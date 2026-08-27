@@ -12,15 +12,19 @@
 ---
 
 ## 1. Push to GitHub
+The repo is already committed on a clean `main` branch (all app code + this guide are in
+commit `cefe5c26`). History still carries the upstream `laravel/laravel` commits underneath —
+harmless. The wrong `origin` (pointing at laravel/laravel) has been removed.
+
+Create a **private** repo on github.com named `rems-transport`, then:
 ```bash
-git init              # (already done)
-git add .
-git commit -m "Prepare for deployment"
 git remote add origin https://github.com/<username>/rems-transport.git
-git branch -M main
 git push -u origin main
 ```
-Repo should be **private** (contains business logic; `.env` stays ignored).
+`.env`, `/vendor`, `/node_modules` stay git-ignored — good.
+
+> Optional: if you want a fresh single-commit history instead of the laravel/laravel
+> history, run `git checkout --orphan clean && git commit -m "Initial commit" && git branch -M clean main` before pushing.
 
 ## 2. Create the app on Laravel Cloud
 1. cloud.laravel.com → Sign in with GitHub → new Organization.
@@ -100,7 +104,12 @@ php artisan view:cache
 > `config:cache` is safe now — all runtime `env()` calls were moved into `config/`.
 > If you change any env var later in the dashboard, trigger a redeploy so the cache rebuilds.
 
-## 8. First deploy → create an admin
+## 8. Enable the Scheduler (required)
+`app/Console/Kernel.php` schedules `booking:send-reminders` daily at 09:00.
+Laravel Cloud → Application settings → turn **Scheduler ON**.
+(No queue worker needed while `QUEUE_CONNECTION=sync`.)
+
+## 9. First deploy → create an admin
 No seeder exists. Open Laravel Cloud's Tinker/console:
 ```php
 \App\Models\User::create([
@@ -113,12 +122,12 @@ No seeder exists. Open Laravel Cloud's Tinker/console:
 ```
 Staff login page: `/admin/login`.
 
-## 9. Custom domain
+## 10. Custom domain
 1. Buy domain (Porkbun / Cloudflare Registrar `.com`, or `remstransport.ph` via dot.ph).
 2. Laravel Cloud → Domains → Add → set the CNAME/A record it shows at your registrar.
 3. SSL auto-provisions. Then set `APP_URL=https://remstransport.com` and redeploy.
 
-## 10. PayMongo
+## 11. PayMongo
 - Update the checkout success/cancel redirect URLs if they are hardcoded — check
   `BookingController@paymongoCheckout` / `TourController` / `JoinerTripController`
   for `success_url` / `cancel_url` (they should use `url()` / `route()` so `APP_URL` drives them).
