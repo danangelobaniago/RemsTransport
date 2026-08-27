@@ -1,0 +1,39 @@
+{
+    "name": "Rem's Transport",
+    "short_name": "Rem's",
+    "description": "Book private van rentals and joiner trips with Rem's Transport.",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#2563eb",
+    "orientation": "portrait-primary",
+    "categories": ["travel", "transportation"],
+    "icons": [
+        {
+            "src": "/icons/icon-192.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icons/icon-512.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "screenshots": [],
+    "shortcuts": [
+        {
+            "name": "Book a Van",
+            "url": "/book",
+            "description": "Start a new van booking"
+        },
+        {
+            "name": "My Bookings",
+            "url": "/my-bookings",
+            "description": "View your bookings"
+        }
+    ]
+}

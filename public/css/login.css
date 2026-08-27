@@ -1,0 +1,226 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+
+/* BACKGROUND IMAGE */
+
+background:url("https://global.toyota/pages/models/images/20191018/kv/hiace_w1920_01.jpg") no-repeat center center/cover;
+
+}
+
+
+body::before{
+content:"";
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,0.55);
+z-index:-1;
+}
+
+/* LOGIN WRAPPER */
+
+.login-wrapper{
+display:flex;
+justify-content:center;
+align-items:center;
+width:100%;
+}
+
+/* GLASS CARD */
+
+.login-card{
+width:380px;
+padding:40px;
+border-radius:16px;
+
+background:rgba(255,255,255,0.18);
+backdrop-filter:blur(14px);
+
+box-shadow:0 20px 40px rgba(0,0,0,0.5);
+color:white;
+}
+
+/* LOGO */
+
+.logo{
+text-align:center;
+margin-bottom:5px;
+}
+
+.subtitle{
+text-align:center;
+font-size:14px;
+margin-bottom:25px;
+opacity:0.9;
+}
+
+/* LABEL */
+
+label{
+display:block;
+margin-top:12px;
+font-size:14px;
+}
+
+/* SELECT */
+
+select{
+width:100%;
+height:42px;
+margin-top:5px;
+border-radius:8px;
+border:none;
+padding:0 10px;
+outline:none;
+}
+
+/* INPUT BOX */
+
+.input-box{
+position:relative;
+margin-top:6px;
+}
+
+/* INPUT */
+
+.input-box input{
+width:100%;
+height:42px;
+padding:0 42px 0 40px;
+border-radius:8px;
+border:none;
+outline:none;
+}
+
+/* ICON LEFT */
+
+.input-box .fa-envelope,
+.input-box .fa-lock{
+position:absolute;
+left:12px;
+top:50%;
+transform:translateY(-50%);
+color:#555;
+}
+
+/* EYE ICON */
+
+.toggle-password{
+position:absolute;
+right:12px;
+top:50%;
+transform:translateY(-50%);
+cursor:pointer;
+color:#555;
+}
+
+/* OPTIONS */
+
+.login-options{
+display:flex;
+justify-content:space-between;
+font-size:13px;
+margin-bottom:20px;
+}
+
+.login-options a{
+color:white;
+text-decoration:none;
+margin-top: 13px;
+}
+
+/* BUTTON */
+
+.login-btn{
+width:100%;
+height:44px;
+background:#2563eb;
+border:none;
+border-radius:8px;
+color:white;
+font-size:15px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.login-btn:hover{
+background:#1e40af;
+transform:translateY(-2px);
+box-shadow:0 10px 25px rgba(0,0,0,0.3);
+}
+
+/* ERROR */
+
+.error-msg{
+text-align:center;
+margin-top:10px;
+color:#ff6b6b;
+font-size:13px;
+}
+
+/* LOADER */
+
+.loader{
+width:26px;
+height:26px;
+border:3px solid rgba(255,255,255,0.3);
+border-top:3px solid white;
+border-radius:50%;
+animation:spin 1s linear infinite;
+margin:10px auto;
+display:none;
+}
+
+@keyframes spin{
+0%{transform:rotate(0deg);}
+100%{transform:rotate(360deg);}
+}
+
+/* REGISTER TEXT */
+
+.register-text{
+text-align:center;
+margin-top:15px;
+font-size:14px;
+color:white;
+}
+
+.register-text a{
+color:#60a5fa;
+text-decoration:none;
+font-weight:600;
+}
+
+.register-text a:hover{
+text-decoration:underline;
+}
+
+/* MOBILE RESPONSIVE */
+
+@media(max-width:480px){
+body{
+align-items:flex-start;
+padding:20px 0;
+min-height:100vh;
+height:auto;
+}
+
+.login-card{
+width:92%;
+padding:28px 20px;
+margin:auto;
+}
+}
+

@@ -1,0 +1,393 @@
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Poppins',sans-serif;
+}
+
+body{
+
+height:100vh;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+background:url("../image/hero-1.jpg")
+no-repeat center/cover;
+
+position:relative;
+}
+
+body::before{
+
+content:"";
+position:absolute;
+
+width:100%;
+height:100%;
+
+background:rgba(0,0,0,0.6);
+
+z-index:-1;
+}
+
+.register-card{
+
+width:420px;
+max-width:90%;
+
+padding:40px;
+
+border-radius:16px;
+
+background:rgba(255,255,255,0.18);
+backdrop-filter:blur(14px);
+
+color:white;
+}
+
+.register-card h1{
+
+text-align:center;
+font-weight:600;
+margin-bottom:5px;
+}
+
+.register-card p{
+
+text-align:center;
+margin-bottom:20px;
+font-size:14px;
+opacity:0.9;
+}
+
+label{
+
+display:block;
+margin-top:14px;
+font-size:14px;
+}
+
+input{
+
+width:100%;
+height:42px;
+
+margin-top:6px;
+
+border:none;
+border-radius:8px;
+
+padding:0 12px;
+
+outline:none;
+}
+
+.input-box{
+
+position:relative;
+}
+
+.input-box input{
+
+padding-right:40px;
+}
+
+.toggle-password{
+
+position:absolute;
+
+right:12px;
+top:50%;
+
+transform:translateY(-50%);
+
+cursor:pointer;
+color:#555;
+}
+
+/* PASSWORD STRENGTH */
+
+.strength-meter{
+
+width:100%;
+height:6px;
+
+background:#ddd;
+
+border-radius:10px;
+
+margin-top:8px;
+overflow:hidden;
+}
+
+#strengthBar{
+
+height:100%;
+width:0%;
+
+background:red;
+
+transition:0.3s;
+}
+
+#strengthText{
+
+font-size:13px;
+margin-top:5px;
+}
+
+/* ERROR */
+
+.error{
+
+color:#ff6b6b;
+font-size:13px;
+
+margin-top:10px;
+text-align:center;
+}
+
+/* BUTTON */
+
+button{
+
+width:100%;
+height:44px;
+
+margin-top:20px;
+
+background:#2563eb;
+
+border:none;
+border-radius:8px;
+
+color:white;
+
+font-size:15px;
+
+cursor:pointer;
+transition:0.3s;
+}
+
+button:hover{
+
+background:#1e40af;
+}
+
+.back{
+
+display:block;
+text-align:center;
+
+margin-top:15px;
+
+color:white;
+
+text-decoration:none;
+font-size:14px;
+}
+
+.back:hover{
+
+text-decoration:underline;
+}
+
+/* PASSWORD STRENGTH */
+
+.strength-meter {
+    width: 100%;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+#strength-bar {
+    height: 100%;
+    width: 0%;
+    transition: 0.3s ease;
+    border-radius: 6px;
+}
+
+#strength-text {
+    font-size: 12px;
+    margin-top: 5px;
+    opacity: 0.9;
+}
+
+/* PASSWORD REQUIREMENTS */
+.password-requirements {
+    margin-top: 10px;
+    margin-bottom: 6px;
+    padding: 10px 14px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.password-requirements p {
+    font-size: 12px;
+    color: #aaa;
+    margin: 0 0 5px 0;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: color 0.2s;
+}
+
+.password-requirements p:last-child {
+    margin-bottom: 0;
+}
+
+/* BACKGROUND OVERLAY */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    overflow: hidden;
+}
+
+
+/* MODAL BOX */
+.modal-content {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+
+    width: 480px;
+    max-width: 90%;
+    margin: 8% auto;
+    padding: 20px;
+    border-radius: 12px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+
+     animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-body p {
+    margin-bottom: 18px;   /* spacing between paragraphs */
+    line-height: 1.7;      /* more breathing space */
+    font-size: 14px;
+    color: #f1f1f1;
+}
+
+.modal-body h4 {
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+/* Close button */
+.close {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 22px;
+    cursor: pointer;
+    color: #fff;
+}
+
+/* Scroll content */
+.modal-body {
+    max-height: 350px;
+    overflow-y: auto;
+    margin: 15px 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #f1f1f1;
+    scrollbar-width: none;
+}
+
+/* Button */
+.modal-content button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #2f6fed;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    transform: scale(1); /* reset if you scaled it */
+    cursor: pointer;
+}
+
+.terms-text {
+    color: #fff; /* white text */
+    font-size: 13px;
+}
+
+.terms-text a {
+    color: #00ffcc; /* bright color */
+    text-decoration: underline;
+}
+
+.terms-text a:hover {
+    color: #00ccaa;
+}
+
+.terms-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #fff;
+}
+
+.terms-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.terms-label a {
+    color: #00e6c3;
+    text-decoration: underline;
+}
+
+.terms-label a:hover {
+    color: #00c9aa;
+}
+
+/* MOBILE RESPONSIVE */
+
+@media(max-width:480px){
+body{
+align-items:flex-start;
+padding:20px 0;
+min-height:100vh;
+height:auto;
+}
+
+.register-card{
+width:92%;
+padding:28px 20px;
+margin:auto;
+}
+}

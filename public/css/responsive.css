@@ -1,0 +1,105 @@
+/* =====================================================
+   GLOBAL RESPONSIVE OVERRIDES — mobile-first fixes
+   ===================================================== */
+
+/* Tables: horizontal scroll on small screens */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+    /* Booking form grid → single column */
+    .booking-grid,
+    .form-row {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Card grids → 1 column */
+    .van-grid,
+    .tour-grid,
+    .features-grid {
+        grid-template-columns: 1fr !important;
+        gap: 16px;
+    }
+
+    /* Nav links hidden on mobile (navbar handles its own toggling) */
+    nav .nav-links {
+        display: none;
+    }
+
+    /* Padding adjustments */
+    section {
+        padding: 40px 16px !important;
+    }
+
+    .hero-content h1 {
+        font-size: clamp(1.5rem, 6vw, 2.2rem) !important;
+    }
+
+    /* Tables inside pages scroll */
+    .table-section,
+    .table-card {
+        overflow-x: auto;
+    }
+
+    /* Booking info row */
+    .info-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    /* My bookings card */
+    .booking-card-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 8px !important;
+    }
+
+    /* Receipt / confirmation page */
+    .receipt-body {
+        padding: 16px !important;
+    }
+
+    .receipt-table td,
+    .receipt-table th {
+        padding: 10px 8px !important;
+        font-size: 13px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Stacked labels and inputs */
+    .field-row {
+        flex-direction: column !important;
+    }
+
+    /* Smaller font for tables */
+    table td,
+    table th {
+        font-size: 12px !important;
+        padding: 8px 6px !important;
+    }
+
+    /* Button rows */
+    .btn-row {
+        flex-direction: column !important;
+        gap: 8px !important;
+    }
+
+    .btn-row a,
+    .btn-row button {
+        width: 100% !important;
+        text-align: center !important;
+    }
+
+    /* Profile / driver cards */
+    .profile-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Joiner trip seats grid */
+    .seats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}

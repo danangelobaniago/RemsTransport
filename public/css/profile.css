@@ -1,0 +1,315 @@
+/* RESET */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* BODY */
+body {
+    background: #f8fafc;
+}
+
+/* ================= NAVBAR ================= */
+.navbar {
+    position: fixed;
+    top: 0;
+    width: 100%;
+    background: #0f172a;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 80px;
+    z-index: 1000;
+}
+
+.logo {
+    font-size: 20px;
+    font-weight: bold;
+    color: white;
+    text-decoration: none;
+}
+
+.logo:hover {
+    opacity: 0.8;
+}
+
+nav a {
+    color: white;
+    margin-left: 25px;
+    text-decoration: none;
+    font-size: 15px;
+    transition: 0.3s;
+}
+
+nav a:hover {
+    color: #ffc107;
+}
+
+/* ALIGN NAV ITEMS */
+nav {
+    display: flex;
+    align-items: center;
+}
+
+/* USER NAME */
+.user-name {
+    color: #cbd5f5;
+    margin-left: 25px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+}
+
+/* LOGOUT FORM FIX */
+.logout-form {
+    margin-left: 20px;
+}
+
+/* CLEAN LOGOUT BUTTON */
+.logout-btn {
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+/* HOVER EFFECT */
+.logout-btn:hover {
+    background: #ef4444;
+    color: white;
+}
+
+
+
+/* ================= MAIN CONTAINER ================= */
+.container {
+    margin-top: 120px;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 60px;
+}
+
+/* ================= CARD ================= */
+.card {
+    width: 420px;
+    background: white;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+}
+
+/* ================= HEADINGS ================= */
+.card h2 {
+    margin-bottom: 20px;
+    font-size: 22px;
+}
+
+.card h3 {
+    margin-top: 25px;
+    margin-bottom: 10px;
+    font-size: 18px;
+}
+
+/* ================= INPUTS ================= */
+label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+input {
+    width: 100%;
+    height: 42px;
+    margin-top: 5px;
+    margin-bottom: 15px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    outline: none;
+    transition: 0.2s;
+}
+
+input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+}
+
+/* ================= INPUT BOX (EYE ICON) ================= */
+.input-box {
+    position: relative;
+    margin-bottom: 15px;
+}
+
+.input-box input {
+    padding-right: 40px;
+}
+
+.input-box i {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #666;
+}
+
+/* ================= BUTTONS ================= */
+button {
+    width: 100%;
+    height: 44px;
+    background: #2563eb;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: 0.3s;
+}
+
+button:hover {
+    background: #1e40af;
+}
+
+/* DANGER BUTTON */
+.btn-danger {
+    background: #ef4444;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* ================= ALERTS ================= */
+.success {
+    color: #16a34a;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+.error {
+    color: #dc2626;
+    margin-bottom: 10px;
+    font-size: 14px;
+}
+
+/* ================= DIVIDER ================= */
+hr {
+    margin: 25px 0;
+    border: none;
+    border-top: 1px solid #eee;
+}
+
+/* ================= PASSWORD STRENGTH ================= */
+.strength-meter {
+    height: 6px;
+    background: #eee;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+#strength-bar {
+    height: 100%;
+    width: 0%;
+    border-radius: 5px;
+    transition: 0.3s;
+}
+
+#strength-text {
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+/* ================= CONTACT SECTION ================= */
+.contact {
+    padding: 80px 20px;
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    text-align: center;
+    color: white;
+}
+
+.contact h2 {
+    font-size: 28px;
+    margin-bottom: 10px;
+    color: #f1f5f9;
+}
+
+.contact-sub {
+    color: #cbd5f5;
+    margin-bottom: 40px;
+}
+
+/* CONTACT GRID */
+.contact-container {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 25px;
+    max-width: 900px;
+    margin: auto;
+}
+
+/* CONTACT CARD */
+.contact-card {
+    background: #1e3a5f;
+    padding: 30px 20px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    transition: 0.3s;
+}
+
+.contact-card i {
+    font-size: 28px;
+    color: #3b82f6;
+    margin-bottom: 10px;
+}
+
+.contact-card h4 {
+    margin-bottom: 5px;
+    color: #e2e8f0;
+}
+
+.contact-card p {
+    color: #cbd5e1;
+    font-size: 14px;
+}
+
+.contact-card:hover {
+    transform: translateY(-5px);
+    background: #2563eb;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+}
+
+/* ================= FOOTER ================= */
+.footer {
+    background: #0f172a;
+    color: white;
+    text-align: center;
+    padding: 20px;
+    font-size: 14px;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 768px) {
+
+    .navbar {
+        padding: 15px 20px;
+    }
+
+    nav a {
+        margin-left: 12px;
+        font-size: 13px;
+    }
+
+    .card {
+        width: 90%;
+    }
+
+    .contact-container {
+        grid-template-columns: 1fr;
+    }
+}
