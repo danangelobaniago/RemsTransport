@@ -169,6 +169,28 @@
         .info-cell .val { font-size: 13px; font-weight: 600; color: #1e293b; }
         .info-cell .sub { font-size: 11px; color: #64748b; }
 
+        /* COMPACT BOOKING LINES (replaces boxed info-row for rental cards) */
+        .bcard-line { font-size: 13px; color: #334155; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .bcard-line:last-of-type { margin-bottom: 0; }
+        .bcard-line i { color: #94a3b8; width: 14px; text-align: center; font-size: 11px; flex-shrink: 0; }
+        .bcard-line strong { font-weight: 700; color: #1e293b; }
+        .bcard-line .bcard-sub { color: #64748b; font-size: 12px; }
+        .bcard-line .arrow { color: #cbd5e1; font-size: 10px; }
+
+        .balance-line {
+            display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+            background: #f8fafc; border-radius: 8px; padding: 10px 12px; margin: 12px 0;
+        }
+        .balance-line .balance-lbl { font-size: 10px; text-transform: uppercase; font-weight: 700; color: #94a3b8; }
+        .balance-line .balance-val { font-size: 15px; font-weight: 800; }
+        .balance-line .balance-sub { font-size: 11px; color: #94a3b8; margin-left: auto; }
+
+        .manifest-link-sm {
+            display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+            color: #1e40af; text-decoration: none; margin-bottom: 12px;
+        }
+        .manifest-link-sm i { font-size: 11px; }
+
         /* PAYMENT ROW */
         .pay-row {
             display: flex; gap: 0; background: #f8fafc; border-radius: 8px;
@@ -495,65 +517,37 @@
                             </div>
                         </div>
                         <div class="bcard-body">
-                            <div class="info-row">
-                                <div class="info-cell">
-                                    <div class="lbl">Customer</div>
-                                    <div class="val">{{ $b->first_name ?? 'N/A' }} {{ $b->last_name ?? '' }}</div>
-                                    @if($b->contact_number)
-                                        <div class="sub"><i class="fas fa-phone" style="font-size:10px;margin-right:3px;color:#60a5fa;"></i>{{ $b->contact_number }}</div>
-                                    @endif
-                                </div>
-                                <div class="info-cell">
-                                    <div class="lbl">Dates</div>
-                                    <div class="val">{{ date('M d', strtotime($b->start_date)) }} – {{ date('M d', strtotime($b->end_date)) }}</div>
-                                </div>
-                                <div class="info-cell">
-                                    <div class="lbl">Destination</div>
-                                    <div class="val">{{ $b->destination }}</div>
-                                </div>
+                            <div class="bcard-line">
+                                <i class="fas fa-user"></i>
+                                <strong>{{ $b->first_name ?? 'N/A' }} {{ $b->last_name ?? '' }}</strong>
+                                @if($b->contact_number)
+                                    <span class="bcard-sub">{{ $b->contact_number }}</span>
+                                @endif
+                            </div>
+                            <div class="bcard-line">
+                                <i class="fas fa-route"></i>
+                                <span class="bcard-sub">{{ $b->pickup }}</span>
+                                <i class="fas fa-arrow-right arrow"></i>
+                                {{ $b->destination }}
+                            </div>
+                            <div class="bcard-line">
+                                <i class="fas fa-calendar"></i>
+                                {{ date('M d', strtotime($b->start_date)) }} – {{ date('M d, Y', strtotime($b->end_date)) }}
                             </div>
 
-                            <div class="pay-row">
-                                <div class="pay-cell"><div class="pl">Total</div><div class="pv c-blue">₱{{ number_format($b->total, 2) }}</div></div>
-                                <div class="pay-cell"><div class="pl">Paid</div><div class="pv c-green">₱{{ number_format($b->amount_paid ?? 0, 2) }}</div></div>
-                                <div class="pay-cell"><div class="pl">Balance</div>
-                                    <div class="pv {{ $bal > 0 ? 'c-red' : 'c-green' }}">
-                                        {{ $bal <= 0 ? '✓ Paid' : '₱'.number_format($bal,2) }}
-                                    </div>
-                                </div>
+                            <div class="balance-line">
+                                <span class="balance-lbl">Balance</span>
+                                <span class="balance-val {{ $bal > 0 ? 'c-red' : 'c-green' }}">
+                                    {{ $bal <= 0 ? '✓ Paid' : '₱'.number_format($bal,2) }}
+                                </span>
+                                <span class="balance-sub">Total ₱{{ number_format($b->total, 2) }} · Paid ₱{{ number_format($b->amount_paid ?? 0, 2) }}</span>
                             </div>
 
-                            <a href="{{ route('driver.rental.manifest', $b->id) }}"
-                               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;margin-bottom:10px;background:#eff6ff;color:#1e40af;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+                            <a href="{{ route('driver.rental.manifest', $b->id) }}" class="manifest-link-sm">
                                 <i class="fas fa-list-check"></i> View Passenger Manifest
                             </a>
 
                             @if(!in_array($sc, ['pending','rejected','cancelled']))
-                                @php
-                                    $smap = ['not_started'=>[0,0,0],'arrived'=>[1,0,0],'in_progress'=>[1,1,0],'completed'=>[1,1,1]];
-                                    $st = $smap[$ts] ?? [0,0,0];
-                                @endphp
-                                <div class="steps-row">
-                                    <div class="step-item">
-                                        <div class="step-circle {{ $st[0] ? 's-done' : ($ts==='not_started' ? 's-active':'') }}">
-                                            <i class="fas {{ $st[0] ? 'fa-check':'fa-map-marker-alt' }}"></i>
-                                        </div>
-                                        <div class="step-txt {{ $st[0] ? 's-done' : ($ts==='not_started' ? 's-active':'') }}">Arrived</div>
-                                    </div>
-                                    <div class="step-item">
-                                        <div class="step-circle {{ $st[1] ? 's-done' : ($ts==='arrived' ? 's-active':'') }}">
-                                            <i class="fas {{ $st[1] ? 'fa-check':'fa-route' }}"></i>
-                                        </div>
-                                        <div class="step-txt {{ $st[1] ? 's-done' : ($ts==='arrived' ? 's-active':'') }}">In Progress</div>
-                                    </div>
-                                    <div class="step-item">
-                                        <div class="step-circle {{ $st[2] ? 's-done' : ($ts==='in_progress' ? 's-active':'') }}">
-                                            <i class="fas {{ $st[2] ? 'fa-check':'fa-flag-checkered' }}"></i>
-                                        </div>
-                                        <div class="step-txt {{ $st[2] ? 's-done' : ($ts==='in_progress' ? 's-active':'') }}">Completed</div>
-                                    </div>
-                                </div>
-
                                 @if($sc === 'completed' || $ts === 'completed')
                                     <button class="trip-btn btn-done-grey" disabled><i class="fas fa-check-double"></i> Trip Completed</button>
                                 @elseif($ts === 'not_started')
@@ -758,24 +752,6 @@ function buildBookingCard(b) {
     const balColor = b.balance > 0 ? 'c-red' : 'c-green';
     const balText  = b.balance <= 0 ? '✓ Paid' : '₱' + b.balance.toLocaleString('en-PH', {minimumFractionDigits:2});
 
-    const stMap = {not_started:[0,0,0], arrived:[1,0,0], in_progress:[1,1,0], completed:[1,1,1]};
-    const st = stMap[b.trip_status] || [0,0,0];
-
-    function sc(idx, label, icon) {
-        const done   = st[idx] === 1;
-        const active = !done && (
-            (idx === 0 && b.trip_status === 'not_started') ||
-            (idx === 1 && b.trip_status === 'arrived')     ||
-            (idx === 2 && b.trip_status === 'in_progress')
-        );
-        const cls  = done ? 's-done' : (active ? 's-active' : '');
-        const ico  = done ? 'fa-check' : icon;
-        return `<div class="step-item">
-            <div class="step-circle ${cls}"><i class="fas ${ico}"></i></div>
-            <div class="step-txt ${cls}">${label}</div>
-        </div>`;
-    }
-
     let actionBtn = '';
     const isActive = !['pending','rejected','cancelled'].includes(b.status.toLowerCase());
 
@@ -806,15 +782,11 @@ function buildBookingCard(b) {
         }
     }
 
-    const stepsHtml = isActive ? `
-        <div class="steps-row">
-            ${sc(0,'Arrived','fa-map-marker-alt')}
-            ${sc(1,'In Progress','fa-route')}
-            ${sc(2,'Completed','fa-flag-checkered')}
-        </div>
-        ${actionBtn}` : '';
-
     const cardColor = b.type === 'joiner' ? '#7c3aed' : b.type === 'tour' ? '#0891b2' : '#2563eb';
+    const manifestHref = b.type === 'rental' ? `/driver/bookings/${b.id}/manifest`
+        : b.type === 'joiner' ? `/driver/joiner-trips/${String(b.id).replace('j','')}`
+        : `/driver/tour-packages/${String(b.id).replace('t','')}`;
+
     return `
     <div class="bcard" style="border-left:4px solid ${cardColor};">
         <div class="bcard-head">
@@ -822,51 +794,34 @@ function buildBookingCard(b) {
             <div style="display:flex;gap:5px;">${statusPill}${tripPill}</div>
         </div>
         <div class="bcard-body">
-            <div class="info-row">
-                <div class="info-cell">
-                    <div class="lbl">Customer</div>
-                    <div class="val">${b.customer}</div>
-                    ${b.contact ? `<div class="sub"><i class="fas fa-phone" style="font-size:10px;margin-right:3px;color:#60a5fa;"></i>${b.contact}</div>` : ''}
-                </div>
-                <div class="info-cell">
-                    <div class="lbl">Pickup</div>
-                    <div class="val">${b.pickup}</div>
-                </div>
-                <div class="info-cell">
-                    <div class="lbl">Destination</div>
-                    <div class="val">${b.destination}</div>
-                </div>
+            <div class="bcard-line">
+                <i class="fas fa-user"></i>
+                <strong>${b.customer}</strong>
+                ${b.contact ? `<span class="bcard-sub">${b.contact}</span>` : ''}
             </div>
-            <div class="info-row" style="margin-bottom:12px;">
-                <div class="info-cell">
-                    <div class="lbl">Dates</div>
-                    <div class="val">${formatDate(b.start_date)} – ${formatDate(b.end_date)}</div>
-                </div>
-                <div class="info-cell">
-                    <div class="lbl">Van</div>
-                    <div class="val">${b.van}</div>
-                    ${b.plate ? `<div class="sub">${b.plate}</div>` : ''}
-                </div>
+            <div class="bcard-line">
+                <i class="fas fa-route"></i>
+                <span class="bcard-sub">${b.pickup}</span>
+                <i class="fas fa-arrow-right arrow"></i>
+                ${b.destination}
             </div>
-            <div class="pay-row">
-                <div class="pay-cell"><div class="pl">Total</div><div class="pv c-blue">₱${Number(b.total).toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
-                <div class="pay-cell"><div class="pl">Paid</div><div class="pv c-green">₱${Number(b.amount_paid).toLocaleString('en-PH',{minimumFractionDigits:2})}</div></div>
-                <div class="pay-cell"><div class="pl">Balance</div><div class="pv ${balColor}">${balText}</div></div>
+            <div class="bcard-line">
+                <i class="fas fa-calendar"></i>
+                ${formatDate(b.start_date)} – ${formatDate(b.end_date)}
+                <span class="bcard-sub">· ${b.van}${b.plate ? ' ('+b.plate+')' : ''}</span>
             </div>
-            ${b.type === 'rental' ? `
-            <a href="/driver/bookings/${b.id}/manifest"
-               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;margin-top:10px;background:#eff6ff;color:#1e40af;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
+
+            <div class="balance-line">
+                <span class="balance-lbl">Balance</span>
+                <span class="pv ${balColor}" style="font-size:15px;font-weight:800;">${balText}</span>
+                <span class="balance-sub">Total ₱${Number(b.total).toLocaleString('en-PH',{minimumFractionDigits:2})} · Paid ₱${Number(b.amount_paid).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
+            </div>
+
+            <a href="${manifestHref}" class="manifest-link-sm">
                 <i class="fas fa-list-check"></i> View Passenger Manifest
-            </a>` : b.type === 'joiner' ? `
-            <a href="/driver/joiner-trips/${String(b.id).replace('j','')}"
-               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;margin-top:10px;background:#f5f3ff;color:#6d28d9;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
-                <i class="fas fa-list-check"></i> View Passenger Manifest
-            </a>` : b.type === 'tour' ? `
-            <a href="/driver/tour-packages/${String(b.id).replace('t','')}"
-               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;margin-top:10px;background:#ecfeff;color:#0e7490;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">
-                <i class="fas fa-list-check"></i> View Passenger Manifest
-            </a>` : ''}
-            ${stepsHtml}
+            </a>
+
+            ${isActive ? actionBtn : ''}
         </div>
     </div>`;
 }
