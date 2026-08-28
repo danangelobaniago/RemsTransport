@@ -233,7 +233,7 @@
 
             <div id="customDownpaymentWrap" style="margin-top: 15px;">
                 <label for="downpaymentInput" style="display:block; font-size:13px; color:#374151; margin-bottom:6px;">
-                    How much would you like to downpay? (minimum ₱{{ number_format($downpayment, 2) }} / 20%)
+                    How much would you like to pay? (minimum ₱{{ number_format($downpayment, 2) }} / 20%)
                 </label>
                 <input type="number" id="downpaymentInput" min="{{ $downpayment }}" max="{{ $total }}" step="0.01"
                        value="{{ $downpayment }}" oninput="updatePaymentSummary()" onblur="updatePaymentSummary()"
