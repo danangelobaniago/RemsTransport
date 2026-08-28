@@ -54,17 +54,33 @@
         .remove-btn { background: #fee2e2; color: #ef4444; border: none; width: 35px; height: 35px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
         .remove-btn:hover { background: #fecaca; }
 
-        .policy-box { background: #fff9eb; border: 1px solid #ffeeba; padding: 20px; border-radius: 12px; margin-top: 40px; }
-        .policy-box li { font-size: 13px; color: #856404; margin-bottom: 5px; display: flex; gap: 8px; align-items: center; }
-
         .price-summary { margin-top: 30px; padding-top: 20px; border-top: 2px solid #f1f5f9; }
-        .row-total { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 
-        .pay-btn {
-            width: 100%; padding: 18px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
-            cursor: not-allowed; background: #94a3b8; color: white; margin-top: 20px; transition: 0.3s;
+        /* Payment Option (matches the van booking passenger form) */
+        .payment-title { margin-top: 0; margin-bottom: 15px; font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 10px; }
+        .payment-selection { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px 25px 15px; margin-bottom: 6px; }
+        .payment-selection .option-label { display: flex; align-items: center; cursor: pointer; text-transform: none; color: #1e293b; font-size: 14px; font-weight: 600; }
+        .payment-selection .option-label input { width: 18px; height: 18px; margin-right: 8px; }
 
+        .amount-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; background: #111827; color: white; padding: 20px; border-radius: 12px; margin-top: 20px; }
+        .amount-item label { font-size: 12px; color: #9ca3af; display: block; text-transform: none; }
+        .amount-item p { margin: 5px 0 0; font-size: 1.2rem; font-weight: 700; color: white; }
+        .green { color: #4ade80; }
+        .red { color: #f87171; }
+        @media (max-width: 600px) { .amount-row { grid-template-columns: 1fr; text-align: center; } }
+
+        .btn-submit {
+            margin-top: 25px; width: 100%; padding: 16px; background: #2563eb; color: white; border: none;
+            border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
         }
+        .btn-submit:hover:not(:disabled) { background: #1e40af; }
+
+        /* Terms and Conditions modal body */
+        .terms-body p { margin: 0 0 16px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
+        .terms-body p:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .terms-body strong { display: block; color: #111827; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
+
         @keyframes slideIn {
              from { transform: scale(0.9); opacity: 0; }
              to { transform: scale(1); opacity: 1; }
@@ -111,7 +127,7 @@
             </div>
         @endif
 
-        <form action="{{ route('bookings.tour_pay') }}" method="POST" id="manifesto-form">
+        <form action="{{ route('bookings.tour_pay') }}" method="POST" id="manifesto-form" onsubmit="return validateTourForm();">
             @csrf
             <input type="hidden" name="tour_id" value="{{ $tour->id }}">
             <input type="hidden" name="preferred_date" value="{{ $preferred_date }}">
@@ -154,72 +170,98 @@
                 <i class="fas fa-plus-circle"></i> Add Another Passenger
             </button>
 
-            <!-- Updated Policy Box -->
-<div class="policy-box">
-    <h4 style="color: #856404; font-size: 15px; margin-bottom: 10px;"><i class="fas fa-shield-alt"></i> Booking Policy</h4>
-    <p style="font-size: 13px; color: #856404; margin-bottom: 10px;">
-        By proceeding, you agree to our
-        <a href="javascript:void(0)" onclick="openTermsModal()" style="color: #2563eb; font-weight: 700; text-decoration: underline;">  Terms and Conditions</a>.
-    </p>
-    <label style="display: flex; align-items: center; cursor: pointer; margin-top: 15px; text-transform: none; color: #1e293b;">
-        <input type="checkbox" name="terms_agree" id="terms_agree" required style="width: 18px; height: 18px; margin-right: 12px;">
-        <span style="font-size: 14px; font-weight: 600;">I understand and agree to the terms above.</span>
-    </label>
-</div>
-
-<!-- NEW: Terms and Conditions Modal -->
-<div id="termsModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; padding: 20px;">
-    <div style="background:white; padding:30px; border-radius:15px; max-width:600px; width:100%; max-height:80vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: slideIn 0.3s ease;">
-        <h2 style="margin-bottom:20px; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Terms and Conditions</h2>
-
-        <div style="font-size: 14px; color: #475569; line-height: 1.6;">
-            <p style="margin-bottom: 15px;"><strong>1. Reservation and Payment</strong><br>
-            A non-refundable 20% downpayment is required to secure your slot. Full payment options are also available. Balance must be settled as specified.</p>
-
-            <p style="margin-bottom: 15px;"><strong>2. Cancellation Policy</strong><br>
-            Cancellations result in forfeiture of the 20% downpayment. For full payments, the 80% balance is refundable through administrative coordination.</p>
-
-            <p style="margin-bottom: 15px;"><strong>3. Passenger Manifesto</strong><br>
-            Only passengers registered in this manifesto are permitted.</p>
-
-        </div>
-
-        <button type="button" onclick="closeTermsModal()" style="margin-top:25px; width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:700; cursor:pointer;">I Have Read the Terms</button>
-    </div>
-</div>
+            <input type="hidden" name="amount_to_pay" id="amount_to_pay" value="{{ $tour->price * 0.20 }}">
 
             <div class="price-summary">
-    <!-- NEW: Payment Option Selector -->
-    <div style="margin-bottom: 25px; padding: 15px; background: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0;">
-        <label style="font-size: 13px; margin-bottom: 10px;">Choose Payment Option:</label>
-        <div style="display: flex; gap: 20px;">
-            <label style="display: flex; align-items: center; cursor: pointer; text-transform: none; color: #1e293b;">
-                <input type="radio" name="payment_type" value="downpayment" checked onchange="togglePayment(this)" style="width: 18px; height: 18px; margin-right: 8px;">
-                <span style="font-size: 14px; font-weight: 600;">Downpayment (20%)</span>
-            </label>
-            <label style="display: flex; align-items: center; cursor: pointer; text-transform: none; color: #1e293b;">
-                <input type="radio" name="payment_type" value="full" onchange="togglePayment(this)" style="width: 18px; height: 18px; margin-right: 8px;">
-                <span style="font-size: 14px; font-weight: 600;">Full Payment</span>
-            </label>
-        </div>
-    </div>
+                <h2 class="payment-title"><i class="fas fa-credit-card"></i> Payment Option</h2>
 
-    <div class="row-total">
-        <span style="color: #64748b;">Package Total:</span>
-        <span style="font-weight: 600;">₱{{ number_format($tour->price, 2) }}</span>
-    </div>
+                <div class="payment-selection">
+                    <label style="display:block; font-size:13px; color:#374151; margin-bottom:10px; font-weight:600;">Choose Payment Option:</label>
+                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                        <label class="option-label">
+                            <input type="radio" name="payment_type" value="downpayment" checked onchange="updatePaymentSummary()">
+                            Pay Downpayment (min. 20%)
+                        </label>
+                        <label class="option-label">
+                            <input type="radio" name="payment_type" value="full" onchange="updatePaymentSummary()">
+                            Pay Full Amount
+                        </label>
+                    </div>
 
-    <div class="row-total">
-        <!-- Dynamic Labels and Prices -->
-        <span id="payment-label" style="font-size: 18px; font-weight: 700;">Downpayment (20%):</span>
-        <span id="payment-amount" style="font-size: 26px; font-weight: 800; color: #10b981;">₱{{ number_format($tour->price * 0.20, 2) }}</span>
-    </div>
+                    <div id="customDownpaymentWrap" style="margin-top: 15px;">
+                        <label for="downpaymentInput" style="display:block; font-size:13px; color:#374151; margin-bottom:6px;">
+                            How much would you like to pay? (minimum ₱{{ number_format($tour->price * 0.20, 2) }} / 20%)
+                        </label>
+                        <input type="number" id="downpaymentInput" min="{{ $tour->price * 0.20 }}" max="{{ $tour->price }}" step="0.01"
+                               value="{{ $tour->price * 0.20 }}" oninput="updatePaymentSummary()" onblur="updatePaymentSummary()"
+                               style="padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; width:100%; max-width:260px; text-align:left; display:block;">
+                        <div id="downpaymentError" style="display:none; color:#b91c1c; font-size:12px; font-weight:600; margin-top:6px;">
+                            Downpayment must be at least ₱{{ number_format($tour->price * 0.20, 2) }} (20% of the total amount).
+                        </div>
+                    </div>
+                </div>
 
-    <button type="submit" id="pay_button" class="pay-btn" disabled>
-        <i class="fas fa-lock" style="margin-right: 8px;"></i>
-        <span id="btn-text">Pay Downpayment via PayMongo</span>
-    </button>
-</div>
+                <div class="amount-row">
+                    <div class="amount-item">
+                        <label id="payment-label">Required Downpayment</label>
+                        <p class="green" id="display-payment-amount">₱{{ number_format($tour->price * 0.20, 2) }}</p>
+                    </div>
+                    <div class="amount-item">
+                        <label>Remaining Balance</label>
+                        <p class="red" id="display-balance">₱{{ number_format($tour->price * 0.80, 2) }}</p>
+                    </div>
+                    <div class="amount-item">
+                        <label>Total Amount</label>
+                        <p>₱{{ number_format($tour->price, 2) }}</p>
+                    </div>
+                </div>
+
+                <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 24px; margin: 25px 0 0; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 220px;">
+                        <h6 style="font-weight: 700; color: #111827; margin: 0 0 4px; font-size: 15px;">Terms &amp; Data Privacy</h6>
+                        <p style="font-size: 13px; color: #6b7280; margin: 0;">Please open and read the full Terms and Data Privacy Act before proceeding with your booking.</p>
+                        <p id="termsStatus" style="display:none; margin: 8px 0 0; font-size: 13px; font-weight: 600; color: #16a34a;">
+                            <i class="fas fa-circle-check"></i> You've read the Terms and Data Privacy Act.
+                        </p>
+                    </div>
+                    <button type="button" onclick="openTermsModal()" style="padding:10px 18px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:8px;">
+                        <i class="fas fa-file-lines"></i> Read Terms
+                    </button>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    Continue to Secure Payment <i class="fas fa-arrow-right" style="margin-left: 10px;"></i>
+                </button>
+            </div>
+
+            {{-- Terms Modal --}}
+            <div id="termsModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
+                <div style="background:white; border-radius:16px; max-width:720px; width:100%; max-height:85vh; box-shadow:0 20px 50px rgba(0,0,0,0.25); display:flex; flex-direction:column; overflow:hidden;">
+
+                    <div style="padding:22px 28px; border-bottom:1px solid #e5e7eb; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-shrink:0;">
+                        <div>
+                            <h2 style="margin:0 0 2px; color:#111827; font-size:19px; font-weight:700;">Terms and Conditions</h2>
+                            <p style="margin:0; color:#6b7280; font-size:13px;">Rem's Transport Tour Booking Agreement &amp; Data Privacy Notice</p>
+                        </div>
+                        <button type="button" onclick="closeTermsModal()" aria-label="Close" style="background:#f3f4f6; border:none; width:32px; height:32px; border-radius:8px; color:#6b7280; cursor:pointer; font-size:14px; flex-shrink:0;">
+                            <i class="fas fa-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="terms-body" style="padding:22px 28px; overflow-y:auto; font-size:14px; color:#475569; line-height:1.7;">
+                        <p><strong>1. Reservation and Payment</strong> A non-refundable 20% downpayment is required to secure your slot. Full payment options are also available. Balance must be settled as specified.</p>
+                        <p><strong>2. Cancellation Policy</strong> Cancellations result in forfeiture of the 20% downpayment. For full payments, the 80% balance is refundable through administrative coordination.</p>
+                        <p><strong>3. Passenger Manifesto</strong> Only passengers registered in this manifesto are permitted.</p>
+                        <p><strong>4. Data Privacy</strong> We collect and process personal information (including passenger names, birthdays, ages, and gender) in compliance with the Data Privacy Act of 2012 (RA 10173), used solely for booking confirmation, trip coordination, and safety purposes.</p>
+                    </div>
+
+                    <div style="padding:16px 28px; border-top:1px solid #e5e7eb; background:#f9fafb; flex-shrink:0;">
+                        <button type="button" onclick="closeTermsModal()" style="width:100%; padding:13px; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                            <i class="fas fa-check"></i> I Have Read and Understood
+                        </button>
+                    </div>
+                </div>
+            </div>
         </form>
     </div>
 </div>
@@ -233,30 +275,79 @@
     // --- MODAL CONTROLS ---
     function openTermsModal() {
         document.getElementById('termsModal').style.display = 'flex';
+        // Opening the terms counts as having read them — unlock the submit button right away.
+        document.getElementById('termsStatus').style.display = 'block';
+        const btn = document.getElementById('submitBtn');
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
     }
 
     function closeTermsModal() {
         document.getElementById('termsModal').style.display = 'none';
     }
 
-    // --- PAYMENT TOGGLE ---
-    function togglePayment(radio) {
-        const tourPrice = {{ $tour->price }};
-        const downpayment = tourPrice * 0.20;
+    // --- PAYMENT SUMMARY ---
+    const MIN_DOWNPAYMENT = {{ $tour->price * 0.20 }}; // 20% of total
+    const TOTAL_AMOUNT = {{ $tour->price }};
+
+    function updatePaymentSummary() {
+        const paymentType = document.querySelector('input[name="payment_type"]:checked').value;
+        const total = TOTAL_AMOUNT;
 
         const label = document.getElementById('payment-label');
-        const amount = document.getElementById('payment-amount');
-        const btnText = document.getElementById('btn-text');
+        const displayAmount = document.getElementById('display-payment-amount');
+        const displayBalance = document.getElementById('display-balance');
+        const hiddenAmount = document.getElementById('amount_to_pay');
+        const customWrap = document.getElementById('customDownpaymentWrap');
+        const downInput = document.getElementById('downpaymentInput');
+        const downError = document.getElementById('downpaymentError');
 
-        if (radio.value === 'full') {
-            label.innerText = 'Full Payment Total:';
-            amount.innerText = '₱' + tourPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            btnText.innerText = 'Pay Full Amount via PayMongo';
+        if (paymentType === 'full') {
+            customWrap.style.display = 'none';
+            downError.style.display = 'none';
+            label.innerText = "Full Payment Amount";
+            displayAmount.innerText = "₱" + total.toLocaleString(undefined, {minimumFractionDigits: 2});
+            displayBalance.innerText = "₱0.00";
+            hiddenAmount.value = total;
         } else {
-            label.innerText = 'Downpayment (20%):';
-            amount.innerText = '₱' + downpayment.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-            btnText.innerText = 'Pay Downpayment via PayMongo';
+            customWrap.style.display = 'block';
+            let amount = parseFloat(downInput.value);
+            if (isNaN(amount)) amount = MIN_DOWNPAYMENT;
+
+            // Never allow the downpayment to exceed the total amount — snap it back immediately.
+            if (amount > total) {
+                amount = total;
+                downInput.value = total;
+            }
+
+            const isValid = amount >= MIN_DOWNPAYMENT;
+            downError.style.display = isValid ? 'none' : 'block';
+
+            const safeAmount = Math.max(amount, MIN_DOWNPAYMENT);
+
+            label.innerText = "Downpayment Amount";
+            displayAmount.innerText = "₱" + safeAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            displayBalance.innerText = "₱" + (total - safeAmount).toLocaleString(undefined, {minimumFractionDigits: 2});
+            hiddenAmount.value = amount;
         }
+    }
+
+    function validateTourForm() {
+        const paymentType = document.querySelector('input[name="payment_type"]:checked').value;
+        if (paymentType === 'downpayment') {
+            updatePaymentSummary(); // re-sync/clamp in case submit happened without a blur event
+            const downInput = document.getElementById('downpaymentInput');
+            const downError = document.getElementById('downpaymentError');
+            const amount = parseFloat(downInput.value);
+            if (isNaN(amount) || amount < MIN_DOWNPAYMENT || amount > TOTAL_AMOUNT) {
+                downError.style.display = 'block';
+                downInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                downInput.focus();
+                return false;
+            }
+        }
+        return true;
     }
 
     // --- AGE CALCULATOR ---
@@ -304,24 +395,6 @@
             addBtn.innerHTML = `<i class="fas fa-plus-circle"></i> Add Another Passenger`;
         }
     }
-
-    // --- TERMS CHECKBOX LOGIC ---
-    const checkbox = document.getElementById('terms_agree');
-    const payBtn = document.getElementById('pay_button');
-
-    checkbox.addEventListener('change', function() {
-        if (this.checked) {
-            payBtn.disabled = false;
-            payBtn.style.background = '#2563eb';
-            payBtn.style.cursor = 'pointer';
-            payBtn.style.boxShadow = '0 4px 15px rgba(37, 99, 235, 0.3)';
-        } else {
-            payBtn.disabled = true;
-            payBtn.style.background = '#94a3b8';
-            payBtn.style.cursor = 'not-allowed';
-            payBtn.style.boxShadow = 'none';
-        }
-    });
 
     // --- GLOBAL MODAL CLICK LOGIC (Moved outside of event listener) ---
     window.onclick = function(event) {

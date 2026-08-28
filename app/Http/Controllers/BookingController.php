@@ -384,6 +384,17 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
             }
         }
 
+        $total = (float) $tour->price;
+        $minDownpayment = $total * 0.20;
+        $paymentType = $request->input('payment_type', 'downpayment'); // 'downpayment' or 'full'
+
+        $amountToPay = $paymentType === 'full'
+            ? $total
+            : (float) $request->input('amount_to_pay', $minDownpayment);
+
+        // Never allow less than the 20% minimum or more than the total.
+        $amountToPay = max($minDownpayment, min($amountToPay, $total));
+
         $formData = [
             'tour_id'         => $tour->id,
             'van_id'          => $tour->van_id,
@@ -392,20 +403,25 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
             'destination'     => $tour->destination,
             'start_date'      => $tourDate,
             'end_date'        => $tour->end_date ? $tour->end_date->format('Y-m-d') : $tourDate,
-            'total'           => (float) $tour->price,
-            'baseFare'        => (float) $tour->price,
+            'total'           => $total,
+            'baseFare'        => $total,
             'driverFee'       => 0,
             'days'            => 1,
             'passengers'      => count($passengers_data),
             'passengers_data' => $passengers_data,
-            'type'            => 'tour_package'
+            'type'            => 'tour_package',
+            'payment_type'    => $paymentType,
+            'amount_to_pay'   => $amountToPay,
         ];
 
         session(['formData' => $formData]);
 
-        $downpaymentAmount = (float) $tour->price * 0.20;
-        $amountInCents = (int) round($downpaymentAmount * 100);
-        if ($amountInCents < 100) { $amountInCents = 100; }
+        $amountInCents = (int) round($amountToPay * 100);
+        if ($amountInCents < 10000) { $amountInCents = 10000; }
+
+        $lineItemName = $paymentType === 'full'
+            ? 'Tour Full Payment: ' . $tour->name
+            : 'Tour Downpayment: ' . $tour->name;
 
         $response = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
             ->post('https://api.paymongo.com/v1/checkout_sessions', [
@@ -414,13 +430,13 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
                         'line_items' => [[
                             'currency' => 'PHP',
                             'amount'   => $amountInCents,
-                            'name'     => 'Tour Downpayment (20%): ' . $tour->name,
+                            'name'     => $lineItemName,
                             'quantity' => 1,
                         ]],
                         'payment_method_types' => ['gcash', 'card'],
                         'success_url'          => url('/payment-success'),
                         'cancel_url'           => url('/tour/details/' . $tour->id),
-                        'description'          => '20% Downpayment for ' . $tour->name . ' Tour Package',
+                        'description'          => ($paymentType === 'full' ? 'Full Payment' : 'Downpayment') . ' for ' . $tour->name . ' Tour Package',
                     ]
                 ]
             ]);
