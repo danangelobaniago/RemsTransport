@@ -227,12 +227,14 @@ class AdminController extends Controller
             'base_fare' => 'required|numeric|min:0',
             'price_per_km' => 'required|numeric|min:0',
             'driver_fee' => 'required|numeric|min:0',
+            'reason' => 'required|string|max:255',
         ]);
 
         DB::table('pricing')->where('id', 1)->update([
             'base_fare' => $request->base_fare,
             'price_per_km' => $request->price_per_km,
             'driver_fee' => $request->driver_fee,
+            'last_update_reason' => $request->reason,
             'updated_at' => now()
         ]);
 

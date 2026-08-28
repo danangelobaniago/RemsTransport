@@ -52,6 +52,11 @@
 
         </div>
 
+        <div class="form-group">
+            <label>Reason for change</label>
+            <textarea name="reason" rows="2" placeholder="Bakit nagbabago ang pricing na ito?" required>{{ old('reason') }}</textarea>
+        </div>
+
         <div class="form-actions">
             <button type="submit" class="btn-save">
                  Save Changes
