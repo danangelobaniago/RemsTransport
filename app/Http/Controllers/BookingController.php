@@ -519,6 +519,103 @@ public function store(Request $request) {
     }
 }
 
+public function payBalanceCheckout(Request $request, $id)
+{
+    $request->validate([
+        'payment_method' => 'required|in:gcash,card',
+    ]);
+
+    $booking = DB::table('bookings')->where('id', $id)->first();
+    if (!$booking) {
+        abort(404);
+    }
+
+    $totalPaid = (float) ($booking->amount_paid ?? 0);
+    $balance   = max(0, (float) $booking->total - $totalPaid);
+
+    if ($balance <= 0) {
+        return redirect("/receipt/{$id}")->with('error', 'This booking has no remaining balance.');
+    }
+
+    $amountInCents = (int) round($balance * 100);
+    if ($amountInCents < 10000) {
+        $amountInCents = 10000;
+    }
+
+    $response = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
+        ->post('https://api.paymongo.com/v1/checkout_sessions', [
+            'data' => [
+                'attributes' => [
+                    'line_items' => [[
+                        'currency' => 'PHP',
+                        'amount'   => $amountInCents,
+                        'name'     => 'Van Booking Balance Payment (#REM-' . str_pad($id, 5, '0', STR_PAD_LEFT) . ')',
+                        'quantity' => 1,
+                    ]],
+                    'payment_method_types' => [$request->payment_method],
+                    'success_url' => url("/booking/{$id}/pay-balance/success"),
+                    'cancel_url'  => url("/receipt/{$id}"),
+                ]
+            ]
+        ]);
+
+    if (!$response->successful()) {
+        return redirect("/receipt/{$id}")->with('error', 'Payment gateway error. Please try again.');
+    }
+
+    session([
+        'pending_balance_checkout' => [
+            'booking_id' => $id,
+            'amount'     => $balance,
+            'session_id' => $response['data']['id'],
+        ],
+    ]);
+
+    return redirect($response['data']['attributes']['checkout_url']);
+}
+
+public function payBalanceSuccess(Request $request, $id)
+{
+    $pending = session('pending_balance_checkout');
+
+    if (!$pending || (string) $pending['booking_id'] !== (string) $id) {
+        return redirect("/receipt/{$id}")->with('error', 'Payment session expired.');
+    }
+
+    $csResponse = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
+        ->get("https://api.paymongo.com/v1/checkout_sessions/{$pending['session_id']}");
+
+    $paymentId = $pending['session_id'];
+    if ($csResponse->successful()) {
+        $payments = $csResponse['data']['attributes']['payments'] ?? [];
+        if (!empty($payments)) {
+            $paymentId = $payments[0]['id'];
+        }
+    }
+
+    $booking = DB::table('bookings')->where('id', $id)->first();
+    if (!$booking) {
+        abort(404);
+    }
+
+    $newAmountPaid = (float) ($booking->amount_paid ?? 0) + (float) $pending['amount'];
+    $newBalance    = max(0, (float) $booking->total - $newAmountPaid);
+    $newStatus     = $newBalance <= 0 ? 'fully_paid' : 'downpayment_paid';
+
+    DB::table('bookings')->where('id', $id)->update([
+        'amount_paid'        => $newAmountPaid,
+        'remaining_balance'  => $newBalance,
+        'status'             => $newStatus,
+        'payment_status'     => $newStatus,
+        'payment_id'         => $paymentId,
+        'updated_at'         => now(),
+    ]);
+
+    session()->forget('pending_balance_checkout');
+
+    return redirect("/receipt/{$id}")->with('success', 'Payment received! Thank you.');
+}
+
 public function showReceipt($id)
 {
     $booking = DB::table('bookings')

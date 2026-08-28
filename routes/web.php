@@ -280,3 +280,5 @@ Route::get('/admin/tours/{id}/bookings', [TourController::class, 'getBookingsJso
 Route::post('/admin/tour-bookings/{id}/approve', [TourController::class, 'approveTourBooking'])->name('admin.tour.booking.approve');
 Route::post('/admin/tour-bookings/{id}/reject', [TourController::class, 'rejectTourBooking'])->name('admin.tour.booking.reject');
 Route::get('/receipt/{id}', [BookingController::class, 'showReceipt']);
+Route::post('/booking/{id}/pay-balance', [BookingController::class, 'payBalanceCheckout']);
+Route::get('/booking/{id}/pay-balance/success', [BookingController::class, 'payBalanceSuccess']);

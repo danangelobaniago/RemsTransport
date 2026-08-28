@@ -83,7 +83,29 @@
         .btn-print { background: var(--primary-blue); color: white; }
         .btn-back { background: #f1f5f9; color: var(--text-main); }
 
-        @media print { .action-bar { display: none; } .receipt-container { box-shadow: none; margin: 0; border: 1px solid #eee; } }
+        .pay-balance-card { margin-top: 20px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; }
+        .pay-balance-card h4 { margin: 0 0 4px; font-size: 15px; color: var(--warning-amber); }
+        .pay-balance-card p { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
+        .method-options { display: flex; gap: 12px; margin-bottom: 16px; }
+        .method-option { flex: 1; }
+        .method-option input { display: none; }
+        .method-option label {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;
+            font-size: 14px; font-weight: 600; color: var(--text-main); transition: 0.15s;
+        }
+        .method-option input:checked + label { border-color: var(--primary-blue); background: #eff6ff; color: var(--primary-blue); }
+        .btn-pay-balance {
+            width: 100%; padding: 13px; background: var(--warning-amber); color: white;
+            border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
+        }
+        .btn-pay-balance:hover { background: #b45309; }
+
+        .alert-banner { padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .alert-banner.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-banner.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
+        @media print { .action-bar { display: none; } .pay-balance-card { display: none; } .receipt-container { box-shadow: none; margin: 0; border: 1px solid #eee; } }
     </style>
 </head>
 <body>
@@ -93,6 +115,13 @@
         <a href="/my-bookings" class="btn btn-back"><i class="fas fa-chevron-left"></i> Back to Bookings</a>
         <button onclick="window.print()" class="btn btn-print"><i class="fas fa-print"></i> Print Receipt</button>
     </div>
+
+    @if(session('success'))
+        <div class="alert-banner success"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert-banner error"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
+    @endif
 
     <div class="receipt-header">
         <div class="brand">
@@ -181,6 +210,30 @@
             @endif
         </div>
     </div>
+
+    @if($balance > 0)
+        <div class="pay-balance-card">
+            <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
+            <p>You may settle your ₱{{ number_format($balance, 2) }} balance now instead of paying at the trip.</p>
+
+            <form action="/booking/{{ $booking->id }}/pay-balance" method="POST">
+                @csrf
+                <div class="method-options">
+                    <div class="method-option">
+                        <input type="radio" name="payment_method" id="pm-gcash" value="gcash" checked>
+                        <label for="pm-gcash"><i class="fas fa-mobile-screen-button"></i> GCash</label>
+                    </div>
+                    <div class="method-option">
+                        <input type="radio" name="payment_method" id="pm-card" value="card">
+                        <label for="pm-card"><i class="fas fa-credit-card"></i> Card</label>
+                    </div>
+                </div>
+                <button type="submit" class="btn-pay-balance">
+                    Pay ₱{{ number_format($balance, 2) }} Now
+                </button>
+            </form>
+        </div>
+    @endif
 
     <div style="margin-top: 40px; text-align: center; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-light); padding-top: 20px;">
         <p>Thank you for choosing Rem's Transport. For support, contact us at remstransport1@gmail.com</p>
