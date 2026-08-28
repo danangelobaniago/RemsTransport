@@ -217,6 +217,36 @@
             transition: 0.2s;
         }
 
+        .pay-balance-box {
+            margin-top: 20px;
+            padding: 20px;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 16px;
+        }
+        .pay-balance-box h4 { margin: 0 0 4px; font-size: 0.95rem; color: #b45309; }
+        .pay-balance-box p { margin: 0 0 14px; font-size: 0.8rem; color: var(--gray); }
+
+        .method-options { display: flex; gap: 10px; margin-bottom: 14px; }
+        .method-option { flex: 1; }
+        .method-option input { display: none; }
+        .method-option label {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            padding: 11px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;
+            font-size: 0.85rem; font-weight: 700; color: var(--dark); transition: 0.15s; background: white;
+        }
+        .method-option input:checked + label { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
+
+        .btn-pay-balance {
+            width: 100%; padding: 13px; background: #d97706; color: white; border: none;
+            border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
+        }
+        .btn-pay-balance:hover { background: #b45309; }
+
+        .alert-banner { padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; }
+        .alert-banner.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .alert-banner.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+
         @media print {
             .no-print { display: none; }
             body { background: white; padding: 0; }
@@ -231,6 +261,13 @@
 </a>
 
 <div class="ticket-container">
+    @if(session('success'))
+        <div class="alert-banner success no-print"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
+    @endif
+    @if(session('error'))
+        <div class="alert-banner error no-print"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
+    @endif
+
     {{-- Logic: Header color changes based on status --}}
     <div class="ticket-header {{ $booking->status === 'fully_paid' ? 'fully-paid' : '' }}">
         @if($booking->status === 'fully_paid')
@@ -316,6 +353,30 @@
                 </div>
             @endif
         </div>
+
+        @if($balance > 0)
+            <div class="pay-balance-box no-print">
+                <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
+                <p>You may settle your ₱{{ number_format($balance, 2) }} balance now instead of paying upon boarding.</p>
+
+                <form action="/joiner-booking/{{ $booking->id }}/pay-balance" method="POST">
+                    @csrf
+                    <div class="method-options">
+                        <div class="method-option">
+                            <input type="radio" name="payment_method" id="jpm-gcash" value="gcash" checked>
+                            <label for="jpm-gcash"><i class="fas fa-mobile-screen-button"></i> GCash</label>
+                        </div>
+                        <div class="method-option">
+                            <input type="radio" name="payment_method" id="jpm-card" value="card">
+                            <label for="jpm-card"><i class="fas fa-credit-card"></i> Card</label>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-pay-balance">
+                        Pay ₱{{ number_format($balance, 2) }} Now
+                    </button>
+                </form>
+            </div>
+        @endif
 
         <button onclick="window.print()" class="btn-action no-print">
             <i class="fas fa-file-pdf"></i> DOWNLOAD TICKET (PDF)

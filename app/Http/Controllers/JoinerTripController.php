@@ -352,6 +352,94 @@ public function processBooking(Request $request, $id)
     return view('admin.joiner_passengers', compact('trip', 'bookings'));
 }
 
+public function payBalanceCheckout(Request $request, $id)
+{
+    $request->validate([
+        'payment_method' => 'required|in:gcash,card',
+    ]);
+
+    $booking = DB::table('joiner_bookings')->where('id', $id)->first();
+    if (!$booking) {
+        abort(404);
+    }
+
+    $totalPaid = (float) ($booking->downpayment ?? 0);
+    $balance   = max(0, (float) $booking->total_price - $totalPaid);
+
+    if ($balance <= 0) {
+        return redirect("/joiner-receipt/{$id}")->with('error', 'This booking has no remaining balance.');
+    }
+
+    $amountInCents = (int) round($balance * 100);
+    if ($amountInCents < 10000) {
+        $amountInCents = 10000;
+    }
+
+    $response = Http::withHeaders([
+        'Content-Type' => 'application/json',
+        'Authorization' => 'Basic ' . base64_encode(config('services.paymongo.secret_key') . ':'),
+    ])->post('https://api.paymongo.com/v1/checkout_sessions', [
+        'data' => [
+            'attributes' => [
+                'line_items' => [[
+                    'currency' => 'PHP',
+                    'amount'   => $amountInCents,
+                    'name'     => 'Joiner Trip Balance Payment (Booking #' . $id . ')',
+                    'quantity' => 1,
+                ]],
+                'payment_method_types' => [$request->payment_method],
+                'success_url' => url("/joiner-booking/{$id}/pay-balance/success"),
+                'cancel_url'  => url("/joiner-receipt/{$id}"),
+            ]
+        ]
+    ]);
+
+    if ($response->failed()) {
+        return redirect("/joiner-receipt/{$id}")->with('error', 'Payment gateway error. Please try again.');
+    }
+
+    session([
+        'pending_joiner_balance_checkout' => [
+            'booking_id' => $id,
+            'amount'     => $balance,
+            'session_id' => $response['data']['id'],
+        ],
+    ]);
+
+    return redirect($response['data']['attributes']['checkout_url']);
+}
+
+public function payBalanceSuccess(Request $request, $id)
+{
+    $pending = session('pending_joiner_balance_checkout');
+
+    if (!$pending || (string) $pending['booking_id'] !== (string) $id) {
+        return redirect("/joiner-receipt/{$id}")->with('error', 'Payment session expired.');
+    }
+
+    $paymentMethod = $this->getPaymongoPaymentMethod($pending['session_id']);
+
+    $booking = DB::table('joiner_bookings')->where('id', $id)->first();
+    if (!$booking) {
+        abort(404);
+    }
+
+    $newDownpayment = (float) ($booking->downpayment ?? 0) + (float) $pending['amount'];
+    $newBalance     = max(0, (float) $booking->total_price - $newDownpayment);
+    $newStatus      = $newBalance <= 0 ? 'fully_paid' : 'downpayment_paid';
+
+    DB::table('joiner_bookings')->where('id', $id)->update([
+        'downpayment'    => $newDownpayment,
+        'status'         => $newStatus,
+        'payment_method' => $paymentMethod,
+        'updated_at'     => now(),
+    ]);
+
+    session()->forget('pending_joiner_balance_checkout');
+
+    return redirect("/joiner-receipt/{$id}")->with('success', 'Payment received! Thank you.');
+}
+
 public function showReceipt($id)
 {
     $booking = DB::table('joiner_bookings')

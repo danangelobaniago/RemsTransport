@@ -253,6 +253,8 @@ Route::get('/admin/drivers/toggle/{id}', [AdminController::class, 'toggleDriverS
 Route::get('/my-bookings', [BookingController::class, 'showMyBookings'])->middleware('auth');
 Route::get('/joiner/payment-success/{payment_id}', [JoinerTripController::class, 'paymentSuccess']);
 Route::get('/joiner-receipt/{id}', [JoinerTripController::class, 'showReceipt'])->name('joiner.receipt');
+Route::post('/joiner-booking/{id}/pay-balance', [JoinerTripController::class, 'payBalanceCheckout']);
+Route::get('/joiner-booking/{id}/pay-balance/success', [JoinerTripController::class, 'payBalanceSuccess']);
 Route::post('/admin/joiner-trips/{id}/complete', [JoinerTripController::class, 'completeTrip'])->name('admin.joiner.complete');
 Route::post('/admin/joiner-trips/{id}/approve', [AdminController::class, 'approveJoinerTrip'])->name('admin.joiner.approve');
 Route::post('/admin/joiner-trips/{id}/reject', [AdminController::class, 'rejectJoinerTrip'])->name('admin.joiner.reject');
