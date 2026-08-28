@@ -15,8 +15,9 @@
 
 <div class="card">
 
-    <form action="/admin/pricing/update" method="POST">
+    <form action="/admin/pricing/update" method="POST" id="pricing-form">
         @csrf
+        <input type="hidden" name="reason" id="pricing-reason">
 
         <div class="form-grid">
 
@@ -52,11 +53,6 @@
 
         </div>
 
-        <div class="form-group">
-            <label>Reason for change</label>
-            <textarea name="reason" rows="2" placeholder="Bakit nagbabago ang pricing na ito?" required>{{ old('reason') }}</textarea>
-        </div>
-
         <div class="form-actions">
             <button type="submit" class="btn-save">
                  Save Changes
@@ -66,5 +62,25 @@
     </form>
 
 </div>
+
+<script>
+document.getElementById('pricing-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+
+    const reason = prompt('Please provide a reason for this price change:');
+
+    if (reason === null) {
+        return;
+    }
+
+    if (reason.trim() === '') {
+        alert('A reason is required to save this price change.');
+        return;
+    }
+
+    document.getElementById('pricing-reason').value = reason.trim();
+    this.submit();
+});
+</script>
 
 @endsection
