@@ -31,6 +31,7 @@
         <a href="/admin/joiner-trips">Joiner Trips</a>
         <a href="/admin/pricing">Pricing</a>
         <a href="/admin/reports">Reports</a>
+        <a href="/admin/live-map">Live Map</a>
         <a href="#" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
         Logout
     </a>

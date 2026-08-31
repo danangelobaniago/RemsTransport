@@ -147,6 +147,27 @@ class DriverController extends Controller
         return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages'));
     }
 
+    public function updateLocation(Request $request)
+    {
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        $driver = DB::table('drivers')->where('user_id', Auth::id())->first();
+        if (!$driver) {
+            return response()->json(['error' => 'No driver record linked to your account.'], 404);
+        }
+
+        DB::table('drivers')->where('id', $driver->id)->update([
+            'current_lat'         => $request->lat,
+            'current_lng'         => $request->lng,
+            'location_updated_at' => now(),
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
     public function joinerTripManifest($id)
     {
         $driver = DB::table('drivers')->where('user_id', Auth::id())->first();

@@ -77,6 +77,7 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
     Route::get('/driver/tour-packages/{id}', [DriverController::class, 'tourPackageManifest'])->name('driver.tour.manifest');
     Route::post('/driver/tour-packages/{id}/status', [DriverController::class, 'updateTourPackageStatus'])->name('driver.tour.status');
     Route::post('/driver/tour-packages/{id}/collect/{bookingId}', [DriverController::class, 'collectTourBookingPayment'])->name('driver.tour.collect');
+    Route::post('/driver/update-location', [DriverController::class, 'updateLocation'])->name('driver.update_location');
 });
 
 
@@ -144,6 +145,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
             ->get();
         return view('admin.drivers', compact('drivers'));
     })->name('admin.drivers');
+    Route::get('/admin/live-map', [AdminController::class, 'liveMap'])->name('admin.live_map');
+    Route::get('/admin/drivers/locations', [AdminController::class, 'driverLocations'])->name('admin.drivers.locations');
     Route::get('/admin/drivers/{id}/schedule', [AdminController::class, 'driverSchedule'])->name('admin.drivers.schedule');
     Route::get('/admin/drivers/edit/{id}', [AdminController::class, 'editDriver'])->name('admin.drivers.edit');
     Route::post('/admin/drivers/update/{id}', [AdminController::class, 'updateDriver'])->name('admin.drivers.update');

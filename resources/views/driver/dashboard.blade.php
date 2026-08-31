@@ -287,6 +287,7 @@
     <div class="brand"><i class="fas fa-van-shuttle"></i> Rem's Transport — Driver Portal</div>
     <div class="nav-right">
         <div class="driver-badge"><span class="dot-green"></span> <strong style="color:#f1f5f9;">{{ $driver->name }}</strong></div>
+        <div class="driver-badge" id="locationStatus"><i class="fas fa-location-crosshairs" style="color:#94a3b8;"></i> Location: Off</div>
         <form id="logout-form" action="/logout" method="POST" style="display:none;">@csrf</form>
         <button class="logout-btn" onclick="document.getElementById('logout-form').submit();">
             <i class="fas fa-sign-out-alt"></i> Logout
@@ -847,6 +848,52 @@ function collectPayment(bookingId, balFmt) {
 }
 
 init();
+
+// ── LIVE LOCATION SHARING ──
+// Shares this driver's position with the admin dashboard while this tab stays open.
+// Sends at most once every 15 seconds, even if the browser reports position more often.
+const LOCATION_SEND_INTERVAL_MS = 15000;
+let lastLocationSendAt = 0;
+
+function setLocationStatus(text, color) {
+    const el = document.getElementById('locationStatus');
+    el.innerHTML = `<i class="fas fa-location-crosshairs" style="color:${color};"></i> Location: ${text}`;
+}
+
+function sendLocation(position) {
+    const now = Date.now();
+    if (now - lastLocationSendAt < LOCATION_SEND_INTERVAL_MS) return;
+    lastLocationSendAt = now;
+
+    fetch("{{ route('driver.update_location') }}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+                || document.querySelector('input[name="_token"]').value,
+        },
+        body: JSON.stringify({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+        }),
+    }).then(r => {
+        if (r.ok) {
+            setLocationStatus('Sharing', '#4ade80');
+        } else {
+            setLocationStatus('Error', '#ef4444');
+        }
+    }).catch(() => setLocationStatus('Error', '#ef4444'));
+}
+
+if ('geolocation' in navigator) {
+    navigator.geolocation.watchPosition(
+        sendLocation,
+        (err) => setLocationStatus('Denied', '#ef4444'),
+        { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }
+    );
+} else {
+    setLocationStatus('Unsupported', '#ef4444');
+}
 
 // ── SECTION COLLAPSE TOGGLE ──
 const sectionState = {};

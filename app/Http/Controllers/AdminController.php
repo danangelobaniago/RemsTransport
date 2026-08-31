@@ -241,6 +241,23 @@ class AdminController extends Controller
         return back()->with('success', 'Pricing updated successfully!');
     }
 
+    // ✅ LIVE DRIVER MAP
+    public function liveMap()
+    {
+        return view('admin.live-map');
+    }
+
+    public function driverLocations()
+    {
+        $drivers = DB::table('drivers')
+            ->whereNotNull('current_lat')
+            ->whereNotNull('current_lng')
+            ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_updated_at')
+            ->get();
+
+        return response()->json(['drivers' => $drivers]);
+    }
+
     // ✅ TOGGLE DRIVER STATUS
     public function toggleDriver($id)
     {
