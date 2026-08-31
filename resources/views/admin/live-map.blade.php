@@ -119,24 +119,33 @@ function fetchLocations() {
         .catch(() => {});
 }
 
+function tripSummary(trip) {
+    if (!trip) return 'No active trip';
+    const who = trip.customer ? ` &bull; ${trip.customer}` : '';
+    return `${trip.type}: ${trip.destination}${who}`;
+}
+
 function renderDrivers(drivers) {
     const seenIds = new Set();
     const listBody = document.getElementById('driverListBody');
+    driverById = {};
 
     if (drivers.length === 0) {
         listBody.innerHTML = '<div class="empty-list">No drivers are currently sharing their location.</div>';
     } else {
         listBody.innerHTML = drivers.map(d => {
             const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
-            return `<div class="driver-list-item" onclick="panTo(${d.current_lat}, ${d.current_lng})">
+            return `<div class="driver-list-item" onclick="showDriver(${d.id})">
                 <div class="driver-list-name"><span class="dot ${isStale ? 'dot-stale' : 'dot-live'}"></span>${d.name}</div>
                 <div class="driver-list-meta">Updated ${timeAgo(d.location_updated_at)} &bull; ${d.status}</div>
+                <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
             </div>`;
         }).join('');
     }
 
     drivers.forEach(d => {
         seenIds.add(d.id);
+        driverById[d.id] = d;
         const pos = { lat: parseFloat(d.current_lat), lng: parseFloat(d.current_lng) };
         const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
 
@@ -158,7 +167,7 @@ function renderDrivers(drivers) {
                     strokeWeight: 2,
                 },
             });
-            markers[d.id].addListener('click', () => panTo(pos.lat, pos.lng));
+            markers[d.id].addListener('click', () => showDriver(d.id));
         }
     });
 
@@ -169,6 +178,26 @@ function renderDrivers(drivers) {
             delete markers[id];
         }
     });
+}
+
+let driverById = {};
+let infoWindow;
+
+function showDriver(id) {
+    const d = driverById[id];
+    if (!d || !markers[id]) return;
+
+    panTo(parseFloat(d.current_lat), parseFloat(d.current_lng));
+
+    if (!infoWindow) infoWindow = new google.maps.InfoWindow();
+    infoWindow.setContent(`
+        <div style="font-size:13px;min-width:180px;">
+            <div style="font-weight:700;margin-bottom:4px;">${d.name}</div>
+            <div style="color:#64748b;margin-bottom:2px;">${tripSummary(d.current_trip)}</div>
+            <div style="color:#94a3b8;font-size:11px;">Updated ${timeAgo(d.location_updated_at)}</div>
+        </div>
+    `);
+    infoWindow.open(map, markers[id]);
 }
 
 function panTo(lat, lng) {

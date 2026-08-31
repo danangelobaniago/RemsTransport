@@ -253,9 +253,68 @@ class AdminController extends Controller
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
             ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_updated_at')
-            ->get();
+            ->get()
+            ->map(function ($driver) {
+                $driver->current_trip = $this->currentTripForDriver($driver);
+                return $driver;
+            });
 
         return response()->json(['drivers' => $drivers]);
+    }
+
+    // Finds the trip a driver is actively out on right now (arrived/in transit),
+    // across the three booking types, so the live map can show what they're doing.
+    private function currentTripForDriver($driver)
+    {
+        $activeStatuses = ['arrived', 'in_progress'];
+
+        $rental = DB::table('bookings')
+            ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
+            ->where('bookings.driver', $driver->id)
+            ->whereIn('bookings.trip_status', $activeStatuses)
+            ->select('bookings.destination', 'bookings.trip_status', 'users.first_name', 'users.last_name')
+            ->first();
+
+        if ($rental) {
+            return [
+                'type'        => 'Van Booking',
+                'destination' => $rental->destination,
+                'customer'    => trim(($rental->first_name ?? '') . ' ' . ($rental->last_name ?? '')),
+                'status'      => $rental->trip_status,
+            ];
+        }
+
+        $joiner = DB::table('joiner_trips')
+            ->where('driver_name', $driver->name)
+            ->whereIn('trip_status', $activeStatuses)
+            ->select('destination', 'trip_status')
+            ->first();
+
+        if ($joiner) {
+            return [
+                'type'        => 'Joiner Trip',
+                'destination' => $joiner->destination,
+                'customer'    => null,
+                'status'      => $joiner->trip_status,
+            ];
+        }
+
+        $tour = DB::table('tour_packages')
+            ->where('driver_name', $driver->name)
+            ->whereIn('trip_status', $activeStatuses)
+            ->select('destination', 'trip_status')
+            ->first();
+
+        if ($tour) {
+            return [
+                'type'        => 'Tour Package',
+                'destination' => $tour->destination,
+                'customer'    => null,
+                'status'      => $tour->trip_status,
+            ];
+        }
+
+        return null;
     }
 
     // ✅ TOGGLE DRIVER STATUS
