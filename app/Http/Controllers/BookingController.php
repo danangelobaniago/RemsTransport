@@ -39,13 +39,15 @@ class BookingController extends Controller
             ->whereNotIn('status', ['cancelled', 'rejected'])
             ->pluck('driver_name');
 
-        // 3. Driver names busy in tour packages on overlapping dates
-        $busyTourNames = DB::table('tour_packages')
-            ->where('tour_date', '<=', $end)
-            ->where(function ($q) use ($start) {
-                $q->whereNull('end_date')->orWhere('end_date', '>=', $start);
-            })
-            ->pluck('driver_name');
+        // 3. Driver names busy in actual tour package bookings on overlapping dates
+        //    (not the package's whole bookable range — that's just what customers may
+        //    pick from, not a standing reservation until someone actually books it)
+        $busyTourNames = DB::table('bookings')
+            ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+            ->where('bookings.start_date', '<=', $end)
+            ->where('bookings.end_date', '>=', $start)
+            ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
+            ->pluck('tour_packages.driver_name');
 
         // Map names → IDs and merge all busy drivers
         $allBusyNames  = $busyJoinerNames->merge($busyTourNames)->filter()->unique();
@@ -88,11 +90,14 @@ class BookingController extends Controller
                 ->get(['trip_date', 'end_date'])
                 ->each(fn($t) => $expand($t->trip_date, $t->end_date ?? $t->trip_date));
 
-            // 3. Tour packages using the same van plate
-            DB::table('tour_packages')
-                ->where('plate_number', $van->plate_number)
-                ->get(['tour_date', 'end_date'])
-                ->each(fn($t) => $expand($t->tour_date, $t->end_date ?? $t->tour_date));
+            // 3. Actual customer bookings for tour packages using the same van plate
+            //    (not the package's whole bookable range)
+            DB::table('bookings')
+                ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+                ->where('tour_packages.plate_number', $van->plate_number)
+                ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
+                ->get(['bookings.start_date', 'bookings.end_date'])
+                ->each(fn($b) => $expand($b->start_date, $b->end_date));
         }
 
         return response()->json(array_values(array_unique($dates)));
