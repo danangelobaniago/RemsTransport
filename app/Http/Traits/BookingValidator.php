@@ -32,13 +32,17 @@ trait BookingValidator
 
         if ($conflictJoiner) return false;
 
-        // Check tour_packages — date range (tour_date to end_date)
-        $conflictTours = DB::table('tour_packages')
-            ->where('tour_date', '<=', $date)
-            ->where('end_date', '>=', $date)
+        // Check tour packages — but only against dates customers have actually booked,
+        // not the package's whole bookable range (that range just bounds what a customer
+        // is ALLOWED to pick; it isn't a real reservation until someone picks a date).
+        $conflictTours = DB::table('bookings')
+            ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+            ->where('bookings.start_date', '<=', $date)
+            ->where('bookings.end_date', '>=', $date)
+            ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
             ->where(function ($q) use ($vanName, $driverName) {
-                $q->where('van', $vanName)
-                  ->orWhere('driver_name', $driverName);
+                $q->where('tour_packages.van', $vanName)
+                  ->orWhere('tour_packages.driver_name', $driverName);
             })
             ->exists();
 
