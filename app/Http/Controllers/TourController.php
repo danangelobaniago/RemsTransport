@@ -190,12 +190,12 @@ class TourController extends Controller
         ],
         'preferred_end'  => 'required|date',
         'payment_type'   => 'required|in:downpayment,full',
+        'amount_to_pay'  => 'nullable|numeric|min:0',
         'first_name'     => 'required|array',
         'first_name.*'   => 'required|string|max:255',
         'last_name.*'    => 'required|string|max:255',
         'birthday.*'     => 'required|date|before_or_equal:today',
         'gender.*'       => 'required|in:Male,Female',
-        'terms_agree'    => 'accepted',
     ]);
 
     if (count($request->first_name) > $tour->max_passengers) {
@@ -227,7 +227,16 @@ class TourController extends Controller
 
     // 1. DYNAMIC CALCULATION BASED ON SELECTION
     $isFullPayment = $request->payment_type === 'full';
-    $amountToPay = $isFullPayment ? $tour->price : ($tour->price * 0.20);
+    $minDownpayment = $tour->price * 0.20;
+
+    if ($isFullPayment) {
+        $amountToPay = $tour->price;
+    } else {
+        // Respect the customer's chosen downpayment amount, but never let it fall
+        // below the required 20% minimum or exceed the total price.
+        $amountToPay = max($minDownpayment, min((float) $request->input('amount_to_pay', $minDownpayment), $tour->price));
+    }
+
     $amountInCents = (int)($amountToPay * 100);
 
     // Start Transaction
@@ -245,7 +254,7 @@ class TourController extends Controller
             'end_date'          => $preferredEnd->format('Y-m-d'),
             'passengers'        => count($request->first_name),
             'total'             => $tour->price,
-            'downpayment'       => $isFullPayment ? $tour->price : ($tour->price * 0.20),
+            'downpayment'       => $amountToPay,
             'status'            => 'pending',
             'payment_status'    => 'pending',
             'booking_type'      => 'tour',

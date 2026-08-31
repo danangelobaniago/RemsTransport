@@ -754,7 +754,10 @@ function buildBookingCard(b) {
     const balText  = b.balance <= 0 ? '✓ Paid' : '₱' + b.balance.toLocaleString('en-PH', {minimumFractionDigits:2});
 
     let actionBtn = '';
-    const isActive = !['pending','rejected','cancelled'].includes(b.status.toLowerCase());
+    // Tour trip status is tracked per tour package (via its own manifest page), not per
+    // individual customer booking, so the calendar card just links there instead of
+    // showing arrived/in-progress/complete controls that don't apply at this level.
+    const isActive = b.type !== 'tour' && !['pending','rejected','cancelled'].includes(b.status.toLowerCase());
 
     if (isActive) {
         const todayStr = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD in local time
@@ -786,7 +789,7 @@ function buildBookingCard(b) {
     const cardColor = b.type === 'joiner' ? '#7c3aed' : b.type === 'tour' ? '#0891b2' : '#2563eb';
     const manifestHref = b.type === 'rental' ? `/driver/bookings/${b.id}/manifest`
         : b.type === 'joiner' ? `/driver/joiner-trips/${String(b.id).replace('j','')}`
-        : `/driver/tour-packages/${String(b.id).replace('t','')}`;
+        : `/driver/tour-packages/${b.tour_package_id}`;
 
     return `
     <div class="bcard" style="border-left:4px solid ${cardColor};">

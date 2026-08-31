@@ -121,26 +121,51 @@ class DriverController extends Controller
             ];
         })->values();
 
-        $tourForJs = $tourPackages->map(function ($t) {
-            return [
-                'id'          => 't' . $t->id,
-                'ref'         => strtoupper($t->name),
-                'customer'    => $t->passenger_count . ' passengers',
-                'contact'     => '',
-                'pickup'      => $t->pickup_point,
-                'destination' => $t->destination,
-                'start_date'  => $t->tour_date,
-                'end_date'    => $t->end_date ?? $t->tour_date,
-                'status'      => 'active',
-                'trip_status' => $t->trip_status ?? 'not_started',
-                'total'       => 0,
-                'amount_paid' => 0,
-                'balance'     => 0,
-                'van'         => $t->van,
-                'plate'       => $t->plate_number,
-                'type'        => 'tour',
-            ];
-        })->values();
+        // Tour packages have a bookable DATE RANGE (customers each pick their own date
+        // within it), so the calendar must only mark the specific dates that customers
+        // actually booked — not the whole range — otherwise the driver looks booked solid
+        // even with zero customers. Pull the real per-customer bookings instead.
+        $tourForJs = DB::table('bookings')
+            ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+            ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
+            ->where('tour_packages.driver_name', $driver->name)
+            ->whereNotIn('bookings.status', ['cancelled', 'rejected'])
+            ->select(
+                'bookings.id',
+                'bookings.start_date',
+                'bookings.end_date',
+                'bookings.status',
+                'tour_packages.id as tour_package_id',
+                'tour_packages.name as tour_name',
+                'tour_packages.destination',
+                'tour_packages.pickup_point',
+                'tour_packages.van',
+                'tour_packages.plate_number',
+                'users.first_name',
+                'users.last_name'
+            )
+            ->get()
+            ->map(function ($b) {
+                return [
+                    'id'              => 't' . $b->id,
+                    'ref'             => strtoupper($b->tour_name),
+                    'customer'        => trim(($b->first_name ?? '') . ' ' . ($b->last_name ?? '')) ?: 'N/A',
+                    'contact'         => '',
+                    'pickup'          => $b->pickup_point,
+                    'destination'     => $b->destination,
+                    'start_date'      => $b->start_date,
+                    'end_date'        => $b->end_date ?? $b->start_date,
+                    'status'          => $b->status,
+                    'trip_status'     => 'not_started',
+                    'total'           => 0,
+                    'amount_paid'     => 0,
+                    'balance'         => 0,
+                    'van'             => $b->van,
+                    'plate'           => $b->plate_number,
+                    'type'            => 'tour',
+                    'tour_package_id' => $b->tour_package_id,
+                ];
+            })->values();
 
         $bookingsForJs = $bookingsForJs->concat($joinerForJs)->concat($tourForJs)->values();
 
