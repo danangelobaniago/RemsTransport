@@ -1425,6 +1425,7 @@ section h2,
     padding: 30px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+    scroll-snap-align: center;
 }
 
 /* Floating Side Controls */
@@ -1730,6 +1731,25 @@ section h2,
         font-size: 10px !important;
         letter-spacing: 1.5px !important;
         padding: 6px 14px !important;
+    }
+
+    /* Feedback slider: no room for floating arrow buttons on mobile —
+       swiping via overflow-x already works, so just size cards to fit. */
+    .slider-relative-wrapper {
+        padding: 0 16px !important;
+    }
+    .side-control {
+        display: none !important;
+    }
+    .feedback-slider-container {
+        gap: 16px !important;
+        padding: 16px 0 !important;
+    }
+    .feedback-item {
+        width: 82vw !important;
+        max-width: 320px !important;
+        margin: 0 !important;
+        padding: 22px !important;
     }
 
     .hero-btn {
