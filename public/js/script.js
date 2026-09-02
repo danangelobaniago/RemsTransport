@@ -31,40 +31,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     const slider = document.getElementById('feedbackSlider');
-    let autoScrollInterval;
 
-    function startAutoScroll() {
-        autoScrollInterval = setInterval(() => {
-            const card = document.querySelector('.feedback-item');
-            if (!card) return;
+    if (slider) {
+        let autoScrollInterval;
+        let resumeTimeout;
 
-            const scrollAmount = card.offsetWidth + 24;
+        function cardStep() {
+            const card = slider.querySelector('.feedback-item');
+            if (!card) return 0;
+            const gap = parseFloat(getComputedStyle(slider).columnGap || getComputedStyle(slider).gap) || 0;
+            return card.offsetWidth + gap;
+        }
 
-            // If at the end, loop back
-            if (slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 10) {
-                slider.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-            }
-        }, 5000); // 5 seconds
+        function startAutoScroll() {
+            clearInterval(autoScrollInterval); // Never stack multiple intervals
+            autoScrollInterval = setInterval(() => {
+                const scrollAmount = cardStep();
+                if (!scrollAmount) return;
+
+                // If at the end, loop back
+                if (slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 10) {
+                    slider.scrollTo({ left: 0, behavior: 'smooth' });
+                } else {
+                    slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+                }
+            }, 5000); // 5 seconds
+        }
+
+        function pauseAutoScroll() {
+            clearInterval(autoScrollInterval);
+            clearTimeout(resumeTimeout);
+        }
+
+        // Pause while the visitor is actually interacting, then resume shortly after.
+        // mouseenter/mouseleave alone don't reliably fire on touch devices, so we
+        // also pause on touchstart and resume a moment after touchend.
+        function pauseThenResume() {
+            pauseAutoScroll();
+            resumeTimeout = setTimeout(startAutoScroll, 4000);
+        }
+
+        function manualScroll(direction) {
+            pauseAutoScroll();
+            slider.scrollBy({ left: direction * cardStep(), behavior: 'smooth' });
+            resumeTimeout = setTimeout(startAutoScroll, 4000);
+        }
+        window.manualScroll = manualScroll;
+
+        slider.addEventListener('mouseenter', pauseAutoScroll);
+        slider.addEventListener('mouseleave', startAutoScroll);
+        slider.addEventListener('touchstart', pauseAutoScroll, { passive: true });
+        slider.addEventListener('touchend', pauseThenResume, { passive: true });
+
+        startAutoScroll();
     }
-
-    function manualScroll(direction) {
-        clearInterval(autoScrollInterval); // Stop auto when user clicks
-        const card = document.querySelector('.feedback-item');
-        const scrollAmount = card.offsetWidth + 24;
-
-        slider.scrollBy({ left: direction * scrollAmount, behavior: 'smooth' });
-
-        startAutoScroll(); // Restart auto scroll
-    }
-
-    // Stop scrolling on hover
-    slider.addEventListener('mouseenter', () => clearInterval(autoScrollInterval));
-    slider.addEventListener('mouseleave', startAutoScroll);
-
-    // Initial Start
-    window.onload = startAutoScroll;
 // FAQ Accordion
 function toggleFaq(btn) {
     const item = btn.parentElement;
