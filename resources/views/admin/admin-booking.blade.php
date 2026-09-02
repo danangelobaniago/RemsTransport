@@ -23,7 +23,23 @@
         .ts-at-pickup  { background: #cffafe; color: #0e7490; }
         .ts-ongoing    { background: #ffedd5; color: #c2410c; }
         .ts-remitted   { background: #d1fae5; color: #065f46; }
-        .btn-remitted  { background: #059669; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 700; }
+        /* Compact icon-only action buttons */
+        .actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        .icon-btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 28px; height: 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; flex-shrink: 0;
+        }
+        .icon-btn-approve     { background: #10b981; color: white; }
+        .icon-btn-approve:hover     { background: #059669; }
+        .icon-btn-reject       { background: #ef4444; color: white; }
+        .icon-btn-reject:hover       { background: #dc2626; }
+        .icon-btn-reschedule   { background: #ede9fe; color: #6d28d9; }
+        .icon-btn-reschedule:hover   { background: #ddd6fe; }
+        .icon-btn-info         { background: #f3f4f6; color: #4b5563; }
+        .icon-btn-info:hover         { background: #e5e7eb; }
+        .icon-btn-remit        { background: #059669; color: white; }
+        .icon-btn-remit:hover        { background: #047857; }
+        .status-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; font-size: 12px; flex-shrink: 0; }
     </style>
 </head>
 
@@ -195,21 +211,19 @@
                             <td>
                                 <div class="actions">
                                     @if($statusClean == 'cancelled')
-                                        <span style="color: #ef4444; font-weight: bold; font-size: 11px;">VOIDED</span>
+                                        <span class="status-icon" style="background:#fee2e2;color:#ef4444;" title="Voided"><i class="fas fa-ban"></i></span>
 
                                     @elseif($statusClean == 'completed')
-                                        <span style="color: #10b981; font-weight: bold; font-size: 11px;">✓ SETTLED</span>
+                                        <span class="status-icon" style="background:#dcfce7;color:#10b981;" title="Settled"><i class="fas fa-check-double"></i></span>
 
                                     @elseif(in_array($statusClean, ['pending', 'downpayment_paid', 'fully_paid']))
-                                        <div style="display:flex; gap:5px;">
-                                            <form method="POST" action="{{ route('admin.updateStatus') }}">
-                                                @csrf
-                                                <input type="hidden" name="booking_id" value="{{ $booking->id }}">
-                                                <input type="hidden" name="status" value="approved">
-                                                <button class="btn btn-approve" style="background:#10b981; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">Approve</button>
-                                            </form>
-                                            <button type="button" class="btn btn-reject" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;" onclick="openRejectModal({{ $booking->id }})">Reject</button>
-                                        </div>
+                                        <form method="POST" action="{{ route('admin.updateStatus') }}">
+                                            @csrf
+                                            <input type="hidden" name="booking_id" value="{{ $booking->id }}">
+                                            <input type="hidden" name="status" value="approved">
+                                            <button type="submit" class="icon-btn icon-btn-approve" title="Approve"><i class="fas fa-check"></i></button>
+                                        </form>
+                                        <button type="button" class="icon-btn icon-btn-reject" title="Reject" onclick="openRejectModal({{ $booking->id }})"><i class="fas fa-xmark"></i></button>
 
                                     @elseif($statusClean == 'approved')
                                         @if($tripStatus === 'completed')
@@ -218,44 +232,41 @@
                                                 @csrf
                                                 <input type="hidden" name="booking_id" value="{{ $booking->id }}">
                                                 <input type="hidden" name="status" value="completed">
-                                                <button type="submit" class="btn-remitted"
+                                                <button type="submit" class="icon-btn icon-btn-remit" title="Confirm Remittance"
                                                     onclick="return confirm('Confirm: Driver has remitted payment successfully?')">
-                                                    <i class="fas fa-check-circle"></i> Confirm Remittance
+                                                    <i class="fas fa-hand-holding-dollar"></i>
                                                 </button>
                                             </form>
                                         @elseif($tripStatus === 'in_progress')
-                                            <span style="color:#c2410c; font-size:11px; font-weight:700;"><i class="fas fa-route"></i> Trip Ongoing</span>
+                                            <span class="status-icon" style="background:#ffedd5;color:#c2410c;" title="Trip Ongoing"><i class="fas fa-route"></i></span>
                                         @elseif($tripStatus === 'arrived')
-                                            <span style="color:#0e7490; font-size:11px; font-weight:700;"><i class="fas fa-map-marker-alt"></i> Driver at Pickup</span>
+                                            <span class="status-icon" style="background:#cffafe;color:#0e7490;" title="Driver at Pickup"><i class="fas fa-map-marker-alt"></i></span>
                                         @elseif($isTour)
                                             {{-- Tour: driver controls trip start, admin cannot manually complete --}}
-                                            <span style="color:#64748b; font-size:11px; font-weight:700;"><i class="fas fa-clock"></i> Awaiting Trip Start</span>
+                                            <span class="status-icon" style="background:#f1f5f9;color:#64748b;" title="Awaiting Trip Start"><i class="fas fa-clock"></i></span>
                                         @else
-                                            <span style="color:#64748b; font-size:11px; font-weight:700;"><i class="fas fa-clock"></i> Awaiting Trip</span>
+                                            <span class="status-icon" style="background:#f1f5f9;color:#64748b;" title="Awaiting Trip"><i class="fas fa-clock"></i></span>
                                         @endif
 
                                     @elseif($statusClean == 'rejected')
                                         @if(!empty($booking->rejection_reason))
                                             <button type="button" onclick="showReasonModal(this)" data-booking-id="{{ $booking->id }}" data-reason="{{ $booking->rejection_reason }}"
-                                                style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:4px 10px; border-radius:6px; font-size:11px; font-weight:700; cursor:pointer;">
-                                                <i class="fas fa-circle-info"></i> Reason
+                                                class="icon-btn icon-btn-info" title="View Rejection Reason">
+                                                <i class="fas fa-circle-info"></i>
                                             </button>
                                         @else
-                                            <span style="color:#9ca3af; font-size:11px;">No reason provided</span>
+                                            <span class="status-icon" style="background:#f1f5f9;color:#9ca3af;" title="No reason provided"><i class="fas fa-circle-info"></i></span>
                                         @endif
 
                                     @else
-                                        <span class="text-muted" style="font-size:11px;">Processing</span>
+                                        <span class="status-icon" style="background:#f1f5f9;color:#9ca3af;" title="Processing"><i class="fas fa-ellipsis"></i></span>
                                     @endif
 
                                     @if(!in_array($statusClean, ['cancelled', 'rejected', 'completed']))
-                                        <div style="margin-top:6px;">
-                                            <button type="button"
-                                                onclick="openAdminRescheduleModal({{ $booking->id }}, {{ $booking->van_id ?? 'null' }})"
-                                                style="background:#ede9fe;color:#6d28d9;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">
-                                                <i class="fas fa-calendar-days"></i> Reschedule
-                                            </button>
-                                        </div>
+                                        <button type="button" class="icon-btn icon-btn-reschedule" title="Reschedule"
+                                            onclick="openAdminRescheduleModal({{ $booking->id }}, {{ $booking->van_id ?? 'null' }})">
+                                            <i class="fas fa-calendar-days"></i>
+                                        </button>
                                     @endif
                                 </div>
                             </td>
