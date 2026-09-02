@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use App\Models\User;
 use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
@@ -239,6 +241,73 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Pricing updated successfully!');
+    }
+
+    // ✅ WALK-IN BOOKING (admin books on behalf of a customer)
+    public function bookForCustomerPage(Request $request)
+    {
+        $search = $request->get('search');
+
+        $customers = DB::table('users')
+            ->where('role', 'customer')
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($q2) use ($search) {
+                    $q2->where('first_name', 'like', "%{$search}%")
+                       ->orWhere('last_name', 'like', "%{$search}%")
+                       ->orWhere('email', 'like', "%{$search}%")
+                       ->orWhere('phone_number', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('first_name')
+            ->limit(50)
+            ->get();
+
+        $actingAs = null;
+        if ($id = session('admin_acting_customer_id')) {
+            $actingAs = DB::table('users')->find($id);
+        }
+
+        return view('admin.book-for-customer', compact('customers', 'search', 'actingAs'));
+    }
+
+    public function selectBookingCustomer(Request $request)
+    {
+        $request->validate(['customer_id' => 'required|exists:users,id']);
+
+        session(['admin_acting_customer_id' => (int) $request->customer_id]);
+
+        return redirect('/')->with('success', 'You are now booking on behalf of this customer. Go through checkout as normal, then return to Admin > New Booking when done.');
+    }
+
+    public function createBookingCustomer(Request $request)
+    {
+        $request->validate([
+            'first_name'   => ['required', 'string', 'max:255'],
+            'last_name'    => ['required', 'string', 'max:255'],
+            'email'        => ['required', 'email', 'unique:users,email'],
+            'phone_number' => ['required', 'regex:/^09\d{9}$/', 'unique:users,phone_number'],
+        ]);
+
+        $userId = DB::table('users')->insertGetId([
+            'first_name'   => $request->first_name,
+            'last_name'    => $request->last_name,
+            'email'        => $request->email,
+            'phone_number' => $request->phone_number,
+            'password'     => Hash::make(Str::random(24)),
+            'role'         => 'customer',
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ]);
+
+        session(['admin_acting_customer_id' => $userId]);
+
+        return redirect('/')->with('success', 'New customer created. You are now booking on their behalf — go through checkout as normal, then return to Admin > New Booking when done.');
+    }
+
+    public function stopBookingForCustomer()
+    {
+        session()->forget('admin_acting_customer_id');
+        return redirect()->route('admin.book_for_customer')->with('success', 'Exited walk-in booking mode.');
     }
 
     // ✅ LIVE DRIVER MAP

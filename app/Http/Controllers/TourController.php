@@ -239,13 +239,18 @@ class TourController extends Controller
 
     $amountInCents = (int)($amountToPay * 100);
 
+    // If an admin is booking this on behalf of a walk-in customer, attribute
+    // the booking to that customer instead of the logged-in admin.
+    $actingCustomerId = session('admin_acting_customer_id');
+    $bookingUserId = $actingCustomerId ?? Auth::id();
+
     // Start Transaction
     DB::beginTransaction();
 
     try {
         // 2. Create the Main Booking
         $bookingId = DB::table('bookings')->insertGetId([
-            'user_id'           => Auth::id(),
+            'user_id'           => $bookingUserId,
             'tour_id'           => $tour->id,
             'package_name'      => $tour->name,
             'destination'       => $tour->name,
@@ -279,6 +284,10 @@ class TourController extends Controller
 
         DB::commit();
 
+        if ($actingCustomerId) {
+            session()->forget('admin_acting_customer_id');
+        }
+
         // 4. Initiate PayMongo Checkout with the dynamic amount
         $client = new Client();
         $response = $client->request('POST', 'https://api.paymongo.com/v1/checkout_sessions', [
@@ -297,6 +306,9 @@ class TourController extends Controller
                             ]
                         ],
                         'payment_method_types' => ['gcash', 'card'],
+                        // Always go through the my-bookings finalize step (it updates status
+                        // and emails the receipt); it redirects to Admin > Bookings afterward
+                        // if this was a walk-in booking made on behalf of a customer.
                         'success_url' => url('/my-bookings?payment=success&booking_id=' . $bookingId),
                         'cancel_url'  => url('/bookings/tour/' . $tour->id),
                         'description' => 'Booking ID: #' . $bookingId . ' - ' . $tour->name,
@@ -338,8 +350,11 @@ public function showMyBookings(Request $request)
         // Use the booking_id we embedded in the success URL for precision
         $bookingId = $request->query('booking_id');
 
+        // Looked up by id alone (not constrained to the current user) because an admin
+        // may have completed this checkout on behalf of a walk-in customer, whose id
+        // differs from the admin's own.
         $targetBooking = $bookingId
-            ? DB::table('bookings')->where('id', $bookingId)->where('user_id', $userId)->first()
+            ? DB::table('bookings')->where('id', $bookingId)->first()
             : DB::table('bookings')->where('user_id', $userId)->where('status', 'pending')->latest()->first();
 
         if ($targetBooking) {
@@ -382,7 +397,7 @@ public function showMyBookings(Request $request)
                 ]);
 
             try {
-                $user = DB::table('users')->find($userId);
+                $user = DB::table('users')->find($targetBooking->user_id);
                 if ($user && $user->email) {
                     $tourName = $targetBooking->package_name ?? $targetBooking->destination ?? 'Tour Package';
                     Mail::to($user->email)->send(new PaymentReceiptMail(
@@ -398,6 +413,14 @@ public function showMyBookings(Request $request)
                 }
             } catch (\Exception $e) {
                 \Log::error('Payment receipt email failed (tour): ' . $e->getMessage());
+            }
+
+            // If this booking belongs to someone other than the person completing
+            // checkout, an admin made it on behalf of a walk-in customer — send them
+            // back to the admin panel instead of showing "my bookings" for the admin.
+            if ((int) $targetBooking->user_id !== (int) $userId) {
+                $ownerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'the customer';
+                return redirect('/admin/bookings')->with('success', "Booking created for {$ownerName}.");
             }
         }
     }

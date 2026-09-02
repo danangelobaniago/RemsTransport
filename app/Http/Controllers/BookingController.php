@@ -291,8 +291,13 @@ $paid = (float) $formData['amount_to_pay']; // Use the actual amount paid
 $remaining = $total - $paid;
 $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_paid';
 
+        // If an admin is booking this on behalf of a walk-in customer, attribute
+        // the booking to that customer instead of the logged-in admin.
+        $actingCustomerId = session('admin_acting_customer_id');
+        $bookingUserId = $actingCustomerId ?? auth()->id();
+
         $bookingId = DB::table('bookings')->insertGetId([
-            'user_id' => auth()->id(),
+            'user_id' => $bookingUserId,
             'van_id' => $formData['van_id'],
             'pickup' => $formData['pickup'],
             'destination' => $formData['destination'],
@@ -335,7 +340,7 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
         $booking = DB::table('bookings')->find($bookingId);
 
         try {
-            $user = DB::table('users')->find(auth()->id());
+            $user = DB::table('users')->find($bookingUserId);
             if ($user && $user->email) {
                 Mail::to($user->email)->send(new PaymentReceiptMail(
                     trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
@@ -350,6 +355,11 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
             }
         } catch (\Exception $e) {
             \Log::error('Payment receipt email failed (van): ' . $e->getMessage());
+        }
+
+        if ($actingCustomerId) {
+            session()->forget('admin_acting_customer_id');
+            return redirect('/admin/bookings')->with('success', 'Booking created for ' . trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) . '.');
         }
 
         return view('payment-success', compact('booking', 'passengers'));

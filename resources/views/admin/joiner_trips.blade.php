@@ -77,6 +77,7 @@
             <a href="/admin/vans">Vans</a>
             <a href="/admin/tours">Tours</a>
             <a href="/admin/customers">Customers</a>
+            <a href="/admin/book-for-customer">New Booking</a>
             <a href="/admin/joiner-trips" class="active">Joiner Trips</a>
             <a href="/admin/pricing">Pricing</a>
             <a href="/admin/reports">Reports</a>

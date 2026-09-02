@@ -146,6 +146,10 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         return view('admin.drivers', compact('drivers'));
     })->name('admin.drivers');
     Route::get('/admin/live-map', [AdminController::class, 'liveMap'])->name('admin.live_map');
+    Route::get('/admin/book-for-customer', [AdminController::class, 'bookForCustomerPage'])->name('admin.book_for_customer');
+    Route::post('/admin/book-for-customer/select', [AdminController::class, 'selectBookingCustomer'])->name('admin.book_for_customer.select');
+    Route::post('/admin/book-for-customer/create', [AdminController::class, 'createBookingCustomer'])->name('admin.book_for_customer.create');
+    Route::post('/admin/book-for-customer/stop', [AdminController::class, 'stopBookingForCustomer'])->name('admin.book_for_customer.stop');
     Route::get('/admin/drivers/locations', [AdminController::class, 'driverLocations'])->name('admin.drivers.locations');
     Route::get('/admin/drivers/{id}/schedule', [AdminController::class, 'driverSchedule'])->name('admin.drivers.schedule');
     Route::get('/admin/drivers/edit/{id}', [AdminController::class, 'editDriver'])->name('admin.drivers.edit');

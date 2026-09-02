@@ -191,6 +191,10 @@ public function processBooking(Request $request, $id)
         $amountInCents = (int)($amountToCharge * 100);
         $reference = 'JOIN-' . time() . '-' . Auth::id();
 
+        // If an admin is booking this on behalf of a walk-in customer, attribute
+        // the booking to that customer instead of the logged-in admin.
+        $bookingUserId = session('admin_acting_customer_id') ?? Auth::id();
+
         // 4. CALL PAYMONGO
         $response = Http::withHeaders([
             'Content-Type' => 'application/json',
@@ -229,7 +233,7 @@ public function processBooking(Request $request, $id)
         try {
             // Insert Main Booking
             $bookingId = DB::table('joiner_bookings')->insertGetId([
-                'user_id'              => Auth::id(),
+                'user_id'              => $bookingUserId,
                 'joiner_trip_id'       => $id,
                 'passenger_name'       => $request->passenger_name[0],
                 'passenger_contact'    => $request->passenger_contact[0],
@@ -297,6 +301,15 @@ public function processBooking(Request $request, $id)
                 }
             } catch (\Exception $e) {
                 \Log::error('Payment receipt email failed (joiner): ' . $e->getMessage());
+            }
+
+            // If this booking belongs to someone other than the person completing
+            // checkout, an admin made it on behalf of a walk-in customer — send them
+            // back to the admin panel instead of the customer-facing my-bookings page.
+            if (session('admin_acting_customer_id') || (int) $booking->user_id !== (int) Auth::id()) {
+                session()->forget('admin_acting_customer_id');
+                $ownerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'the customer';
+                return redirect('/admin/joiner-trips')->with('success', "Booking created for {$ownerName}.");
             }
 
             return redirect('/my-bookings')->with('success', 'Payment successful! Your seats are reserved.');
