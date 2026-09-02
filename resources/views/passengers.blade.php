@@ -98,7 +98,12 @@
 }
         .form-row-4 { grid-template-columns: repeat(4, 1fr); }
         @media (max-width: 700px) { .form-row-4 { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .form-row, .form-row-4 { grid-template-columns: 1fr; } .amount-row { grid-template-columns: 1fr; text-align: center; } }
+        @media (max-width: 600px) {
+            .form-row, .form-row-4 { grid-template-columns: 1fr; }
+            .amount-row { grid-template-columns: 1fr; text-align: center; }
+            .payment-selection > label { display: block; margin-bottom: 12px; }
+            .payment-selection > label:last-of-type { margin-bottom: 0; }
+        }
     </style>
 </head>
 <body>
