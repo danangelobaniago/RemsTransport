@@ -308,6 +308,7 @@
             <div style="padding:20px 24px;">
                 <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">New Travel Date</label>
                 <input type="date" name="new_start_date" id="adminRescheduleDate" required
+                    min="{{ date('Y-m-d', strtotime('+1 day')) }}"
                     style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
 
                 <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Reason</label>
