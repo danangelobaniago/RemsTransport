@@ -101,6 +101,8 @@
         }
         .btn-pay-balance:hover { background: #b45309; }
 
+        .reschedule-note { text-align: right; margin: -20px 0 20px; font-size: 12px; color: var(--text-muted); }
+
         .alert-banner { padding: 12px 18px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .alert-banner.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-banner.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
@@ -125,6 +127,32 @@
         }
         .reschedule-modal-box .modal-foot { padding: 14px 24px; border-top: 1px solid var(--border-light); background: #f9fafb; display: flex; gap: 10px; justify-content: flex-end; }
 
+        @media (max-width: 640px) {
+            body { padding: 12px; }
+            .receipt-container { margin: 0 auto; padding: 20px; border-radius: 12px; }
+
+            .action-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+            .action-bar > div { flex-direction: column; }
+            .action-bar .btn { width: 100%; justify-content: center; }
+
+            .receipt-header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 24px; }
+
+            .reschedule-note { text-align: left; margin-top: 0; }
+
+            .info-grid { grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; padding-bottom: 24px; }
+
+            .manifest-section { overflow-x: auto; }
+
+            .payment-recap { justify-content: stretch; }
+            .recap-card { width: 100%; box-sizing: border-box; }
+
+            .method-options { flex-direction: column; }
+
+            .reschedule-modal-box .modal-body,
+            .reschedule-modal-box .modal-head,
+            .reschedule-modal-box .modal-foot { padding-left: 18px; padding-right: 18px; }
+        }
+
         @media print { .action-bar { display: none; } .pay-balance-card { display: none; } .receipt-container { box-shadow: none; margin: 0; border: 1px solid #eee; } }
     </style>
 </head>
@@ -146,7 +174,7 @@
     </div>
 
     @if(!$canReschedule && !in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && $daysUntilTrip >= 0)
-        <p style="text-align:right; margin:-20px 0 20px; font-size:12px; color:var(--text-muted);">
+        <p class="reschedule-note">
             <i class="fas fa-circle-info"></i> This trip is too close to reschedule online (must be more than 3 days out). Please contact us directly.
         </p>
     @endif
