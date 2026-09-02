@@ -6,13 +6,14 @@ use Illuminate\Support\Facades\DB;
 
 trait BookingValidator
 {
-    private function checkAvailability($vanName, $driverName, $date)
+    private function checkAvailability($vanName, $driverName, $date, $excludeBookingId = null)
     {
         // Check bookings — date range (start_date to end_date), skip rejected/cancelled/completed
         $conflictBookings = DB::table('bookings')
             ->where('start_date', '<=', $date)
             ->where('end_date', '>=', $date)
             ->whereNotIn('status', ['rejected', 'cancelled', 'completed'])
+            ->when($excludeBookingId, fn($q) => $q->where('id', '!=', $excludeBookingId))
             ->where(function ($q) use ($vanName, $driverName) {
                 $q->where('van', $vanName)
                   ->orWhere('driver', $driverName);

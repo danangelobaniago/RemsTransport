@@ -247,6 +247,16 @@
                                     @else
                                         <span class="text-muted" style="font-size:11px;">Processing</span>
                                     @endif
+
+                                    @if(!in_array($statusClean, ['cancelled', 'rejected', 'completed']))
+                                        <div style="margin-top:6px;">
+                                            <button type="button"
+                                                onclick="openAdminRescheduleModal({{ $booking->id }}, {{ $booking->van_id ?? 'null' }})"
+                                                style="background:#ede9fe;color:#6d28d9;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;font-size:11px;">
+                                                <i class="fas fa-calendar-days"></i> Reschedule
+                                            </button>
+                                        </div>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -286,6 +296,33 @@
     </div>
 </div>
 
+{{-- Reschedule Booking Modal --}}
+<div id="adminRescheduleModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:14px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">
+        <form method="POST" id="adminRescheduleForm">
+            @csrf
+            <div style="padding:20px 24px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="margin:0 0 2px; color:#111827; font-size:16px; font-weight:700;">Reschedule Booking</h3>
+                <p style="margin:0; color:#6b7280; font-size:13px;">Admins can reschedule anytime, as long as the van/driver is free on the new date.</p>
+            </div>
+            <div style="padding:20px 24px;">
+                <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">New Travel Date</label>
+                <input type="date" name="new_start_date" id="adminRescheduleDate" required
+                    style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; margin-bottom:16px; box-sizing:border-box;">
+
+                <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Reason</label>
+                <textarea name="reason" required maxlength="500" rows="3"
+                    placeholder="e.g. Customer requested a different date..."
+                    style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+            </div>
+            <div style="padding:14px 24px; border-top:1px solid #e5e7eb; background:#f9fafb; display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeAdminRescheduleModal()" style="padding:9px 16px; background:#e5e7eb; color:#374151; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Cancel</button>
+                <button type="submit" style="padding:9px 16px; background:#6d28d9; color:white; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Confirm Reschedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- View Rejection Reason Modal --}}
 <div id="reasonModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
     <div style="background:white; border-radius:14px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">
@@ -314,6 +351,31 @@ function openRejectModal(bookingId) {
 function closeRejectModal() {
     document.getElementById('rejectModal').style.display = 'none';
 }
+function openAdminRescheduleModal(bookingId, vanId) {
+    document.getElementById('adminRescheduleForm').action = '/booking/' + bookingId + '/reschedule';
+    document.getElementById('adminRescheduleDate').value = '';
+    document.getElementById('adminRescheduleModal').style.display = 'flex';
+
+    if (vanId) {
+        fetch('/booked-dates/' + vanId)
+            .then(r => r.json())
+            .then(dates => {
+                // No native way to grey out specific dates on <input type="date">,
+                // so we just warn on change instead.
+                document.getElementById('adminRescheduleDate').dataset.booked = JSON.stringify(dates);
+            })
+            .catch(() => {});
+    }
+}
+function closeAdminRescheduleModal() {
+    document.getElementById('adminRescheduleModal').style.display = 'none';
+}
+document.getElementById('adminRescheduleDate')?.addEventListener('change', function () {
+    const booked = JSON.parse(this.dataset.booked || '[]');
+    if (booked.includes(this.value)) {
+        alert('Heads up: this van already has another booking on that date. You can still submit, but double-check availability first.');
+    }
+});
 function showReasonModal(btn) {
     document.getElementById('reasonModalTitle').innerText = 'Rejection Reason — Booking #' + btn.dataset.bookingId;
     document.getElementById('reasonModalText').innerText = btn.dataset.reason;

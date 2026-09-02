@@ -105,6 +105,26 @@
         .alert-banner.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .alert-banner.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
+        .btn-reschedule { background: #ede9fe; color: #6d28d9; }
+        .btn-reschedule:hover { background: #ddd6fe; }
+
+        .reschedule-modal-overlay {
+            display: none; position: fixed; inset: 0; z-index: 9999;
+            background: rgba(15,23,42,0.65); align-items: center; justify-content: center; padding: 20px;
+        }
+        .reschedule-modal-overlay.open { display: flex; }
+        .reschedule-modal-box { background: white; border-radius: 14px; max-width: 440px; width: 100%; box-shadow: 0 20px 50px rgba(0,0,0,0.25); overflow: hidden; }
+        .reschedule-modal-box .modal-head { padding: 20px 24px; border-bottom: 1px solid var(--border-light); }
+        .reschedule-modal-box .modal-head h3 { margin: 0 0 2px; color: #111827; font-size: 16px; font-weight: 700; }
+        .reschedule-modal-box .modal-head p { margin: 0; color: var(--text-muted); font-size: 13px; }
+        .reschedule-modal-box .modal-body { padding: 20px 24px; }
+        .reschedule-modal-box label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+        .reschedule-modal-box input[type="date"], .reschedule-modal-box textarea {
+            width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px;
+            font-family: inherit; box-sizing: border-box; margin-bottom: 16px; resize: vertical;
+        }
+        .reschedule-modal-box .modal-foot { padding: 14px 24px; border-top: 1px solid var(--border-light); background: #f9fafb; display: flex; gap: 10px; justify-content: flex-end; }
+
         @media print { .action-bar { display: none; } .pay-balance-card { display: none; } .receipt-container { box-shadow: none; margin: 0; border: 1px solid #eee; } }
     </style>
 </head>
@@ -113,7 +133,12 @@
 <div class="receipt-container">
     <div class="action-bar">
         <a href="/my-bookings" class="btn btn-back"><i class="fas fa-chevron-left"></i> Back to Bookings</a>
-        <button onclick="window.print()" class="btn btn-print"><i class="fas fa-print"></i> Print Receipt</button>
+        <div style="display:flex; gap:10px;">
+            @if(!in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && strtotime($booking->start_date) > time())
+                <button onclick="openRescheduleModal()" class="btn btn-reschedule"><i class="fas fa-calendar-days"></i> Reschedule Trip</button>
+            @endif
+            <button onclick="window.print()" class="btn btn-print"><i class="fas fa-print"></i> Print Receipt</button>
+        </div>
     </div>
 
     @if(session('success'))
@@ -239,6 +264,60 @@
         <p>Thank you for choosing Rem's Transport. For support, contact us at remstransport1@gmail.com</p>
     </div>
 </div>
+
+{{-- Reschedule Trip Modal --}}
+<div class="reschedule-modal-overlay" id="rescheduleModal">
+    <div class="reschedule-modal-box">
+        <form method="POST" action="/booking/{{ $booking->id }}/reschedule">
+            @csrf
+            <div class="modal-head">
+                <h3><i class="fas fa-calendar-days"></i> Reschedule Trip</h3>
+                <p>Bookings can only be rescheduled at least 3 days before the trip date, and only to a date the van/driver is still free.</p>
+            </div>
+            <div class="modal-body">
+                <label for="new_start_date">New Travel Date</label>
+                <input type="date" name="new_start_date" id="new_start_date" required
+                       min="{{ date('Y-m-d', strtotime('+3 days')) }}">
+                <p id="dateAvailabilityNote" style="display:none; margin:-10px 0 16px; font-size:12px; color:#dc2626;">
+                    <i class="fas fa-triangle-exclamation"></i> This date is already booked for this van. Please pick another.
+                </p>
+
+                <label for="reschedule_reason">Reason for Rescheduling</label>
+                <textarea name="reason" id="reschedule_reason" rows="3" required maxlength="500"
+                          placeholder="e.g. Change of plans, unavailable on original date..."></textarea>
+            </div>
+            <div class="modal-foot">
+                <button type="button" onclick="closeRescheduleModal()" class="btn" style="background:#e5e7eb;color:#374151;">Cancel</button>
+                <button type="submit" class="btn" style="background:#6d28d9;color:white;">Confirm Reschedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let bookedDatesForVan = [];
+
+function openRescheduleModal() {
+    document.getElementById('rescheduleModal').classList.add('open');
+
+    @if($booking->van_id)
+        fetch("/booked-dates/{{ $booking->van_id }}")
+            .then(r => r.json())
+            .then(dates => { bookedDatesForVan = dates; })
+            .catch(() => { bookedDatesForVan = []; });
+    @endif
+}
+function closeRescheduleModal() {
+    document.getElementById('rescheduleModal').classList.remove('open');
+}
+document.getElementById('rescheduleModal').addEventListener('click', function (e) {
+    if (e.target === this) closeRescheduleModal();
+});
+document.getElementById('new_start_date').addEventListener('change', function () {
+    const note = document.getElementById('dateAvailabilityNote');
+    note.style.display = bookedDatesForVan.includes(this.value) ? 'block' : 'none';
+});
+</script>
 
 </body>
 </html>

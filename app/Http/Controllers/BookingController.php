@@ -550,6 +550,69 @@ public function store(Request $request) {
     }
 }
 
+public function rescheduleBooking(Request $request, $id)
+{
+    $request->validate([
+        'new_start_date' => 'required|date|after:today',
+        'reason'         => 'required|string|max:500',
+    ]);
+
+    $booking = DB::table('bookings')->where('id', $id)->first();
+    if (!$booking) {
+        abort(404);
+    }
+
+    $isAdmin = auth()->check() && auth()->user()->role === 'admin';
+
+    if (!$isAdmin && (int) $booking->user_id !== (int) auth()->id()) {
+        abort(403);
+    }
+
+    if (in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed'])) {
+        return back()->with('error', 'This booking can no longer be rescheduled.');
+    }
+
+    // Customers may only reschedule at least 3 days before the current trip date.
+    // Admins can reschedule anytime (e.g. to accommodate a customer's request).
+    if (!$isAdmin) {
+        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(date('Y-m-d'))) / 86400);
+        if ($daysUntilTrip < 3) {
+            return back()->with('error', 'Bookings can only be rescheduled at least 3 days before the trip date. Please contact us directly for urgent changes.');
+        }
+    }
+
+    $days = max(1, (int) $booking->days);
+    $newStart = date('Y-m-d', strtotime($request->new_start_date));
+    $newEnd   = date('Y-m-d', strtotime($newStart . ' +' . ($days - 1) . ' days'));
+
+    $van = $booking->van_id ? DB::table('vans')->find($booking->van_id) : null;
+    $vanName = $van->name ?? $booking->van;
+
+    // Make sure the van/driver is actually free on every day of the new range.
+    for ($d = strtotime($newStart); $d <= strtotime($newEnd); $d = strtotime('+1 day', $d)) {
+        $checkDate = date('Y-m-d', $d);
+        if (!$this->checkAvailability($vanName, $booking->driver, $checkDate, $booking->id)) {
+            return back()->with('error', "The van/driver is already booked on {$checkDate}. Please pick a different date.");
+        }
+    }
+
+    DB::table('bookings')->where('id', $id)->update([
+        'original_start_date' => $booking->original_start_date ?? $booking->start_date,
+        'original_end_date'   => $booking->original_end_date ?? $booking->end_date,
+        'start_date'          => $newStart,
+        'end_date'            => $newEnd,
+        'reschedule_reason'   => $request->reason,
+        'reschedule_count'    => $booking->reschedule_count + 1,
+        'updated_at'          => now(),
+    ]);
+
+    if ($isAdmin) {
+        return redirect('/admin/bookings')->with('success', "Booking #REM-" . str_pad($id, 5, '0', STR_PAD_LEFT) . " rescheduled to {$newStart}.");
+    }
+
+    return redirect("/receipt/{$id}")->with('success', 'Your booking has been rescheduled successfully.');
+}
+
 public function payBalanceCheckout(Request $request, $id)
 {
     $request->validate([

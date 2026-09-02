@@ -112,6 +112,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::post('/booking/cancel/{id}', [BookingController::class, 'cancelBooking']);
+    Route::post('/booking/{id}/reschedule', [BookingController::class, 'rescheduleBooking'])->name('booking.reschedule');
     Route::post('/submit-feedback', [FeedbackController::class, 'store'])->name('feedback.store');
 });
 
