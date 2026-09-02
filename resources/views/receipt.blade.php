@@ -131,15 +131,25 @@
 <body>
 
 <div class="receipt-container">
+    @php
+        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(date('Y-m-d'))) / 86400);
+        $canReschedule = !in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && $daysUntilTrip > 3;
+    @endphp
     <div class="action-bar">
         <a href="/my-bookings" class="btn btn-back"><i class="fas fa-chevron-left"></i> Back to Bookings</a>
         <div style="display:flex; gap:10px;">
-            @if(!in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && strtotime($booking->start_date) > time())
+            @if($canReschedule)
                 <button onclick="openRescheduleModal()" class="btn btn-reschedule"><i class="fas fa-calendar-days"></i> Reschedule Trip</button>
             @endif
             <button onclick="window.print()" class="btn btn-print"><i class="fas fa-print"></i> Print Receipt</button>
         </div>
     </div>
+
+    @if(!$canReschedule && !in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && $daysUntilTrip >= 0)
+        <p style="text-align:right; margin:-20px 0 20px; font-size:12px; color:var(--text-muted);">
+            <i class="fas fa-circle-info"></i> This trip is too close to reschedule online (must be more than 3 days out). Please contact us directly.
+        </p>
+    @endif
 
     @if(session('success'))
         <div class="alert-banner success"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
@@ -277,7 +287,7 @@
             <div class="modal-body">
                 <label for="new_start_date">New Travel Date</label>
                 <input type="date" name="new_start_date" id="new_start_date" required
-                       min="{{ date('Y-m-d', strtotime('+3 days')) }}">
+                       min="{{ date('Y-m-d', strtotime('+1 day')) }}">
                 <p id="dateAvailabilityNote" style="display:none; margin:-10px 0 16px; font-size:12px; color:#dc2626;">
                     <i class="fas fa-triangle-exclamation"></i> This date is already booked for this van. Please pick another.
                 </p>

@@ -572,12 +572,13 @@ public function rescheduleBooking(Request $request, $id)
         return back()->with('error', 'This booking can no longer be rescheduled.');
     }
 
-    // Customers may only reschedule at least 3 days before the current trip date.
-    // Admins can reschedule anytime (e.g. to accommodate a customer's request).
+    // Customers may only reschedule if there's more than 3 full days left before
+    // the current trip date (e.g. on Sep 2, a Sep 3-5 trip is too close — Sep 6
+    // onward is the earliest that still qualifies). Admins can reschedule anytime.
     if (!$isAdmin) {
         $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(date('Y-m-d'))) / 86400);
-        if ($daysUntilTrip < 3) {
-            return back()->with('error', 'Bookings can only be rescheduled at least 3 days before the trip date. Please contact us directly for urgent changes.');
+        if ($daysUntilTrip <= 3) {
+            return back()->with('error', 'Bookings can only be rescheduled more than 3 days before the trip date. Please contact us directly for urgent changes.');
         }
     }
 
