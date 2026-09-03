@@ -454,8 +454,8 @@
                                 <div class="sub"><i class="fas fa-map-pin" style="font-size:10px;margin-right:3px;color:#0891b2;"></i>Meet: {{ $tp->pickup_point }}</div>
                             </div>
                             <div class="info-cell">
-                                <div class="lbl">Dates</div>
-                                <div class="val">{{ date('M d', strtotime($tp->tour_date)) }} – {{ $tp->end_date ? date('M d', strtotime($tp->end_date)) : 'TBD' }}</div>
+                                <div class="lbl">Booked Date</div>
+                                <div class="val">{{ date('M d', strtotime($tp->start_date)) }}{{ $tp->end_date && $tp->end_date !== $tp->start_date ? ' – ' . date('M d', strtotime($tp->end_date)) : '' }}</div>
                                 <div class="sub"><i class="fas fa-clock" style="font-size:10px;margin-right:3px;"></i>{{ date('g:i A', strtotime($tp->pickup_time)) }}</div>
                             </div>
                             <div class="info-cell">
@@ -466,12 +466,12 @@
                         </div>
                         <div class="pay-row" style="margin-top:10px;">
                             <div class="pay-cell">
-                                <div class="pl">Booked</div>
-                                <div class="pv c-blue">{{ $tp->passenger_count }} pax</div>
+                                <div class="pl">Customer</div>
+                                <div class="pv c-blue" style="font-size:12px;">{{ $tp->customer_name }}</div>
                             </div>
                             <div class="pay-cell">
-                                <div class="pl">Price / Seat</div>
-                                <div class="pv">₱{{ number_format($tp->price) }}</div>
+                                <div class="pl">Pax</div>
+                                <div class="pv">{{ $tp->passenger_count }}</div>
                             </div>
                             <div class="pay-cell">
                                 <div class="pl">Revenue</div>
@@ -483,7 +483,7 @@
                                style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;background:#ecfeff;color:#0e7490;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">
                                 <i class="fas fa-diamond-turn-right"></i> Navigate
                             </a>
-                            <a href="{{ route('driver.tour.manifest', $tp->id) }}"
+                            <a href="{{ route('driver.tour.manifest', $tp->tour_package_id) }}"
                                style="flex:1;display:flex;align-items:center;justify-content:center;padding:11px;background:#0891b2;color:white;border-radius:8px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;">
                                 <i class="fas fa-list-check" style="margin-right:6px;"></i>
                                 Open Manifest & Manage Trip

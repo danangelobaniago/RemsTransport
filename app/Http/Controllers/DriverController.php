@@ -34,21 +34,37 @@ class DriverController extends Controller
             ->orderBy('bookings.start_date', 'asc')
             ->get();
 
-        // Fetch tour packages assigned to this driver by name
-        $tourPackages = DB::table('tour_packages')
-            ->where('driver_name', $driver->name)
-            ->orderBy('tour_date', 'asc')
+        // Fetch tour packages assigned to this driver by name. A package has a whole
+        // bookable date RANGE (customers each pick their own date within it), so this
+        // must show each customer's actual booked date — not the package's range — one
+        // card per real booking rather than one per package.
+        $tourPackages = DB::table('bookings')
+            ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+            ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
+            ->where('tour_packages.driver_name', $driver->name)
+            ->whereNotIn('bookings.status', ['cancelled', 'rejected'])
+            ->select(
+                'tour_packages.id as tour_package_id',
+                'tour_packages.name',
+                'tour_packages.destination',
+                'tour_packages.pickup_point',
+                'tour_packages.pickup_time',
+                'tour_packages.price',
+                'tour_packages.van',
+                'tour_packages.plate_number',
+                'bookings.id as booking_id',
+                'bookings.start_date',
+                'bookings.end_date',
+                'bookings.passengers as passenger_count',
+                'bookings.total as total_revenue',
+                'users.first_name',
+                'users.last_name'
+            )
+            ->orderBy('bookings.start_date', 'asc')
             ->get()
-            ->map(function ($tour) {
-                $tour->passenger_count = DB::table('bookings')
-                    ->where('tour_id', $tour->id)
-                    ->whereNotIn('status', ['cancelled', 'rejected'])
-                    ->count();
-                $tour->total_revenue = DB::table('bookings')
-                    ->where('tour_id', $tour->id)
-                    ->whereNotIn('status', ['cancelled', 'rejected'])
-                    ->sum('total');
-                return $tour;
+            ->map(function ($b) {
+                $b->customer_name = trim(($b->first_name ?? '') . ' ' . ($b->last_name ?? '')) ?: 'N/A';
+                return $b;
             });
 
         // Fetch joiner trips assigned to this driver by name
