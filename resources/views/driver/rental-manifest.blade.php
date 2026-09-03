@@ -72,8 +72,16 @@
         }
         .print-btn:hover { background: #0f172a; }
 
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px;
+            padding: 9px 16px; background: white; color: #1e293b; border: 1px solid #e2e8f0;
+            border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+        }
+        .back-btn:hover { background: #f1f5f9; }
+
         @media print {
-            .navbar, .back-link, .print-btn { display: none; }
+            .navbar, .back-link, .back-btn, .print-btn { display: none; }
             body { background: white; }
             .section { box-shadow: none; border: 1px solid #e2e8f0; }
         }
@@ -87,6 +95,8 @@
 </nav>
 
 <div class="main">
+
+    <a href="{{ route('driver.dashboard') }}" class="back-btn"><i class="fas fa-chevron-left"></i> Back to Dashboard</a>
 
     {{-- TRIP HEADER --}}
     <div class="trip-card">
