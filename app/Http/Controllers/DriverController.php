@@ -169,7 +169,23 @@ class DriverController extends Controller
 
         $bookingsForJs = $bookingsForJs->concat($joinerForJs)->concat($tourForJs)->values();
 
-        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages'));
+        // Whichever trip needs the driver's attention right now: one already under way
+        // (arrived/in progress) takes priority, otherwise the soonest upcoming one.
+        $today = date('Y-m-d');
+        $doneStatuses = ['cancelled', 'rejected', 'completed'];
+        $nextTrip = $bookingsForJs
+            ->filter(function ($b) use ($doneStatuses, $today) {
+                if (in_array(strtolower($b['status']), $doneStatuses)) return false;
+                if (($b['trip_status'] ?? null) === 'completed') return false;
+                return $b['end_date'] >= $today;
+            })
+            ->sortBy(function ($b) {
+                $inMotion = in_array($b['trip_status'] ?? '', ['arrived', 'in_progress']) ? '0' : '1';
+                return $inMotion . '_' . $b['start_date'];
+            })
+            ->first();
+
+        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages', 'nextTrip'));
     }
 
     public function updateLocation(Request $request)

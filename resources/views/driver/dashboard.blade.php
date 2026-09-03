@@ -52,6 +52,27 @@
         .stat-num { font-size: 30px; font-weight: 800; line-height: 1; }
         .stat-lbl { font-size: 12px; opacity: 0.75; margin-top: 3px; }
 
+        /* ── NEXT UP CARD ── */
+        .next-up-card {
+            background: white; border-radius: 14px; border-left: 5px solid #f59e0b;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 18px 22px; margin-bottom: 22px;
+            display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        }
+        .next-up-label {
+            display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800;
+            text-transform: uppercase; letter-spacing: 0.5px; color: #b45309; margin-bottom: 6px;
+        }
+        .next-up-dest { font-size: 17px; font-weight: 800; color: #1e293b; margin-bottom: 4px; }
+        .next-up-meta { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: #64748b; }
+        .next-up-meta span { display: flex; align-items: center; gap: 5px; }
+        .next-up-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .next-up-actions a {
+            display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border-radius: 8px;
+            font-size: 13px; font-weight: 700; text-decoration: none; white-space: nowrap;
+        }
+        .next-up-btn-navigate { background: #fef3c7; color: #92400e; }
+        .next-up-btn-manifest { background: #1e293b; color: white; }
+
         /* ── TWO-COLUMN LAYOUT ── */
         .dashboard-grid {
             display: grid;
@@ -326,6 +347,39 @@
             <div class="stat-lbl">Active Trips</div>
         </div>
     </div>
+
+    {{-- NEXT UP CARD --}}
+    @if($nextTrip)
+        @php
+            $nuManifestHref = match($nextTrip['type']) {
+                'joiner' => route('driver.joiner.manifest', str_replace('j', '', $nextTrip['id'])),
+                'tour'   => route('driver.tour.manifest', $nextTrip['tour_package_id']),
+                default  => route('driver.rental.manifest', $nextTrip['id']),
+            };
+            $nuInMotion = in_array($nextTrip['trip_status'] ?? '', ['arrived', 'in_progress']);
+        @endphp
+        <div class="next-up-card">
+            <div>
+                <div class="next-up-label">
+                    <i class="fas fa-bolt"></i> {{ $nuInMotion ? 'Trip In Progress' : 'Next Up' }}
+                </div>
+                <div class="next-up-dest">{{ $nextTrip['destination'] }}</div>
+                <div class="next-up-meta">
+                    <span><i class="fas fa-calendar"></i> {{ date('M d', strtotime($nextTrip['start_date'])) }}</span>
+                    <span><i class="fas fa-user"></i> {{ $nextTrip['customer'] }}</span>
+                    <span><i class="fas fa-map-pin"></i> {{ $nextTrip['pickup'] }}</span>
+                </div>
+            </div>
+            <div class="next-up-actions">
+                <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($nextTrip['pickup']) }}" target="_blank" rel="noopener" class="next-up-btn-navigate">
+                    <i class="fas fa-diamond-turn-right"></i> Navigate
+                </a>
+                <a href="{{ $nuManifestHref }}" class="next-up-btn-manifest">
+                    <i class="fas fa-list-check"></i> Open Manifest
+                </a>
+            </div>
+        </div>
+    @endif
 
     {{-- DASHBOARD GRID --}}
     <div class="dashboard-grid">
