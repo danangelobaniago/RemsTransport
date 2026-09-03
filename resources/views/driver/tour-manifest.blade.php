@@ -97,7 +97,7 @@
         <div class="trip-title"><i class="fas fa-suitcase" style="margin-right:8px;"></i>{{ $tour->name }}</div>
         <div class="trip-meta">
             <span><i class="fas fa-map-marker-alt"></i> {{ $tour->destination }}</span>
-            <span><i class="fas fa-calendar"></i> {{ date('M d', strtotime($tour->tour_date)) }} – {{ $tour->end_date ? date('M d', strtotime($tour->end_date)) : 'TBD' }}</span>
+            <span><i class="fas fa-calendar"></i> {{ date('M d', strtotime($bookedStart)) }}{{ $bookedEnd && $bookedEnd !== $bookedStart ? ' – ' . date('M d', strtotime($bookedEnd)) : '' }}</span>
             <span><i class="fas fa-clock"></i> {{ date('g:i A', strtotime($tour->pickup_time)) }}</span>
             <span><i class="fas fa-map-pin"></i> Meet: {{ $tour->pickup_point }}</span>
             <span><i class="fas fa-bus"></i> {{ $tour->van }} ({{ $tour->plate_number }})</span>

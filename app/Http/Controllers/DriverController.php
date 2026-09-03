@@ -370,10 +370,14 @@ class DriverController extends Controller
             ->where('status', 'approved')
             ->exists();
 
+        // Show what customers actually booked, not the package's whole bookable range.
+        $bookedStart = $bookings->min('start_date') ?? $tour->tour_date;
+        $bookedEnd   = $bookings->max('end_date') ?? $tour->end_date;
+
         return view('driver.tour-manifest', compact(
             'tour', 'bookings', 'totalPassengers',
             'totalCashCollected', 'totalOutstanding', 'totalDue', 'allPaid',
-            'hasApprovedBookings'
+            'hasApprovedBookings', 'bookedStart', 'bookedEnd'
         ));
     }
 
