@@ -30,6 +30,12 @@
             background: #ef4444; color: white; border: none; padding: 7px 14px;
             border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
         }
+        .install-btn {
+            background: rgba(255,255,255,0.1); color: #f1f5f9; border: 1px solid rgba(255,255,255,0.2);
+            padding: 7px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .install-btn:hover { background: rgba(255,255,255,0.2); }
 
         /* ── MAIN ── */
         .main { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
@@ -337,6 +343,9 @@
     <div class="nav-right">
         <div class="driver-badge"><span class="dot-green"></span> <strong style="color:#f1f5f9;">{{ $driver->name }}</strong></div>
         <div class="driver-badge" id="locationStatus"><i class="fas fa-location-crosshairs" style="color:#94a3b8;"></i> Location: Off</div>
+        <button id="pwa-install-btn" class="install-btn" style="display:none;">
+            <i class="fas fa-download"></i> Install App
+        </button>
         <form id="logout-form" action="/logout" method="POST" style="display:none;">@csrf</form>
         <button class="logout-btn" onclick="document.getElementById('logout-form').submit();">
             <i class="fas fa-sign-out-alt"></i> Logout
