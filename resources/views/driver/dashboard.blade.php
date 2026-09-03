@@ -191,6 +191,13 @@
         }
         .manifest-link-sm i { font-size: 11px; }
 
+        .link-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
+        .navigate-link-sm {
+            display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700;
+            color: #0e7490; text-decoration: none;
+        }
+        .navigate-link-sm i { font-size: 11px; }
+
         /* PAYMENT ROW */
         .pay-row {
             display: flex; gap: 0; background: #f8fafc; border-radius: 8px;
@@ -417,11 +424,17 @@
                                 <div class="pv c-green">₱{{ number_format($tp->total_revenue ?? 0, 2) }}</div>
                             </div>
                         </div>
-                        <a href="{{ route('driver.tour.manifest', $tp->id) }}"
-                           style="display:block;width:100%;margin-top:12px;padding:11px;background:#0891b2;color:white;border-radius:8px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;">
-                            <i class="fas fa-list-check" style="margin-right:6px;"></i>
-                            Open Manifest & Manage Trip
-                        </a>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($tp->pickup_point) }}" target="_blank" rel="noopener"
+                               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;background:#ecfeff;color:#0e7490;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">
+                                <i class="fas fa-diamond-turn-right"></i> Navigate
+                            </a>
+                            <a href="{{ route('driver.tour.manifest', $tp->id) }}"
+                               style="flex:1;display:flex;align-items:center;justify-content:center;padding:11px;background:#0891b2;color:white;border-radius:8px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;">
+                                <i class="fas fa-list-check" style="margin-right:6px;"></i>
+                                Open Manifest & Manage Trip
+                            </a>
+                        </div>
                     </div>
                 </div>
                 @endforeach
@@ -480,11 +493,17 @@
                                 <div class="pv c-green">₱{{ number_format($jt->total_revenue ?? 0, 2) }}</div>
                             </div>
                         </div>
-                        <a href="{{ route('driver.joiner.manifest', $jt->id) }}"
-                           style="display:block;width:100%;margin-top:12px;padding:11px;background:#7c3aed;color:white;border-radius:8px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;">
-                            <i class="fas fa-users" style="margin-right:6px;"></i>
-                            {{ $jt->status === 'pending' ? 'View Trip (Pending Approval)' : 'Open Manifest & Collect Payments' }}
-                        </a>
+                        <div style="display:flex;gap:8px;margin-top:12px;">
+                            <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($jt->meetup_point) }}" target="_blank" rel="noopener"
+                               style="display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 14px;background:#f5f3ff;color:#6d28d9;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;">
+                                <i class="fas fa-diamond-turn-right"></i> Navigate
+                            </a>
+                            <a href="{{ route('driver.joiner.manifest', $jt->id) }}"
+                               style="flex:1;display:flex;align-items:center;justify-content:center;padding:11px;background:#7c3aed;color:white;border-radius:8px;text-align:center;font-size:13px;font-weight:700;text-decoration:none;">
+                                <i class="fas fa-users" style="margin-right:6px;"></i>
+                                {{ $jt->status === 'pending' ? 'View Trip (Pending Approval)' : 'Open Manifest & Collect Payments' }}
+                            </a>
+                        </div>
                     </div>
                 </div>
                 @endforeach
@@ -544,9 +563,14 @@
                                 <span class="balance-sub">Total ₱{{ number_format($b->total, 2) }} · Paid ₱{{ number_format($b->amount_paid ?? 0, 2) }}</span>
                             </div>
 
-                            <a href="{{ route('driver.rental.manifest', $b->id) }}" class="manifest-link-sm">
-                                <i class="fas fa-list-check"></i> View Passenger Manifest
-                            </a>
+                            <div class="link-row">
+                                <a href="{{ route('driver.rental.manifest', $b->id) }}" class="manifest-link-sm" style="margin-bottom:0;">
+                                    <i class="fas fa-list-check"></i> View Passenger Manifest
+                                </a>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination={{ urlencode($b->pickup) }}" target="_blank" rel="noopener" class="navigate-link-sm">
+                                    <i class="fas fa-diamond-turn-right"></i> Navigate
+                                </a>
+                            </div>
 
                             @if(!in_array($sc, ['pending','rejected','cancelled']))
                                 @if($sc === 'completed' || $ts === 'completed')
@@ -821,9 +845,14 @@ function buildBookingCard(b) {
                 <span class="balance-sub">Total ₱${Number(b.total).toLocaleString('en-PH',{minimumFractionDigits:2})} · Paid ₱${Number(b.amount_paid).toLocaleString('en-PH',{minimumFractionDigits:2})}</span>
             </div>
 
-            <a href="${manifestHref}" class="manifest-link-sm">
-                <i class="fas fa-list-check"></i> View Passenger Manifest
-            </a>
+            <div class="link-row">
+                <a href="${manifestHref}" class="manifest-link-sm" style="margin-bottom:0;">
+                    <i class="fas fa-list-check"></i> View Passenger Manifest
+                </a>
+                <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(b.pickup)}" target="_blank" rel="noopener" class="navigate-link-sm">
+                    <i class="fas fa-diamond-turn-right"></i> Navigate
+                </a>
+            </div>
 
             ${isActive ? actionBtn : ''}
         </div>
