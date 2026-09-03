@@ -984,6 +984,22 @@ if ('geolocation' in navigator) {
 // ── SECTION COLLAPSE TOGGLE ──
 const sectionState = {};
 
+// Start every section collapsed so the page opens on the Next Up card +
+// calendar, not a long scroll of cards — the driver expands what they need.
+function collapseSectionsByDefault() {
+    ['tours', 'joiners', 'rentals'].forEach(key => {
+        const body = document.getElementById(key + '-body');
+        const icon = document.getElementById(key + '-icon');
+        if (!body) return;
+        body.style.maxHeight = '0';
+        body.style.opacity   = '0';
+        body.style.overflow  = 'hidden';
+        if (icon) icon.style.transform = 'rotate(180deg)';
+        sectionState[key] = false;
+    });
+}
+collapseSectionsByDefault();
+
 function toggleSection(key) {
     const body = document.getElementById(key + '-body');
     const icon = document.getElementById(key + '-icon');
