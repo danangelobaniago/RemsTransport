@@ -78,6 +78,15 @@
         }
         .back-btn:hover { background: #f1f5f9; }
 
+        @media (max-width: 600px) {
+            .main { padding: 0 12px; margin: 16px auto; }
+            .trip-card { padding: 18px 20px; }
+            .trip-ref { font-size: 18px; }
+            .stats-row { grid-template-columns: 1fr; gap: 10px; }
+            .customer-grid { grid-template-columns: 1fr; }
+            .section-body { overflow-x: auto; }
+        }
+
         @media print {
             .navbar, .back-btn, .print-btn { display: none; }
             body { background: white; }

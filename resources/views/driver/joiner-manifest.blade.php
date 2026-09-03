@@ -114,7 +114,17 @@
         .collect-btn:hover { background:#d97706; }
         .collected-msg { text-align:center; padding:10px; background:#dcfce7; color:#166534; border-radius:8px; font-size:13px; font-weight:700; }
 
-        @media(max-width:600px) { .summary-row { grid-template-columns:1fr 1fr; } .steps { gap:0; } }
+        @media(max-width:600px) {
+            .navbar { flex-direction: column; height: auto; padding: 10px 16px; gap: 4px; }
+            .main { padding: 0 12px; margin: 16px auto; }
+            .trip-card { padding: 18px 20px; }
+            .trip-title { font-size: 18px; }
+            .summary-row { grid-template-columns:1fr 1fr; }
+            .pax-amounts { grid-template-columns: 1fr 1fr; }
+            .steps { gap:0; }
+            .step-circle { width: 36px; height: 36px; font-size: 15px; }
+            .step-label { font-size: 10px; }
+        }
     </style>
 </head>
 <body>
