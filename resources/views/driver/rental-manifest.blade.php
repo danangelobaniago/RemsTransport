@@ -15,8 +15,6 @@
             height: 56px; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
         }
         .brand { font-size: 15px; font-weight: 700; color: #60a5fa; display: flex; align-items: center; gap: 8px; }
-        .back-link { color: #94a3b8; font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; }
-        .back-link:hover { color: white; }
 
         .main { max-width: 820px; margin: 24px auto; padding: 0 16px; }
 
@@ -81,7 +79,7 @@
         .back-btn:hover { background: #f1f5f9; }
 
         @media print {
-            .navbar, .back-link, .back-btn, .print-btn { display: none; }
+            .navbar, .back-btn, .print-btn { display: none; }
             body { background: white; }
             .section { box-shadow: none; border: 1px solid #e2e8f0; }
         }
@@ -91,7 +89,6 @@
 
 <nav class="navbar">
     <div class="brand"><i class="fas fa-van-shuttle"></i> Driver Portal</div>
-    <a href="{{ route('driver.dashboard') }}" class="back-link"><i class="fas fa-chevron-left"></i> Back to Dashboard</a>
 </nav>
 
 <div class="main">
