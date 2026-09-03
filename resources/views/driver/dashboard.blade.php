@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+        html, body { overflow-x: hidden; max-width: 100%; }
         body { background: #f1f5f9; color: #1e293b; min-height: 100vh; }
 
         /* ── NAVBAR ── */
@@ -81,6 +82,26 @@
             align-items: start;
         }
         @media (max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+
+        @media (max-width: 640px) {
+            .navbar { flex-wrap: wrap; height: auto; padding: 10px 16px; row-gap: 6px; }
+            .brand { font-size: 14px; }
+            .brand .brand-suffix { display: none; }
+            .nav-right { flex-wrap: wrap; gap: 8px; font-size: 12px; row-gap: 6px; }
+
+            .main { padding: 0 12px; }
+            .profile-card { padding: 16px 18px; }
+            .profile-name { font-size: 17px; }
+
+            .next-up-card { padding: 14px 16px; }
+            .next-up-dest { font-size: 15px; }
+            .next-up-actions { width: 100%; }
+            .next-up-actions a { flex: 1; justify-content: center; }
+
+            /* Navbar height becomes variable once it wraps, so a fixed sticky
+               offset can no longer be trusted to sit below it. */
+            .calendar-panel { position: static; }
+        }
 
         /* ── CALENDAR PANEL ── */
         .calendar-panel {
@@ -312,7 +333,7 @@
 </form>
 
 <nav class="navbar">
-    <div class="brand"><i class="fas fa-van-shuttle"></i> Rem's Transport — Driver Portal</div>
+    <div class="brand"><i class="fas fa-van-shuttle"></i> Rem's Transport <span class="brand-suffix">— Driver Portal</span></div>
     <div class="nav-right">
         <div class="driver-badge"><span class="dot-green"></span> <strong style="color:#f1f5f9;">{{ $driver->name }}</strong></div>
         <div class="driver-badge" id="locationStatus"><i class="fas fa-location-crosshairs" style="color:#94a3b8;"></i> Location: Off</div>
