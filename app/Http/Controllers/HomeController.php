@@ -59,7 +59,16 @@ public function index()
         ->get();
 
     // 4. Fetch Tour Packages and compute per-tour availability
-    $tours = \App\Models\TourPackage::all()->map(function ($tour) {
+    // Only packages whose bookable window hasn't fully passed yet.
+    $today = date('Y-m-d');
+    $tours = \App\Models\TourPackage::where(function ($q) use ($today) {
+            $q->where('end_date', '>=', $today)
+              ->orWhere(function ($q2) use ($today) {
+                  $q2->whereNull('end_date')->where('tour_date', '>=', $today);
+              });
+        })
+        ->get()
+        ->map(function ($tour) {
         preg_match('/(\d+)/', $tour->duration ?? '1', $dm);
         $tripDays = max(1, (int)($dm[1] ?? 1));
 

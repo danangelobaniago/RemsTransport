@@ -145,6 +145,11 @@ class TourController extends Controller
     $tour = DB::table('tour_packages')->where('id', $id)->first();
     if (!$tour) { abort(404); }
 
+    $tourEnd = $tour->end_date ?: $tour->tour_date;
+    if ($tourEnd < date('Y-m-d')) {
+        return redirect('/')->with('error', 'This tour package is no longer available for booking.');
+    }
+
     $isBooked = DB::table('bookings')
         ->where('tour_id', $id)
         ->whereIn('status', ['paid', 'confirmed', 'pending'])
@@ -173,6 +178,14 @@ class TourController extends Controller
 {
     // Fetch tour first so we can use its dates in validation
     $tour = DB::table('tour_packages')->where('id', $request->tour_id)->first();
+    if (!$tour) {
+        return redirect('/')->with('error', 'Tour package not found.');
+    }
+
+    $tourEnd = $tour->end_date ?: $tour->tour_date;
+    if ($tourEnd < date('Y-m-d')) {
+        return redirect('/')->with('error', 'This tour package is no longer available for booking.');
+    }
 
     // Parse trip duration in days from e.g. "3D2N", "Day Tour", "2"
     preg_match('/(\d+)/', $tour->duration ?? '1', $dm);
