@@ -179,7 +179,7 @@
 
                                 {{-- Toggle Status --}}
                                 <a href="{{ route('admin.vans.toggle', $van->id) }}"
-                                   class="btn small {{ $van->status === 'available' ? 'gray' : 'btn-approve' }}"
+                                   class="btn small {{ $van->status === 'available' ? 'btn-approve' : 'gray' }}"
                                    title="Toggle Status">
                                     <i class="fas fa-toggle-{{ $van->status === 'available' ? 'on' : 'off' }}"></i>
                                 </a>

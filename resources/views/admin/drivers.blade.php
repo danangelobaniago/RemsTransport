@@ -196,7 +196,7 @@
 
                                 {{-- Toggle Status --}}
                                 <a href="{{ route('admin.drivers.toggle', $driver->id) }}"
-                                   class="btn small {{ $driver->status === 'available' ? 'gray' : 'btn-approve' }}"
+                                   class="btn small {{ $driver->status === 'available' ? 'btn-approve' : 'gray' }}"
                                    title="Toggle Status">
                                     <i class="fas fa-toggle-{{ $driver->status === 'available' ? 'on' : 'off' }}"></i>
                                 </a>
