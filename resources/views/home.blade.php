@@ -233,8 +233,8 @@
 
                         <div class="tour-footer">
                             <div class="tour-date">
-                                <small>Travel Date:</small>
-                                <span>{{ date('M d, Y', strtotime($tour->tour_date)) }}</span>
+                                <small>Available Dates:</small>
+                                <span>{{ date('M d', strtotime($tour->tour_date)) }} – {{ date('M d, Y', strtotime($tour->end_date ?? $tour->tour_date)) }}</span>
                             </div>
 
                             @if($isBooked)
