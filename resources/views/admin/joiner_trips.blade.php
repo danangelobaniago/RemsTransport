@@ -117,6 +117,10 @@
                 @csrf
                 <div class="form-grid">
                     <div class="form-group">
+                        <label>Trip Name</label>
+                        <input type="text" name="name" placeholder="e.g. Mt. Pulag Joiner Trip" required>
+                    </div>
+                    <div class="form-group">
                         <label>Destination</label>
                         <input type="text" name="destination" placeholder="e.g. Mt. Pulag" required>
                     </div>
@@ -144,6 +148,16 @@
                         <label>Price Per Seat (PHP)</label>
                         <input type="number" name="price_per_seat" placeholder="2500" required>
                     </div>
+                </div>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <label>Description & Inclusions</label>
+                    <textarea name="description" rows="3" placeholder="List what's included in the trip..."></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <label>Thumbnail Image</label>
+                    <input type="file" name="image" accept="image/*">
                 </div>
 
                 <div class="form-section">

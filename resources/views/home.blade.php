@@ -269,12 +269,18 @@
                     $isFull = $trip->available_seats <= 0;
                 @endphp
                 <div class="joiner-card">
+                    @if(!empty($trip->image))
+                        <div class="joiner-image">
+                            <img src="{{ \Storage::disk('public')->url($trip->image) }}" alt="{{ $trip->name ?? $trip->destination }}">
+                        </div>
+                    @endif
+
                     <div class="trip-badge {{ $isFull ? 'status-full' : 'status-open' }}">
                         {{ $isFull ? 'Full' : 'Open' }}
                     </div>
 
                     <div class="joiner-content">
-                        <h3 class="destination">📍 {{ $trip->destination }}</h3>
+                        <h3 class="destination">📍 {{ $trip->name ?? $trip->destination }}</h3>
 
                         <div class="trip-info">
                             <div class="info-item">

@@ -71,7 +71,12 @@
                 </ol>
             </nav>
 
-            <h1 class="fw-bold text-dark display-6 mt-2">{{ $trip->destination }}</h1>
+            @if(!empty($trip->image))
+                <img src="{{ \Storage::disk('public')->url($trip->image) }}" alt="{{ $trip->name ?? $trip->destination }}"
+                     style="width:100%; max-height:320px; object-fit:cover; border-radius:14px; margin-top:15px;">
+            @endif
+
+            <h1 class="fw-bold text-dark display-6 mt-2">{{ $trip->name ?? $trip->destination }}</h1>
 
             <div class="d-flex align-items-center gap-3 text-muted mt-3">
                 <span><i class="fas fa-map-marker-alt text-danger"></i> Philippines</span>
@@ -137,7 +142,11 @@
         </div>
 
         <h4 class="fw-bold mb-3">About this trip</h4>
-        <p class="text-muted lead fs-6">Experience the best of {{ $trip->destination }}. This joiner trip guarantees a comfortable seat in a {{ $trip->van }} van, professional service, and an unforgettable sightseeing experience.</p>
+        @if(!empty($trip->description))
+            <p class="text-muted lead fs-6" style="white-space:pre-line;">{{ $trip->description }}</p>
+        @else
+            <p class="text-muted lead fs-6">Experience the best of {{ $trip->destination }}. This joiner trip guarantees a comfortable seat in a {{ $trip->van }} van, professional service, and an unforgettable sightseeing experience.</p>
+        @endif
 
         <hr class="my-5">
 

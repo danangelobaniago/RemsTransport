@@ -22,7 +22,10 @@ class JoinerTripController extends Controller
 public function store(Request $request)
 {
     $request->validate([
+        'name'           => 'required|string|max:255',
         'destination'    => 'required|string',
+        'description'    => 'nullable|string',
+        'image'          => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'meetup_point'   => 'required|string',
         'meetup_time'    => 'required|string',
         'trip_date'      => 'required|date|after_or_equal:today',
@@ -35,6 +38,8 @@ public function store(Request $request)
 
     $van    = DB::table('vans')->where('id', $request->van_id)->first();
     $driver = DB::table('drivers')->where('id', $request->driver_id)->first();
+
+    $imagePath = $request->hasFile('image') ? $request->file('image')->store('joiner-trips', 'public') : null;
 
     $conflict = DB::table('joiner_trips')
         ->where('trip_date', $request->trip_date)
@@ -51,7 +56,10 @@ public function store(Request $request)
     }
 
     DB::table('joiner_trips')->insert([
+        'name'                  => $request->name,
         'destination'           => $request->destination,
+        'description'           => $request->description,
+        'image'                 => $imagePath,
         'meetup_point'          => $request->meetup_point,
         'meetup_time'           => $request->meetup_time,
         'trip_date'             => $request->trip_date,
