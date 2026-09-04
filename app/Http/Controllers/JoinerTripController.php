@@ -106,6 +106,9 @@ public function store(Request $request)
         if (!$trip) {
             return redirect('/')->with('error', 'Trip not found.');
         }
+        if ($trip->trip_date < date('Y-m-d')) {
+            return redirect('/')->with('error', 'This trip has already passed and can no longer be booked.');
+        }
 
         // Get seats from URL (?seats=5), default to 1 if not found
         $seats = $request->query('seats', 1);
@@ -173,6 +176,9 @@ public function processBooking(Request $request, $id)
         $trip = DB::table('joiner_trips')->where('id', $id)->first();
         if (!$trip) {
             return redirect()->back()->with('error', 'Trip not found.');
+        }
+        if ($trip->trip_date < date('Y-m-d')) {
+            return redirect('/')->with('error', 'This trip has already passed and can no longer be booked.');
         }
 
         // 2. CALCULATE TOTALS BASED ON SEATS

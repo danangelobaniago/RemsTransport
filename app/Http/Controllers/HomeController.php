@@ -17,6 +17,7 @@ public function index()
     // 2. Fetch Joiner Trips with Dynamic Availability Calculation
     $joinerTrips = DB::table('joiner_trips')
     ->where('status', 'active')
+    ->where('trip_date', '>=', date('Y-m-d'))
     ->get()
     ->map(function ($trip) {
         // Count occupied seats by passenger rows (accurate for multi-seat bookings)
