@@ -2,12 +2,18 @@
 
 namespace App\Http\Traits;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 trait BookingValidator
 {
     private function checkAvailability($vanName, $driverName, $date, $excludeBookingId = null)
     {
+        // Driver's weekly rest day — a hard block, no assignment on that weekday.
+        if ($this->driverRestsOn($driverName, $date)) {
+            return false;
+        }
+
         // Check bookings — date range (start_date to end_date), skip rejected/cancelled/completed
         $conflictBookings = DB::table('bookings')
             ->where('start_date', '<=', $date)
@@ -50,5 +56,52 @@ trait BookingValidator
         if ($conflictTours) return false;
 
         return true;
+    }
+
+    /**
+     * True if the given date falls on the driver's weekly rest day.
+     * Accepts a driver id or a driver name.
+     */
+    private function driverRestsOn($driver, $date): bool
+    {
+        if ($driver === null || $driver === '') {
+            return false;
+        }
+
+        $dayOff = is_numeric($driver)
+            ? DB::table('drivers')->where('id', $driver)->value('day_off')
+            : DB::table('drivers')->where('name', $driver)->value('day_off');
+
+        if ($dayOff === null) {
+            return false;
+        }
+
+        return (int) Carbon::parse($date)->dayOfWeek === (int) $dayOff;
+    }
+
+    /**
+     * True if any date in the inclusive range lands on the driver's rest day.
+     * Pass a driver id (preferred) or name.
+     */
+    private function driverRestDayInRange($driver, $startDate, $endDate = null): bool
+    {
+        $dayOff = is_numeric($driver)
+            ? DB::table('drivers')->where('id', $driver)->value('day_off')
+            : DB::table('drivers')->where('name', $driver)->value('day_off');
+
+        if ($dayOff === null) {
+            return false;
+        }
+
+        $start = Carbon::parse($startDate)->startOfDay();
+        $end   = Carbon::parse($endDate ?: $startDate)->startOfDay();
+
+        for ($d = $start->copy(); $d->lte($end); $d->addDay()) {
+            if ((int) $d->dayOfWeek === (int) $dayOff) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

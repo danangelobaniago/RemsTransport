@@ -39,6 +39,12 @@ public function store(Request $request)
     $van    = DB::table('vans')->where('id', $request->van_id)->first();
     $driver = DB::table('drivers')->where('id', $request->driver_id)->first();
 
+    // Driver's weekly rest day is a hard block
+    if ($this->driverRestDayInRange($driver->id, $request->trip_date, $request->end_date)) {
+        return back()->withInput()->with('error',
+            "❌ {$driver->name} has a weekly day off (" . \App\Support\Weekday::label($driver->day_off) . ") that falls within this trip's dates.");
+    }
+
     $imagePath = $request->hasFile('image') ? $request->file('image')->store('joiner-trips', 'public') : null;
 
     $conflict = DB::table('joiner_trips')

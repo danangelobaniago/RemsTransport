@@ -100,6 +100,16 @@
                         <input type="file" name="license_image" accept="image/*" required>
                         @error('license_image')<small style="color:#ef4444;">{{ $message }}</small>@enderror
                     </div>
+                    <div class="form-group">
+                        <label>Weekly Day Off</label>
+                        <select name="day_off">
+                            <option value="">None</option>
+                            @foreach(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $i => $d)
+                                <option value="{{ $i }}" @selected(old('day_off') !== null && old('day_off') !== '' && (int) old('day_off') === $i)>{{ $d }}</option>
+                            @endforeach
+                        </select>
+                        @error('day_off')<small style="color:#ef4444;">{{ $message }}</small>@enderror
+                    </div>
                     <div class="full-width">
                         <button type="submit" class="btn btn-approve" style="padding:10px 24px;">
                             <i class="fas fa-plus"></i> Add Driver
@@ -120,6 +130,7 @@
                         <th>License No.</th>
                         <th>License</th>
                         <th>Status</th>
+                        <th>Day Off</th>
                         <th>Login Account</th>
                         <th style="text-align:center;">Actions</th>
                     </tr>
@@ -145,6 +156,9 @@
                             <span class="driver-status status-{{ strtolower(str_replace(' ', '-', $driver->status)) }}">
                                 {{ $driver->status }}
                             </span>
+                        </td>
+                        <td style="font-size:12px;color:#374151;">
+                            {{ \App\Support\Weekday::label($driver->day_off ?? null) ?? '—' }}
                         </td>
                         <td>
                             @if($driver->user_id)
@@ -212,7 +226,7 @@
                         </td>
                     </tr>
                     @empty
-                        <tr><td colspan="8" style="text-align:center;padding:20px;color:#9ca3af;">No drivers found.</td></tr>
+                        <tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af;">No drivers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
