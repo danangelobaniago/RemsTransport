@@ -12,7 +12,6 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\TourController;
 use App\Http\Controllers\JoinerTripController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DriverController;
 
 
@@ -95,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/save-booking', [BookingController::class, 'storeBooking']);
 
     Route::get('/bookings/tour/{tour_id}', [BookingController::class, 'createTourBooking'])->name('bookings.tour_create');
-    Route::post('/bookings/tour/pay', [BookingController::class, 'processTourPayment'])->name('bookings.tour_pay');
+    Route::post('/bookings/tour/pay', [TourController::class, 'tour_pay'])->name('bookings.tour_pay');
 
     Route::post('/paymongo/checkout', [BookingController::class, 'paymongoCheckout']);
     Route::get('/payment-success', [BookingController::class, 'paymentSuccess']);
@@ -161,15 +160,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/tours', [HomeController::class, 'manageTours'])->name('admin.tours');
     Route::post('/admin/tours/add', [TourController::class, 'store']);
-    Route::get('/admin/tours/delete/{id}', [HomeController::class, 'deleteTour'])->name('admin.tours.delete');
-    Route::get('/admin/tours', [TourController::class, 'index']);
     Route::get('/admin/customers', [AdminController::class, 'customers'])->name('admin.customers');
     Route::get('/admin/joiner-trips', [AdminController::class, 'joinerTrips'])->name('admin.joiner');
     Route::get('/admin/pricing', [AdminController::class, 'pricing']);
     Route::post('/admin/pricing/update', [AdminController::class, 'updatePricing']);
 
-    //joiners
-    Route::post('/admin/drivers/add', [AdminController::class, 'addDriver'])->name('admin.drivers.add');
     Route::get('/admin/joiner-trips/edit/{id}', [AdminController::class, 'editJoinerTrip'])->name('admin.joiner-trips.edit');
     Route::put('/admin/joiner-trips/update/{id}', [AdminController::class, 'updateJoinerTrip'])->name('admin.joiner-trips.update');
     Route::delete('/admin/joiner-trips/{id}', [AdminController::class, 'deleteJoinerTrip'])->name('admin.joiner-trips.delete');
@@ -180,21 +175,6 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 Route::get('/booked-dates/{vanId}', [BookingController::class, 'getBookedDates']);
 Route::get('/available-drivers', [BookingController::class, 'getAvailableDrivers']);
 Route::post('/paymongo/webhook', [BookingController::class, 'paymongoWebhook']);
-
-// Step 2: Show this page (GET)
-Route::get('/verify-login-otp', [AuthController::class, 'showOtpForm'])->name('otp.verify');
-
-// Step 2: Handle the button click (POST)
-// Note: name('verify.otp.post') matches the form above
-Route::post('/verify-login-otp', [AuthController::class, 'verifyLoginOtp'])->name('verify.otp.post');
-
-// Step 1: Forgot Password Page (Current)
-Route::get('/forgot-password', function () { return view('login.forgot'); })->name('password.request');
-Route::post('/forgot-password', [AuthController::class, 'sendOtp']);
-
-// Step 2: Input OTP Page (The one you want next)
-Route::get('/verify-reset-otp', [AuthController::class, 'showResetOtpVerifyForm'])->name('otp.reset.verify');
-Route::post('/verify-reset-otp', [AuthController::class, 'verifyResetOtp']);
 
 Route::middleware(['auth'])->group(function () {
     // ... other routes ...
@@ -224,9 +204,9 @@ Route::prefix('admin')->group(function () {
     Route::post('/joiner-trips', [JoinerTripController::class, 'store'])->name('admin.joiner-trips.store');
 });
 
-// Add this route
-Route::post('/join-trip/{id}', [App\Http\Controllers\JoinerTripController::class, 'join'])->name('join-trip');
+Route::post('/join-trip/{id}', [JoinerTripController::class, 'join'])->name('join-trip');
 Route::get('/join-trip/{id}', [JoinerTripController::class, 'show'])->name('joiner.show');
+
 Route::middleware(['auth'])->group(function () {
     // This matches the link in your navbar
     Route::get('/notifications/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
@@ -236,25 +216,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 
-// View the details
-Route::get('/join-trip/{id}', [JoinerTripController::class, 'show'])->name('joiner.show');
-
-// Process the join request (POST)
-Route::post('/join-trip/{id}', [JoinerTripController::class, 'join'])->name('join-trip');
-
-
 
 // Finalize the booking (Move your previous 'join' logic here)
 Route::post('/joiner/book/{id}', [JoinerTripController::class, 'processBooking'])->name('joiner.book');
 Route::get('/joiner/passenger-details/{id}', [JoinerTripController::class, 'passengerForm'])->name('joiner.passengerForm');
 
-
-Route::middleware(['auth', 'role:customer'])->group(function () {
-    Route::get('/dashboard', [CustomerController::class, 'index'])->name('dashboard');
-
-
-
-});
 
 // Route for toggling driver status
 Route::get('/admin/drivers/toggle/{id}', [AdminController::class, 'toggleDriverStatus'])->name('admin.drivers.toggle');
@@ -269,10 +235,6 @@ Route::post('/admin/joiner-trips/{id}/approve', [AdminController::class, 'approv
 Route::post('/admin/joiner-trips/{id}/reject', [AdminController::class, 'rejectJoinerTrip'])->name('admin.joiner.reject');
 Route::get('/my-bookings', [JoinerTripController::class, 'myBookings']);
 Route::post('/submit-feedback', [App\Http\Controllers\JoinerTripController::class, 'submitFeedback']);
-
-Route::get('/tour/details/{id}', [TourController::class, 'show']);
-
-Route::post('/bookings/tour/pay', [TourController::class, 'tour_pay'])->name('bookings.tour_pay');
 
 // Find this line and change it:
 Route::get('/my-bookings', [TourController::class, 'showMyBookings'])->name('my.bookings');
