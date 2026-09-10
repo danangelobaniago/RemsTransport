@@ -56,7 +56,22 @@ class BookingController extends Controller
             ->pluck('id')
             ->map(fn($id) => (int) $id);
 
-        $allBusy = $busyIds->merge($busyNameIds)->unique()->values();
+        // 4. Drivers whose weekly rest day falls within the requested range
+        $restDayIds = DB::table('drivers')
+            ->whereNotNull('day_off')
+            ->pluck('day_off', 'id')
+            ->filter(function ($dayOff) use ($start, $end) {
+                for ($d = strtotime($start); $d <= strtotime($end); $d = strtotime('+1 day', $d)) {
+                    if ((int) date('w', $d) === (int) $dayOff) {
+                        return true;
+                    }
+                }
+                return false;
+            })
+            ->keys()
+            ->map(fn($id) => (int) $id);
+
+        $allBusy = $busyIds->merge($busyNameIds)->merge($restDayIds)->unique()->values();
 
         return response()->json(['busy' => $allBusy]);
     }

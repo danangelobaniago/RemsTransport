@@ -370,6 +370,9 @@
                 <span><i class="fas fa-phone"></i> {{ $driver->phone }}</span>
                 <span><i class="fas fa-id-card"></i> {{ $driver->license_number }}</span>
                 <span><span class="dot-green"></span> {{ strtoupper($driver->status) }}</span>
+                @if(\App\Support\Weekday::label($driver->day_off ?? null))
+                    <span><i class="fas fa-mug-hot"></i> Day off: {{ \App\Support\Weekday::label($driver->day_off) }}</span>
+                @endif
             </div>
         </div>
         <div class="stat-box">

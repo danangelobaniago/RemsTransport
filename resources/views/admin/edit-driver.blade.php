@@ -196,6 +196,16 @@
             </div>
 
             <div class="form-group">
+                <label for="day_off">Weekly Day Off</label>
+                <select id="day_off" name="day_off">
+                    <option value="">None</option>
+                    @foreach(['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'] as $i => $d)
+                        <option value="{{ $i }}" @selected((string) old('day_off', $driver->day_off) === (string) $i)>{{ $d }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-group">
                 <label>Driver's License Document</label>
                 <div class="license-management">
                     @if($driver->license_image)

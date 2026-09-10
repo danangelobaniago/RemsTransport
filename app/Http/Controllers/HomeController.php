@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\TourPackage;
+use App\Http\Traits\BookingValidator;
 
 class HomeController extends Controller
 {
+    use BookingValidator;
+
     // ================= PUBLIC HOMEPAGE =================
 public function index()
 {
@@ -167,6 +170,13 @@ public function index()
         'image'          => 'required|image|mimes:jpg,jpeg,png|max:2048', // name is "image" in your Blade
     ]);
 
+    // Block if the assigned driver's weekly rest day falls inside the tour dates
+    if ($this->driverRestDayInRange($request->driver_id, $request->tour_date, $request->end_date)) {
+        $driver = DB::table('drivers')->where('id', $request->driver_id)->first();
+        return back()->withInput()->with('error',
+            "❌ " . ($driver->name ?? 'This driver') . " has a weekly day off (" . \App\Support\Weekday::label($driver->day_off ?? null) . ") within the selected tour dates.");
+    }
+
     // 2. Handle Image Upload
     $path = null;
     if ($request->hasFile('image')) {
@@ -310,6 +320,11 @@ public function updateTour(Request $request, $id)
         'price' => 'required|numeric',
         // Add other validation rules as needed
     ]);
+
+    if ($request->driver_name && $this->driverRestDayInRange($request->driver_name, $request->tour_date, $request->end_date)) {
+        return back()->withInput()->with('error',
+            "❌ {$request->driver_name} has a weekly day off within the selected tour dates.");
+    }
 
     // 2. Prepare the data for update
     $data = [

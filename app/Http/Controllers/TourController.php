@@ -104,6 +104,11 @@ class TourController extends Controller
         $van    = DB::table('vans')->where('id', $request->van_id)->first();
         $driver = DB::table('drivers')->where('id', $request->driver_id)->first();
 
+        if ($this->driverRestDayInRange($driver->id, $request->tour_date, $request->end_date)) {
+            return back()->withInput()->with('error',
+                "❌ {$driver->name} has a weekly day off (" . \App\Support\Weekday::label($driver->day_off) . ") within the selected tour dates.");
+        }
+
         $isAvailable = $this->checkAvailability(
             $van->plate_number,
             $driver->name,

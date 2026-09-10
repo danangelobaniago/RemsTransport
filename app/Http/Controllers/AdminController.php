@@ -9,9 +9,12 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
+use App\Http\Traits\BookingValidator;
 
 class AdminController extends Controller
 {
+    use BookingValidator;
+
     public function updateStatus(Request $request)
     {
         $booking = DB::table('bookings')
@@ -438,7 +441,8 @@ public function updateDriver(Request $request, $id)
         'name' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z\s\-]+$/'],
         'phone' => ['required', 'regex:/^09\d{9}$/'],
         'license' => 'required|string|max:255',
-        'license_image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048' // Optional on update
+        'license_image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048', // Optional on update
+        'day_off' => ['nullable', 'integer', 'between:0,6'],
     ], [
         'name.regex' => 'The driver name cannot contain numbers.',
         'phone.regex' => 'The phone number must start with 09 and be exactly 11 digits.',
@@ -449,6 +453,7 @@ public function updateDriver(Request $request, $id)
         'name' => $request->name,
         'phone' => $request->phone,
         'license_number' => $request->license,
+        'day_off' => $request->filled('day_off') ? (int) $request->day_off : null,
         'updated_at' => now()
     ];
 
@@ -497,7 +502,8 @@ public function addDriver(Request $request)
         // MATCHED TO YOUR DB: license_number
         'license' => ['required', 'string', 'max:255', 'unique:drivers,license_number'],
 
-        'license_image' => 'required|image|mimes:jpg,jpeg,png|max:2048'
+        'license_image' => 'required|image|mimes:jpg,jpeg,png|max:2048',
+        'day_off' => ['nullable', 'integer', 'between:0,6'],
     ], [
         // Custom Error Messages for the Admin Alert
         'name.unique' => 'Duplicate Entry: This driver name is already in the list.',
@@ -517,6 +523,7 @@ public function addDriver(Request $request)
         'license_number' => $request->license, // Matched to your DB screenshot
         'license_image' => $imagePath,
         'status' => 'AVAILABLE',
+        'day_off' => $request->filled('day_off') ? (int) $request->day_off : null,
         'created_at' => now(),
         'updated_at' => now(),
     ]);
@@ -709,6 +716,12 @@ public function updateJoinerTrip(Request $request, $id)
         'price_per_seat'=> 'required|numeric',
         'status'        => 'required|in:active,inactive,completed',
     ]);
+
+    $trip = DB::table('joiner_trips')->where('id', $id)->first();
+    if ($trip && $this->driverRestsOn($trip->driver_name, $request->trip_date)) {
+        return back()->withInput()->with('error',
+            "❌ {$trip->driver_name} has a weekly day off on " . \Illuminate\Support\Carbon::parse($request->trip_date)->format('l') . ". Pick another date or reassign the driver.");
+    }
 
     DB::table('joiner_trips')->where('id', $id)->update([
         'destination' => $request->destination,
