@@ -201,6 +201,18 @@
     }
 
     window.onload = startTimer;
+
+    // Prevent double-submit (each extra click = another OTP email / attempt).
+    // The resend button is left to its own 60s timer.
+    document.querySelectorAll("form").forEach(form => {
+        form.addEventListener("submit", () => {
+            const btn = form.querySelector("button[type=submit]");
+            if (btn && btn.id !== "resendBtn") {
+                btn.disabled = true;
+                setTimeout(() => { btn.disabled = false; }, 5000);
+            }
+        });
+    });
 </script>
 </body>
 </html>
