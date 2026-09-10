@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Carbon\Carbon;
 use App\Models\Van;
 use App\Models\TourPackage;
 use App\Mail\PaymentReceiptMail;
@@ -134,25 +135,12 @@ class BookingController extends Controller
     }
 
     public function show($id)
-{
-    $booking = DB::table('bookings')
-        ->join('users', 'bookings.user_id', '=', 'users.id')
-        // NEW: Join with tour_packages to get vehicle info
-        ->join('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
-        ->select(
-            'bookings.*',
-            'users.first_name',
-            'users.last_name',
-            'users.email',
-            'tour_packages.van as vehicle_type' // This pulls the van name
-        )
-        ->where('bookings.id', $id)
-        ->first();
-
-    $passengers = DB::table('passengers')->where('booking_id', $id)->get();
-
-    return view('receipt', compact('booking', 'passengers'));
-}
+    {
+        // Kept for the older /receipt/{id} route binding — the canonical
+        // receipt builder (payments, balance, installment state) lives in
+        // showReceipt().
+        return $this->showReceipt($id);
+    }
 
     public function showBooking($id)
     {
@@ -332,6 +320,17 @@ $status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_p
             'payment_id' => $paymentId,
             'created_at' => now(),
             'updated_at' => now(),
+        ]);
+
+        DB::table('booking_payments')->insert([
+            'booking_id'   => $bookingId,
+            'amount'       => $paid,
+            'method'       => 'paymongo',
+            'reference'    => $paymentId,
+            'collected_by' => 'customer',
+            'paid_at'      => now(),
+            'created_at'   => now(),
+            'updated_at'   => now(),
         ]);
 
         if (!empty($formData['passengers_data']) && is_array($formData['passengers_data'])) {
@@ -629,10 +628,18 @@ public function rescheduleBooking(Request $request, $id)
     return redirect("/receipt/{$id}")->with('success', 'Your booking has been rescheduled successfully.');
 }
 
+// Installments may be paid online up to this many days before the trip.
+// Closer than that, only the full remaining balance can be settled online;
+// whatever is left is collected by the driver on the trip.
+private const INSTALLMENT_CUTOFF_DAYS = 7;
+
+private const MIN_ONLINE_PAYMENT = 100; // PayMongo minimum (PHP)
+
 public function payBalanceCheckout(Request $request, $id)
 {
     $request->validate([
         'payment_method' => 'required|in:gcash,card',
+        'amount'         => 'nullable|numeric',
     ]);
 
     $booking = DB::table('bookings')->where('id', $id)->first();
@@ -641,16 +648,33 @@ public function payBalanceCheckout(Request $request, $id)
     }
 
     $totalPaid = (float) ($booking->amount_paid ?? 0);
-    $balance   = max(0, (float) $booking->total - $totalPaid);
+    $balance   = round(max(0, (float) $booking->total - $totalPaid), 2);
 
     if ($balance <= 0) {
         return redirect("/receipt/{$id}")->with('error', 'This booking has no remaining balance.');
     }
 
-    $amountInCents = (int) round($balance * 100);
-    if ($amountInCents < 10000) {
-        $amountInCents = 10000;
+    $daysUntilTrip     = now()->startOfDay()->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
+    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
+
+    // Decide how much to charge now
+    if ($installmentAllowed && $request->filled('amount')) {
+        $amount = round(min((float) $request->amount, $balance), 2);
+    } else {
+        $amount = $balance; // full balance only
     }
+
+    // Enforce the gateway minimum, but never charge more than the balance
+    if ($amount < self::MIN_ONLINE_PAYMENT) {
+        $amount = min($balance, (float) self::MIN_ONLINE_PAYMENT);
+    }
+    if ($amount < self::MIN_ONLINE_PAYMENT && $amount < $balance) {
+        return redirect("/receipt/{$id}")->with('error',
+            'Minimum online payment is ₱' . self::MIN_ONLINE_PAYMENT . '. Please pay the full balance or settle it with your driver.');
+    }
+
+    $isPartial     = $amount < $balance;
+    $amountInCents = (int) round($amount * 100);
 
     $response = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
         ->post('https://api.paymongo.com/v1/checkout_sessions', [
@@ -659,7 +683,8 @@ public function payBalanceCheckout(Request $request, $id)
                     'line_items' => [[
                         'currency' => 'PHP',
                         'amount'   => $amountInCents,
-                        'name'     => 'Van Booking Balance Payment (#REM-' . str_pad($id, 5, '0', STR_PAD_LEFT) . ')',
+                        'name'     => ($isPartial ? 'Van Booking Installment' : 'Van Booking Balance Payment')
+                                      . ' (#REM-' . str_pad($id, 5, '0', STR_PAD_LEFT) . ')',
                         'quantity' => 1,
                     ]],
                     'payment_method_types' => [$request->payment_method],
@@ -676,7 +701,8 @@ public function payBalanceCheckout(Request $request, $id)
     session([
         'pending_balance_checkout' => [
             'booking_id' => $id,
-            'amount'     => $balance,
+            'amount'     => $amount,
+            'method'     => $request->payment_method,
             'session_id' => $response['data']['id'],
         ],
     ]);
@@ -708,8 +734,8 @@ public function payBalanceSuccess(Request $request, $id)
         abort(404);
     }
 
-    $newAmountPaid = (float) ($booking->amount_paid ?? 0) + (float) $pending['amount'];
-    $newBalance    = max(0, (float) $booking->total - $newAmountPaid);
+    $newAmountPaid = round((float) ($booking->amount_paid ?? 0) + (float) $pending['amount'], 2);
+    $newBalance    = round(max(0, (float) $booking->total - $newAmountPaid), 2);
     $newStatus     = $newBalance <= 0 ? 'fully_paid' : 'downpayment_paid';
 
     DB::table('bookings')->where('id', $id)->update([
@@ -721,9 +747,24 @@ public function payBalanceSuccess(Request $request, $id)
         'updated_at'         => now(),
     ]);
 
+    DB::table('booking_payments')->insert([
+        'booking_id'   => $id,
+        'amount'       => (float) $pending['amount'],
+        'method'       => $pending['method'] ?? 'paymongo',
+        'reference'    => $paymentId,
+        'collected_by' => 'customer',
+        'paid_at'      => now(),
+        'created_at'   => now(),
+        'updated_at'   => now(),
+    ]);
+
     session()->forget('pending_balance_checkout');
 
-    return redirect("/receipt/{$id}")->with('success', 'Payment received! Thank you.');
+    $msg = $newBalance <= 0
+        ? 'Payment received — your booking is now fully paid. Thank you!'
+        : '₱' . number_format((float) $pending['amount'], 2) . ' received. Remaining balance: ₱' . number_format($newBalance, 2) . '.';
+
+    return redirect("/receipt/{$id}")->with('success', $msg);
 }
 
 public function showReceipt($id)
@@ -755,9 +796,18 @@ public function showReceipt($id)
     // For tour bookings: amount_paid is set when Paymongo succeeds; downpayment is the initial charge
     // remaining_balance defaults to 0 in DB so cannot be trusted — compute directly
     $totalPaid = (float) ($booking->amount_paid ?? $booking->downpayment ?? 0);
-    $balance   = max(0, (float) $booking->total - $totalPaid);
+    $balance   = round(max(0, (float) $booking->total - $totalPaid), 2);
 
-    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance'));
+    $payments = DB::table('booking_payments')
+        ->where('booking_id', $id)
+        ->orderBy('paid_at')
+        ->get();
+
+    // Installments can be paid online only while the trip is more than a week away
+    $daysUntilTrip     = now()->startOfDay()->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
+    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
+
+    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
 }
 
 }

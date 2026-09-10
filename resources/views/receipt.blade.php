@@ -100,6 +100,22 @@
             border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
         }
         .btn-pay-balance:hover { background: #b45309; }
+        .installment-field { margin-bottom: 16px; }
+        .installment-field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+        .installment-field .amount-wrap { position: relative; }
+        .installment-field .amount-wrap span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600; }
+        .installment-field input[type="number"] {
+            width: 100%; padding: 12px 14px 12px 32px; border: 2px solid #e5e7eb;
+            border-radius: 10px; font-size: 15px; font-weight: 600; outline: none;
+        }
+        .installment-field input[type="number"]:focus { border-color: var(--primary-blue); }
+        .installment-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+        .payment-history { margin-top: 24px; }
+        .payment-history h4 { font-size: 14px; margin: 0 0 10px; color: var(--text-main); }
+        .payment-history table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .payment-history th, .payment-history td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
+        .payment-history th { color: var(--text-muted); font-weight: 600; }
+        .payment-history td.amt { text-align: right; font-weight: 600; color: var(--success-green); }
 
         .reschedule-note { text-align: right; margin: -20px 0 20px; font-size: 12px; color: var(--text-muted); }
 
@@ -274,13 +290,55 @@
         </div>
     </div>
 
+    @if($payments->count())
+        <div class="payment-history">
+            <h4><i class="fas fa-clock-rotate-left"></i> Payment History</h4>
+            <table>
+                <thead>
+                    <tr><th>Date</th><th>Method</th><th>Received by</th><th style="text-align:right;">Amount</th></tr>
+                </thead>
+                <tbody>
+                    @foreach($payments as $p)
+                        <tr>
+                            <td>{{ \Carbon\Carbon::parse($p->paid_at ?? $p->created_at)->format('M d, Y g:i A') }}</td>
+                            <td>{{ ucfirst($p->method ?? 'online') }}</td>
+                            <td>{{ $p->collected_by === 'driver' ? 'Driver (cash)' : 'Online' }}</td>
+                            <td class="amt">₱{{ number_format($p->amount, 2) }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    @endif
+
     @if($balance > 0)
         <div class="pay-balance-card">
-            <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
-            <p>You may settle your ₱{{ number_format($balance, 2) }} balance now instead of paying at the trip.</p>
+            @if($installmentAllowed)
+                <h4><i class="fas fa-hand-holding-dollar"></i> Pay in Installments</h4>
+                <p>Your trip is still {{ $daysUntilTrip }} days away. Pay any amount now toward your
+                   ₱{{ number_format($balance, 2) }} balance — as many times as you like — or settle
+                   whatever's left with your driver on the trip.</p>
+            @else
+                <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
+                <p>Your trip is close, so installments are closed. You may pay the full
+                   ₱{{ number_format($balance, 2) }} balance now, or pay it to your driver on the trip.</p>
+            @endif
 
             <form action="/booking/{{ $booking->id }}/pay-balance" method="POST">
                 @csrf
+
+                @if($installmentAllowed)
+                    <div class="installment-field">
+                        <label for="pay-amount">Amount to pay now</label>
+                        <div class="amount-wrap">
+                            <span>₱</span>
+                            <input type="number" id="pay-amount" name="amount" min="100" max="{{ $balance }}"
+                                   step="0.01" value="{{ number_format($balance, 2, '.', '') }}" required>
+                        </div>
+                        <div class="installment-hint">Minimum ₱100. Maximum ₱{{ number_format($balance, 2) }} (your full balance).</div>
+                    </div>
+                @endif
+
                 <div class="method-options">
                     <div class="method-option">
                         <input type="radio" name="payment_method" id="pm-gcash" value="gcash" checked>
@@ -292,7 +350,7 @@
                     </div>
                 </div>
                 <button type="submit" class="btn-pay-balance">
-                    Pay ₱{{ number_format($balance, 2) }} Now
+                    {{ $installmentAllowed ? 'Pay Now' : 'Pay ₱' . number_format($balance, 2) . ' Now' }}
                 </button>
             </form>
         </div>
