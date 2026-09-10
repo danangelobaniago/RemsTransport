@@ -238,7 +238,11 @@ class BookingController extends Controller
                         'currency' => 'PHP',
                         'amount'   => $amountInCents,
                         // Dynamic name based on selection
-                        'name'     => ($paymentType === 'full') ? 'Van Booking: Full Payment' : 'Van Booking: Downpayment (20%)',
+                        'name'     => match ($paymentType) {
+                            'full'        => 'Van Booking: Full Payment',
+                            'installment' => 'Van Booking: Initial Installment',
+                            default       => 'Van Booking: Downpayment',
+                        },
                         'quantity' => 1,
                     ]],
                     'payment_method_types' => ['gcash', 'card'],
@@ -291,8 +295,8 @@ class BookingController extends Controller
 
        $total = (float) $formData['total'];
 $paid = (float) $formData['amount_to_pay']; // Use the actual amount paid
-$remaining = $total - $paid;
-$status = ($formData['payment_type'] === 'full') ? 'fully_paid' : 'downpayment_paid';
+$remaining = round(max(0, $total - $paid), 2);
+$status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_paid' : 'downpayment_paid';
 
         // If an admin is booking this on behalf of a walk-in customer, attribute
         // the booking to that customer instead of the logged-in admin.

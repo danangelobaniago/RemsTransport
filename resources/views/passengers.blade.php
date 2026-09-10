@@ -232,20 +232,31 @@
                 Pay Downpayment (min. 20%)
             </label>
             <label>
+                <input type="radio" name="payment_type" value="installment" onchange="updatePaymentSummary()">
+                Pay in Installments (min. 20% now)
+            </label>
+            <label>
                 <input type="radio" name="payment_type" value="full" onchange="updatePaymentSummary()">
                 Pay Full Amount
             </label>
 
             <div id="customDownpaymentWrap" style="margin-top: 15px;">
                 <label for="downpaymentInput" style="display:block; font-size:13px; color:#374151; margin-bottom:6px;">
-                    How much would you like to pay? (minimum ₱{{ number_format($downpayment, 2) }} / 20%)
+                    How much would you like to pay now? (minimum ₱{{ number_format($downpayment, 2) }} / 20%)
                 </label>
                 <input type="number" id="downpaymentInput" min="{{ $downpayment }}" max="{{ $total }}" step="0.01"
                        value="{{ $downpayment }}" oninput="updatePaymentSummary()" onblur="updatePaymentSummary()"
                        style="padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; width:100%; max-width:260px; text-align:left; display:block;">
                 <div id="downpaymentError" style="display:none; color:#b91c1c; font-size:12px; font-weight:600; margin-top:6px;">
-                    Downpayment must be at least ₱{{ number_format($downpayment, 2) }} (20% of the total amount).
+                    You must pay at least ₱{{ number_format($downpayment, 2) }} (20% of the total amount).
                 </div>
+            </div>
+
+            <div id="installmentNote" style="display:none; margin-top:12px; background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px 14px; font-size:12.5px; color:#1e40af; line-height:1.55;">
+                <i class="fas fa-circle-info"></i>
+                Pay at least 20% now to reserve your booking. You can then pay the rest in parts
+                from <strong>My Bookings &rsaquo; Receipt</strong> any time until <strong>7 days before</strong> your trip.
+                Whatever is left after that is collected by your driver on the trip.
             </div>
         </div>
 
@@ -402,7 +413,7 @@ function validatePassengers() {
 
     // Custom downpayment amount must be at least 20% of the total, and never exceed it.
     const paymentType = document.querySelector('input[name="payment_type"]:checked').value;
-    if (paymentType === 'downpayment') {
+    if (paymentType === 'downpayment' || paymentType === 'installment') {
         updatePaymentSummary(); // re-sync/clamp in case submit happened without a blur event
         const downInput = document.getElementById('downpaymentInput');
         const downError = document.getElementById('downpaymentError');
@@ -441,6 +452,9 @@ function updatePaymentSummary() {
     const customWrap = document.getElementById('customDownpaymentWrap');
     const downInput = document.getElementById('downpaymentInput');
     const downError = document.getElementById('downpaymentError');
+    const installmentNote = document.getElementById('installmentNote');
+
+    installmentNote.style.display = (paymentType === 'installment') ? 'block' : 'none';
 
     if (paymentType === 'full') {
         customWrap.style.display = 'none';
@@ -454,7 +468,7 @@ function updatePaymentSummary() {
         let amount = parseFloat(downInput.value);
         if (isNaN(amount)) amount = MIN_DOWNPAYMENT;
 
-        // Never allow the downpayment to exceed the total amount — snap it back immediately.
+        // Never allow the amount to exceed the total amount — snap it back immediately.
         if (amount > total) {
             amount = total;
             downInput.value = total;
@@ -465,7 +479,7 @@ function updatePaymentSummary() {
 
         const safeAmount = Math.max(amount, MIN_DOWNPAYMENT);
 
-        label.innerText = "Downpayment Amount";
+        label.innerText = (paymentType === 'installment') ? "Paying Now" : "Downpayment Amount";
         displayAmount.innerText = "₱" + safeAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
         displayBalance.innerText = "₱" + (total - safeAmount).toLocaleString(undefined, {minimumFractionDigits: 2});
         hiddenAmount.value = amount;
