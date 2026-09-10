@@ -37,9 +37,10 @@ Route::get('/register', [AuthController::class, 'showRegister'])->name('register
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-// Staff Login (Admin & Driver)
-Route::get('/admin/login', [AuthController::class, 'showAdminLogin'])->name('admin.login');
-Route::post('/admin/login', [AuthController::class, 'loginStaff'])->name('admin.login.post');
+// Staff (Admin & Driver) now use the same unified login page as customers.
+// Kept for backward compatibility with old bookmarks / redirects.
+Route::get('/admin/login', fn () => redirect()->route('login'))->name('admin.login');
+Route::post('/admin/login', [AuthController::class, 'login'])->name('admin.login.post');
 
 // 2. Login 2FA Flow (This is what handles your login verification)
 Route::get('/verify-login-otp', [AuthController::class, 'showOtpForm'])->name('otp.verify');

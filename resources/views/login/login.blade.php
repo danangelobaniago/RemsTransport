@@ -356,7 +356,6 @@
 
         <form method="POST" action="/login" id="loginForm">
             @csrf
-            <input type="hidden" name="role" value="customer">
 
             <div class="form-group">
                 <label for="email">Email Address</label>
@@ -397,7 +396,7 @@
         </div>
 
         <div class="staff-link">
-            <a href="/admin/login"><i class="fas fa-shield-halved" style="margin-right:4px;"></i>Admin / Driver Login</a>
+            <i class="fas fa-shield-halved" style="margin-right:4px;"></i>Customers, drivers, and admins all sign in here.
         </div>
 
     </div>
@@ -441,6 +440,19 @@
             input.addEventListener('focus',  () => input.parentElement.style.borderRadius = '10px');
             input.addEventListener('blur',   () => input.parentElement.style.boxShadow   = '');
         });
+
+        // Prevent double-submit — each successful login sends an OTP email
+        const loginForm = document.getElementById('loginForm');
+        if (loginForm) {
+            loginForm.addEventListener('submit', function () {
+                const btn = loginForm.querySelector('.btn-login');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.6';
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Signing in…';
+                }
+            });
+        }
 
     });
     </script>
