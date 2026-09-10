@@ -15,7 +15,43 @@ use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
+    /**
+     * Returns an error message if a new OTP email may NOT be sent to this
+     * address yet, or null if sending is allowed. Limits per email address:
+     * 1 code per 60 seconds, and 5 codes per hour. This is the server-side
+     * guard — the countdown on the verify pages is only cosmetic and can be
+     * bypassed by refreshing or posting directly.
+     *
+     * Call recordOtpSend() right after an OTP email is actually sent.
+     */
+    private function otpThrottleError(string $email): ?string
+    {
+        $email = Str::lower($email);
 
+        if (RateLimiter::tooManyAttempts('otp-send-min:' . $email, 1)) {
+            $seconds = RateLimiter::availableIn('otp-send-min:' . $email);
+            return "Please wait {$seconds} second" . ($seconds === 1 ? '' : 's')
+                . " before requesting another verification code.";
+        }
+
+        if (RateLimiter::tooManyAttempts('otp-send-hour:' . $email, 5)) {
+            $minutes = max(1, (int) ceil(RateLimiter::availableIn('otp-send-hour:' . $email) / 60));
+            return "Too many verification codes requested. Please try again in about {$minutes} minute"
+                . ($minutes === 1 ? '' : 's') . ".";
+        }
+
+        return null;
+    }
+
+    /**
+     * Records that an OTP email was just sent to this address, for throttling.
+     */
+    private function recordOtpSend(string $email): void
+    {
+        $email = Str::lower($email);
+        RateLimiter::hit('otp-send-min:' . $email, 60);
+        RateLimiter::hit('otp-send-hour:' . $email, 3600);
+    }
 
     public function showLogin()
     {
@@ -52,21 +88,38 @@ public function login(Request $request)
 
             $user = Auth::user();
 
-            // Generate OTP
-            $otp = rand(100000, 999999);
-            $user->otp_code = $otp;
-            $user->otp_expires_at = now()->addMinutes(5);
-            $user->save();
+            // Only send a fresh OTP if we are allowed to. If the user is
+            // throttled but still holds a valid code (e.g. they just came
+            // back to re-login), reuse it instead of emailing another.
+            $otpError = $this->otpThrottleError($user->email);
+            $hasValidOtp = $user->otp_code
+                && $user->otp_expires_at
+                && now()->lt($user->otp_expires_at);
 
-            // Send OTP Email
-            Mail::to($user->email)->send(new LoginOtpMail($otp));
+            $reusedOtp = false;
+
+            if (!$otpError || !$hasValidOtp) {
+                $otp = rand(100000, 999999);
+                $user->otp_code = $otp;
+                $user->otp_expires_at = now()->addMinutes(5);
+                $user->save();
+
+                Mail::to($user->email)->send(new LoginOtpMail($otp));
+                $this->recordOtpSend($user->email);
+            } else {
+                $reusedOtp = true;
+            }
 
             // Logout temporarily for 2FA
             Auth::logout();
 
             session(['login_2fa_user_id' => $user->id]);
 
-            return redirect('/verify-login-otp');
+            $redirect = redirect('/verify-login-otp');
+
+            return $reusedOtp
+                ? $redirect->with('success', 'We already sent a verification code to your email recently. Please enter it below.')
+                : $redirect;
         }
 
         // 3. LOGIN FAILED: Increment hits
@@ -120,19 +173,34 @@ public function login(Request $request)
 
             $user = Auth::user();
 
-            // Generate OTP for 2FA
-            $otp = rand(100000, 999999);
-            $user->otp_code = $otp;
-            $user->otp_expires_at = now()->addMinutes(5);
-            $user->save();
+            $otpError = $this->otpThrottleError($user->email);
+            $hasValidOtp = $user->otp_code
+                && $user->otp_expires_at
+                && now()->lt($user->otp_expires_at);
 
-            Mail::to($user->email)->send(new LoginOtpMail($otp));
+            $reusedOtp = false;
+
+            if (!$otpError || !$hasValidOtp) {
+                $otp = rand(100000, 999999);
+                $user->otp_code = $otp;
+                $user->otp_expires_at = now()->addMinutes(5);
+                $user->save();
+
+                Mail::to($user->email)->send(new LoginOtpMail($otp));
+                $this->recordOtpSend($user->email);
+            } else {
+                $reusedOtp = true;
+            }
 
             Auth::logout();
 
             session(['login_2fa_user_id' => $user->id]);
 
-            return redirect('/verify-login-otp');
+            $redirect = redirect('/verify-login-otp');
+
+            return $reusedOtp
+                ? $redirect->with('success', 'We already sent a verification code to your email recently. Please enter it below.')
+                : $redirect;
         }
 
         RateLimiter::hit($throttleKey, 3600);
@@ -253,6 +321,10 @@ public function updateProfile(Request $request)
 {
     $request->validate(['email' => 'required|email|exists:users,email']);
 
+    if ($error = $this->otpThrottleError($request->email)) {
+        return back()->with('error', $error);
+    }
+
     $user = User::where('email', $request->email)->first();
     $otp = rand(100000, 999999);
 
@@ -261,6 +333,7 @@ public function updateProfile(Request $request)
     $user->save();
 
     Mail::to($user->email)->send(new \App\Mail\LoginOtpMail($otp));
+    $this->recordOtpSend($user->email);
 
     // Store ID in a RESET-specific session key
     session(['password_reset_user_id' => $user->id]);
@@ -335,12 +408,17 @@ public function verifyResetOtp(Request $request)
             return redirect('/login')->with('error', 'Session expired.');
         }
 
+        if ($error = $this->otpThrottleError($user->email)) {
+            return back()->with('error', $error);
+        }
+
         $otp = rand(100000, 999999);
         $user->otp_code = $otp;
         $user->otp_expires_at = now()->addMinutes(5);
         $user->save();
 
         Mail::to($user->email)->send(new LoginOtpMail($otp));
+        $this->recordOtpSend($user->email);
 
         return back()->with('success', 'OTP resent successfully!');
     }
@@ -363,6 +441,9 @@ public function register(Request $request)
         'terms'        => 'required',
     ]);
 
+    if ($error = $this->otpThrottleError($request->email)) {
+        return back()->withInput()->with('error', $error);
+    }
 
     $otp = rand(100000, 999999);
 
@@ -381,6 +462,7 @@ public function register(Request $request)
     ]);
 
     Mail::to($request->email)->send(new LoginOtpMail($otp));
+    $this->recordOtpSend($request->email);
 
     return redirect('/verify-register-otp');
 }
@@ -437,6 +519,10 @@ public function resendRegisterOtp()
         return redirect('/register')->with('error', 'Session expired. Please fill in the form again.');
     }
 
+    if ($error = $this->otpThrottleError($pendingData['email'])) {
+        return back()->with('error', $error);
+    }
+
     $otp = rand(100000, 999999);
     session([
         'reg_otp'            => (string) $otp,
@@ -444,6 +530,7 @@ public function resendRegisterOtp()
     ]);
 
     Mail::to($pendingData['email'])->send(new LoginOtpMail($otp));
+    $this->recordOtpSend($pendingData['email']);
 
     return back()->with('success', 'A new OTP has been sent to your email.');
 }
