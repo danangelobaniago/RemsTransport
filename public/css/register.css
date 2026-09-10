@@ -7,14 +7,17 @@ font-family:'Poppins',sans-serif;
 
 body{
 
-height:100vh;
+min-height:100vh;
+height:auto;
 
 display:flex;
 justify-content:center;
 align-items:center;
 
+padding:40px 20px;
+
 background:url("../image/hero-1.jpg")
-no-repeat center/cover;
+no-repeat center/cover fixed;
 
 position:relative;
 }
