@@ -376,7 +376,10 @@ public function register(Request $request)
         'birthday'     => 'required|date|before_or_equal:today',
         'phone_number' => ['required', 'regex:/^09\d{9}$/', 'unique:users,phone_number'],
         'password'     => 'required|min:8|confirmed',
-        'terms'        => 'required',
+        'terms'        => 'required|in:accepted',
+    ], [
+        'terms.required' => 'Please review and accept the Terms of Service & Privacy Policy to continue.',
+        'terms.in'       => 'Please review and accept the Terms of Service & Privacy Policy to continue.',
     ]);
 
     if ($error = $this->otpThrottleError($request->email)) {

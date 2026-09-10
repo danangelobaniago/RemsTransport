@@ -20,7 +20,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 
 <h1>Rem's Transport</h1>
 <p>Create your account</p>
-<p class="required-hint"><span class="req">*</span> Required fields</p>
 
 {{-- ERROR DISPLAY --}}
 @if ($errors->any())
@@ -111,15 +110,19 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 <i class="fa fa-eye toggle-password" id="toggleConfirm"></i>
 </div>
 
-<div class="terms-text">
-    <label class="terms-label">
-        <input type="checkbox" name="terms" required>
-        <span>
-            I accept the
-            <a href="#" onclick="openTerms(); return false;">Terms of Service</a>
-            and Privacy Policy <span class="req">*</span>
-        </span>
-    </label>
+<input type="hidden" name="terms" id="termsField" value="{{ old('terms') }}">
+
+<div class="terms-text" id="termsStatus">
+    <span id="termsPending">
+        Please review our
+        <a href="#" onclick="openTerms(); return false;">Terms of Service &amp; Privacy Policy</a>
+        before creating an account.
+    </span>
+    <span id="termsAccepted" style="display:none;">
+        <i class="fa fa-circle-check" style="color:#22c55e;"></i>
+        You have accepted the
+        <a href="#" onclick="openTerms(); return false;">Terms of Service &amp; Privacy Policy</a>.
+    </span>
 </div>
 
 
@@ -136,38 +139,140 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 
         <span class="close" onclick="closeModal()">&times;</span>
 
+        <h3>Terms of Service &amp; Privacy Policy</h3>
+
         <div class="modal-body">
 
-            <h3>Terms & Conditions</h3>
+            <p><em>Last updated: {{ date('F Y') }}</em></p>
 
-<div class="modal-body">
-    <p><strong>Privacy Policy & Terms</strong></p>
+            <p>
+                Welcome to Rem's Transport. These Terms of Service ("Terms") govern your access to and
+                use of the Rem's Transport website, booking platform, and related services (collectively,
+                the "Service"). By creating an account or making a booking, you confirm that you have
+                read, understood, and agree to be bound by these Terms and by the Privacy Policy below.
+                If you do not agree, please do not use the Service.
+            </p>
 
-     <p>
-    At Rem's Transport, we are committed to safeguarding your personal information and ensuring your privacy.
-    The information we collect will be used solely for contacting the client who initiated the request and for generating an invoice.
-    </p>
+            <h4>1. Eligibility</h4>
+            <p>
+                You must be at least 18 years old, or the age of legal majority in your place of
+                residence, to create an account and enter into bookings. By registering, you represent
+                that the information you provide — including your name, birthday, email address, and
+                mobile number — is accurate, current, and complete, and that you will keep it updated.
+            </p>
 
-    <p>
-    Your name, contact number, email, and address are securely stored in our customer database.
-    We do not share, sell, or lease your data to third parties.
-    </p>
+            <h4>2. Accounts and Security</h4>
+            <p>
+                You are responsible for maintaining the confidentiality of your account credentials and
+                one-time verification codes, and for all activity that occurs under your account. Do not
+                share your password or OTP with anyone. Notify us immediately if you suspect any
+                unauthorized use of your account. We may suspend or terminate accounts that show signs
+                of fraud, abuse, or repeated policy violations.
+            </p>
 
-    <p>
-    Occasionally, we may send updates regarding special offers or compliance information.
-    You can unsubscribe anytime.
-    </p>
+            <h4>3. Bookings and Trips</h4>
+            <p>
+                A booking is a request for a van rental, joiner trip seat, or tour package and is only
+                confirmed once payment (or the required downpayment) is received and you receive a
+                confirmation. Trip schedules, routes, pick-up points, vehicle assignments, and driver
+                assignments may change due to weather, road conditions, mechanical issues, or
+                operational needs. We will make reasonable efforts to notify you of material changes.
+            </p>
+            <p>
+                Passenger counts must not exceed the seating capacity stated for the vehicle or package.
+                You are responsible for the conduct of all passengers included in your booking, and for
+                arriving at the agreed pick-up point on time. The driver may decline to transport
+                passengers who are intoxicated, disruptive, or unsafe.
+            </p>
 
-    <h4>Data Deletion Requests</h4>
+            <h4>4. Payments</h4>
+            <p>
+                Prices are shown in Philippine Peso and are payable through our third-party payment
+                provider or, where offered, in cash to the driver. Downpayments reserve your slot;
+                the remaining balance is due as stated at checkout or before the trip begins. Fees for
+                additional stops, waiting time, extended hours, or damage to the vehicle may be charged
+                separately. Failure to settle outstanding balances may result in cancellation and may
+                affect future bookings.
+            </p>
 
-    <p>
-    If you wish to have your personal data deleted, please contact us at remstransport1.com
-    We will process your request within 30 days.
-    </p>
+            <h4>5. Cancellations, Rescheduling, and Refunds</h4>
+            <p>
+                Cancellation and rescheduling requests must be made through your account as early as
+                possible. Refund eligibility depends on how far in advance you cancel and on the
+                specific van, joiner trip, or tour policy shown at the time of booking. Downpayments
+                may be non-refundable. Refunds, when approved, are returned through the original
+                payment method and may take several business days to process. No-shows are generally
+                not eligible for a refund.
+            </p>
 
-</div>
+            <h4>6. Acceptable Use</h4>
+            <p>
+                You agree not to misuse the Service, including by submitting false information, making
+                fraudulent bookings, attempting to access other users' accounts, interfering with the
+                platform's security or availability, or using the Service for any unlawful purpose.
+            </p>
 
-        <button onclick="agreeTerms()">I Understand</button>
+            <h4>7. Liability</h4>
+            <p>
+                Rem's Transport provides the Service on a commercially reasonable basis. To the extent
+                permitted by law, we are not liable for indirect or consequential losses, for delays or
+                losses caused by events beyond our reasonable control, or for personal belongings left
+                in a vehicle. Nothing in these Terms limits liability that cannot be limited under
+                applicable law.
+            </p>
+
+            <h4>8. Changes to These Terms</h4>
+            <p>
+                We may update these Terms from time to time. Material changes will be posted on this
+                page with a new "last updated" date. Continued use of the Service after changes take
+                effect means you accept the revised Terms.
+            </p>
+
+            <h3 style="margin-top:22px;">Privacy Policy</h3>
+
+            <h4>Information We Collect</h4>
+            <p>
+                We collect the information you provide when you register and book — your name (and
+                suffix, if any), birthday, email address, mobile number, and booking and payment
+                details — as well as limited technical information such as your IP address for security
+                and fraud prevention.
+            </p>
+
+            <h4>How We Use Your Information</h4>
+            <p>
+                Your information is used to create and secure your account, process and manage
+                bookings, generate invoices and receipts, coordinate trips with drivers, send
+                verification codes and booking updates, and comply with legal obligations. We may send
+                occasional service or promotional messages; you can opt out of promotional messages at
+                any time.
+            </p>
+
+            <h4>Sharing</h4>
+            <p>
+                We share information only as needed to operate the Service — for example, trip details
+                with the assigned driver, and payment information with our payment provider. We do not
+                sell, rent, or lease your personal data to third parties. We may disclose information
+                if required by law or to protect the rights and safety of our users and staff.
+            </p>
+
+            <h4>Data Retention and Your Rights</h4>
+            <p>
+                We keep your information for as long as your account is active or as needed to provide
+                the Service and meet legal and accounting requirements. You may request access to,
+                correction of, or deletion of your personal data by contacting us. Verified deletion
+                requests are processed within 30 days, except where we are required to retain certain
+                records.
+            </p>
+
+            <h4>Contact</h4>
+            <p>
+                For questions about these Terms or the Privacy Policy, or to make a data request,
+                contact Rem's Transport at <strong>remstransport1@gmail.com</strong>.
+            </p>
+
+        </div>
+
+        <button onclick="agreeTerms()">I Understand and Accept</button>
 
     </div>
 </div>

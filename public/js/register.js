@@ -104,6 +104,11 @@ if (toggleConfirm) {
     });
 
 
+    // Reflect an already-accepted state after a validation bounce
+    if (termsAccepted()) {
+        showTermsAccepted();
+    }
+
     form.addEventListener("submit", function (e) {
 
         const val = passwordInput.value;
@@ -122,11 +127,34 @@ if (toggleConfirm) {
         if (passwordInput.value !== confirmInput.value) {
             e.preventDefault();
             alert("Passwords do not match!");
+            return;
+        }
+
+        if (!termsAccepted()) {
+            e.preventDefault();
+            alert("Please read and accept the Terms of Service & Privacy Policy first.");
+            openTerms();
         }
 
     });
 
 });
+
+function termsField() {
+    return document.getElementById("termsField");
+}
+
+function termsAccepted() {
+    const f = termsField();
+    return !!f && f.value === "accepted";
+}
+
+function showTermsAccepted() {
+    const pending  = document.getElementById("termsPending");
+    const accepted = document.getElementById("termsAccepted");
+    if (pending)  pending.style.display  = "none";
+    if (accepted) accepted.style.display = "inline";
+}
 
 
 function openTerms() {
@@ -138,7 +166,9 @@ function closeModal() {
 }
 
 function agreeTerms() {
-    document.querySelector('input[name="terms"]').checked = true;
+    const f = termsField();
+    if (f) f.value = "accepted";
+    showTermsAccepted();
     closeModal();
 }
 
