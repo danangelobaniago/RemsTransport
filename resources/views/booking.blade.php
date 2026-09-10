@@ -150,7 +150,7 @@
 </div>
 
 <div class="row">
-<span>Travel Time</span>
+<span>Estimated Travel Time</span>
 <span id="travelTime">0 mins</span>
 </div>
 
