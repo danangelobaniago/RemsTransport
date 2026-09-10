@@ -83,8 +83,8 @@
         .btn-print { background: var(--primary-blue); color: white; }
         .btn-back { background: #f1f5f9; color: var(--text-main); }
 
-        .pay-balance-card { margin-top: 20px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; }
-        .pay-balance-card h4 { margin: 0 0 4px; font-size: 15px; color: var(--warning-amber); }
+        .pay-balance-card { margin-top: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 22px; max-width: 520px; }
+        .pay-balance-card h4 { margin: 0 0 4px; font-size: 15px; color: var(--primary-blue); }
         .pay-balance-card p { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
         .method-options { display: flex; gap: 12px; margin-bottom: 16px; }
         .method-option { flex: 1; }
@@ -96,13 +96,13 @@
         }
         .method-option input:checked + label { border-color: var(--primary-blue); background: #eff6ff; color: var(--primary-blue); }
         .btn-pay-balance {
-            width: 100%; padding: 13px; background: var(--warning-amber); color: white;
+            width: 100%; padding: 13px; background: var(--primary-blue); color: white;
             border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer;
         }
-        .btn-pay-balance:hover { background: #b45309; }
+        .btn-pay-balance:hover { background: #1d4ed8; }
         .installment-field { margin-bottom: 16px; }
         .installment-field label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
-        .installment-field .amount-wrap { position: relative; }
+        .installment-field .amount-wrap { position: relative; max-width: 240px; }
         .installment-field .amount-wrap span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-weight: 600; }
         .installment-field input[type="number"] {
             width: 100%; padding: 12px 14px 12px 32px; border: 2px solid #e5e7eb;
