@@ -373,11 +373,12 @@ public function register(Request $request)
         'last_name'    => ['required', 'max:20', 'regex:/^[A-Za-z\s]+$/'],
         'suffix'       => ['nullable', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
         'email'        => 'required|email|unique:users,email',
-        'birthday'     => 'required|date|before_or_equal:today',
+        'birthday'     => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->format('Y-m-d')],
         'phone_number' => ['required', 'regex:/^09\d{9}$/', 'unique:users,phone_number'],
         'password'     => 'required|min:8|confirmed',
         'terms'        => 'required|in:accepted',
     ], [
+        'birthday.before_or_equal' => 'You must be at least 18 years old to create an account.',
         'terms.required' => 'Please review and accept the Terms of Service & Privacy Policy to continue.',
         'terms.in'       => 'Please review and accept the Terms of Service & Privacy Policy to continue.',
     ]);
