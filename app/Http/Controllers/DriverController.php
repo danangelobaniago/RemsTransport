@@ -460,7 +460,7 @@ class DriverController extends Controller
 
         if (!$booking) return back()->with('error', 'Booking not found or not assigned to you.');
 
-        $balance = $booking->remaining_balance ?? ($booking->total - ($booking->amount_paid ?? 0));
+        $balance = round(max(0, (float) $booking->total - (float) ($booking->amount_paid ?? 0)), 2);
 
         if ($balance <= 0) return back()->with('error', 'No outstanding balance on this booking.');
 
@@ -469,6 +469,17 @@ class DriverController extends Controller
             'remaining_balance' => 0,
             'payment_status'    => 'fully_paid',
             'updated_at'        => now(),
+        ]);
+
+        DB::table('booking_payments')->insert([
+            'booking_id'   => $request->booking_id,
+            'amount'       => $balance,
+            'method'       => 'cash',
+            'reference'    => null,
+            'collected_by' => 'driver',
+            'paid_at'      => now(),
+            'created_at'   => now(),
+            'updated_at'   => now(),
         ]);
 
         return back()->with('success', '₱' . number_format($balance, 2) . ' collected successfully. Trip is now fully paid.');
