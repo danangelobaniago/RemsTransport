@@ -456,6 +456,6 @@
 
     });
     </script>
-<script src="/js/pwa.js"></script>
+<script src="@vasset('js/pwa.js')"></script>
 </body>
 </html>
