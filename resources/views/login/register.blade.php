@@ -68,8 +68,9 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     <input type="email" name="email" value="{{ old('email') }}" placeholder="Enter email" required>
 
     <label>Birthday <span class="req">*</span></label>
-    <!-- max attribute blocks future dates -->
-    <input type="date" name="birthday" value="{{ old('birthday') }}" max="{{ date('Y-m-d') }}" required>
+    <!-- max = latest birthday that still makes the user at least 18 -->
+    <input type="date" name="birthday" value="{{ old('birthday') }}" max="{{ now()->subYears(18)->format('Y-m-d') }}" required>
+    <small class="field-note">You must be at least 18 years old to create an account.</small>
 
     <label>Cellphone Number <span class="req">*</span></label>
     <input type="text"
@@ -142,8 +143,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         <h3>Terms of Service &amp; Privacy Policy</h3>
 
         <div class="modal-body">
-
-            <p><em>Last updated: {{ date('F Y') }}</em></p>
 
             <p>
                 Welcome to Rem's Transport. These Terms of Service ("Terms") govern your access to and
@@ -224,8 +223,8 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
             <h4>8. Changes to These Terms</h4>
             <p>
                 We may update these Terms from time to time. Material changes will be posted on this
-                page with a new "last updated" date. Continued use of the Service after changes take
-                effect means you accept the revised Terms.
+                page. Continued use of the Service after changes take effect means you accept the
+                revised Terms.
             </p>
 
             <h3 style="margin-top:22px;">Privacy Policy</h3>
