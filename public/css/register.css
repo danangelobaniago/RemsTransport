@@ -72,6 +72,37 @@ margin-top:14px;
 font-size:14px;
 }
 
+/* Required-field asterisk */
+.req{
+color:#ff5b5b;
+font-weight:700;
+margin-left:2px;
+}
+
+.required-hint{
+margin-top:4px;
+margin-bottom:16px;
+font-size:12px;
+opacity:0.85;
+}
+
+/* Full name row (First / Middle / Last / Suffix) */
+.name-row{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin-bottom:15px;
+}
+
+.name-row input{
+flex:1 1 130px;
+margin-top:6px;
+}
+
+.name-row .suffix-input{
+flex:0 1 90px;
+}
+
 input{
 
 width:100%;

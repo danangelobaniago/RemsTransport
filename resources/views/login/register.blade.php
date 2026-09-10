@@ -20,6 +20,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 
 <h1>Rem's Transport</h1>
 <p>Create your account</p>
+<p class="required-hint"><span class="req">*</span> Required fields</p>
 
 {{-- ERROR DISPLAY --}}
 @if ($errors->any())
@@ -48,24 +49,33 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         }
     </script>
 
-    <label>Full Name</label>
+    <label>Full Name <span class="req">*</span></label>
     <!-- Name Row using Flexbox -->
-    <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-        <input type="text" name="first_name" placeholder="First Name" required maxlength="20" oninput="allowLettersOnly(this)" style="flex: 1;">
-        <input type="text" name="middle_name" placeholder="Middle Name" maxlength="20" oninput="allowLettersOnly(this)" style="flex: 1;">
-        <input type="text" name="last_name" placeholder="Last Name" required maxlength="20" oninput="allowLettersOnly(this)" style="flex: 1;">
+    <div class="name-row">
+        <input type="text" name="first_name" value="{{ old('first_name') }}" placeholder="First Name" required maxlength="20" oninput="allowLettersOnly(this)">
+        <input type="text" name="middle_name" value="{{ old('middle_name') }}" placeholder="Middle Name" maxlength="20" oninput="allowLettersOnly(this)">
+        <input type="text" name="last_name" value="{{ old('last_name') }}" placeholder="Last Name" required maxlength="20" oninput="allowLettersOnly(this)">
+        <input type="text" name="suffix" value="{{ old('suffix') }}" placeholder="Suffix" maxlength="10" list="suffix-options" class="suffix-input">
+        <datalist id="suffix-options">
+            <option value="Jr."></option>
+            <option value="Sr."></option>
+            <option value="II"></option>
+            <option value="III"></option>
+            <option value="IV"></option>
+        </datalist>
     </div>
 
-    <label>Email Address</label>
-    <input type="email" name="email" placeholder="Enter email" required>
+    <label>Email Address <span class="req">*</span></label>
+    <input type="email" name="email" value="{{ old('email') }}" placeholder="Enter email" required>
 
-    <label>Birthday</label>
+    <label>Birthday <span class="req">*</span></label>
     <!-- max attribute blocks future dates -->
-    <input type="date" name="birthday" max="{{ date('Y-m-d') }}" required>
+    <input type="date" name="birthday" value="{{ old('birthday') }}" max="{{ date('Y-m-d') }}" required>
 
-    <label>Cellphone Number</label>
+    <label>Cellphone Number <span class="req">*</span></label>
     <input type="text"
            name="phone_number"
+           value="{{ old('phone_number') }}"
            placeholder="09XXXXXXXXX"
            maxlength="11"
            pattern="^09\d{9}$"
@@ -73,7 +83,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
            title="Must start with 09 and be exactly 11 digits"
            required>
 
-<label>Password</label>
+<label>Password <span class="req">*</span></label>
 <div class="input-box">
 <input type="password" id="password" name="password" placeholder="Create password" required>
 <i class="fa fa-eye toggle-password" id="togglePassword"></i>
@@ -95,7 +105,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     <p id="req-special"><i class="fa fa-circle-xmark"></i> At least one special character (!@#$...)</p>
 </div>
 
-<label>Confirm Password</label>
+<label>Confirm Password <span class="req">*</span></label>
 <div class="input-box">
 <input type="password" id="confirmPassword" name="password_confirmation" placeholder="Confirm password" required>
 <i class="fa fa-eye toggle-password" id="toggleConfirm"></i>
@@ -107,7 +117,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
         <span>
             I accept the
             <a href="#" onclick="openTerms(); return false;">Terms of Service</a>
-            and Privacy Policy
+            and Privacy Policy <span class="req">*</span>
         </span>
     </label>
 </div>
