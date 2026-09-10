@@ -150,7 +150,7 @@
 
 <h3>Route Preview</h3>
 <div class="row"><span>Total Distance</span><span id="travelDistance">0 km</span></div>
-<div class="row"><span>Travel Time</span><span id="travelTime">0 mins</span></div>
+<div class="row"><span>Estimated Travel Time</span><span id="travelTime">0 mins</span></div>
 
 <div class="route-legs" id="routeLegs" style="display:none;">
     <div style="font-size:11px;font-weight:700;color:#7c3aed;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 6px;">Route Breakdown</div>
