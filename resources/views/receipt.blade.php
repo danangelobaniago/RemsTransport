@@ -83,7 +83,7 @@
         .btn-print { background: var(--primary-blue); color: white; }
         .btn-back { background: #f1f5f9; color: var(--text-main); }
 
-        .pay-balance-card { margin-top: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 22px; max-width: 520px; }
+        .pay-balance-card { margin-top: 20px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 24px; width: 100%; box-sizing: border-box; }
         .pay-balance-card h4 { margin: 0 0 4px; font-size: 15px; color: var(--primary-blue); }
         .pay-balance-card p { margin: 0 0 16px; font-size: 13px; color: var(--text-muted); }
         .method-options { display: flex; gap: 12px; margin-bottom: 16px; }
