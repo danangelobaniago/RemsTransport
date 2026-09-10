@@ -58,17 +58,16 @@ class AuthController extends Controller
         return view('login.login');
     }
 
-    public function showAdminLogin()
-    {
-        return view('login.admin-login');
-    }
-
-public function login(Request $request)
+    /**
+     * Single login for every role. Credentials are matched on email +
+     * password only; the account's own `role` column then decides where
+     * verifyLoginOtp() sends the user after 2FA.
+     */
+    public function login(Request $request)
     {
         $credentials = $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            'role' => 'required'
         ]);
 
         // Define Throttling Key
@@ -149,69 +148,7 @@ public function login(Request $request)
             return back()->with('error', "Too many failed attempts. Try again in 60 seconds.");
         }
 
-        return back()->with('error', 'Invalid credentials or role mismatch');
-    }
-
-    public function loginStaff(Request $request)
-    {
-        $credentials = $request->validate([
-            'email'    => 'required|email',
-            'password' => 'required',
-            'role'     => 'required|in:admin,driver',
-        ]);
-
-        $throttleKey = Str::lower($request->input('email')) . '|' . $request->ip();
-
-        if (RateLimiter::tooManyAttempts($throttleKey, 5)) {
-            $seconds = RateLimiter::availableIn($throttleKey);
-            $displaySeconds = $seconds > 60 ? 60 : $seconds;
-            return back()->with('error', "Too many failed attempts. Try again in $displaySeconds seconds.");
-        }
-
-        if (Auth::attempt($credentials, $request->remember)) {
-            RateLimiter::clear($throttleKey);
-
-            $user = Auth::user();
-
-            $otpError = $this->otpThrottleError($user->email);
-            $hasValidOtp = $user->otp_code
-                && $user->otp_expires_at
-                && now()->lt($user->otp_expires_at);
-
-            $reusedOtp = false;
-
-            if (!$otpError || !$hasValidOtp) {
-                $otp = rand(100000, 999999);
-                $user->otp_code = $otp;
-                $user->otp_expires_at = now()->addMinutes(5);
-                $user->save();
-
-                Mail::to($user->email)->send(new LoginOtpMail($otp));
-                $this->recordOtpSend($user->email);
-            } else {
-                $reusedOtp = true;
-            }
-
-            Auth::logout();
-
-            session(['login_2fa_user_id' => $user->id]);
-
-            $redirect = redirect('/verify-login-otp');
-
-            return $reusedOtp
-                ? $redirect->with('success', 'We already sent a verification code to your email recently. Please enter it below.')
-                : $redirect;
-        }
-
-        RateLimiter::hit($throttleKey, 3600);
-
-        if (RateLimiter::remaining($throttleKey, 5) === 0) {
-            RateLimiter::clear($throttleKey);
-            RateLimiter::hit($throttleKey, 60);
-            return back()->with('error', "Too many failed attempts. Try again in 60 seconds.");
-        }
-
-        return back()->with('error', 'Invalid credentials or role mismatch.');
+        return back()->with('error', 'Invalid email or password.');
     }
 
     public function showOtpForm()
@@ -537,16 +474,10 @@ public function resendRegisterOtp()
 
     public function logout()
 {
-    $role = Auth::user()?->role;
-
     Auth::logout();
 
     request()->session()->invalidate();
     request()->session()->regenerateToken();
-
-    if (in_array($role, ['admin', 'driver'])) {
-        return redirect('/admin/login')->with('success', 'You have been logged out successfully.');
-    }
 
     return redirect('/login')->with('success', 'You have been logged out successfully.');
 }
