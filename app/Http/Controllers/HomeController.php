@@ -144,7 +144,19 @@ public function index()
             ->leftJoin('drivers', 'tour_packages.driver_id', '=', 'drivers.id')
             ->select('tour_packages.*', 'vans.name as assigned_van', 'drivers.name as assigned_driver')
             ->latest('tour_packages.created_at')
-            ->get();
+            ->get()
+            ->map(function ($tour) {
+                // The admin.tours view shows these per-package booking counts
+                $tour->pending_count  = DB::table('bookings')
+                    ->where('tour_id', $tour->id)
+                    ->whereIn('status', ['downpayment_paid', 'fully_paid'])
+                    ->count();
+                $tour->approved_count = DB::table('bookings')
+                    ->where('tour_id', $tour->id)
+                    ->where('status', 'approved')
+                    ->count();
+                return $tour;
+            });
 
         // Get available vans and drivers for the dropdowns
         $vans = DB::table('vans')->where('status', 'available')->get();
