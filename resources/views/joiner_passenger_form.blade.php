@@ -41,8 +41,8 @@
     // Fewer passengers = a narrower card, so a 1-seat booking isn't a tiny
     // form lost in a huge blank page.
     $formMaxWidth = match (true) {
-        $seats <= 1 => '640px',
-        $seats == 2 => '880px',
+        $seats <= 1 => '720px',
+        $seats == 2 => '980px',
         default     => '1200px',
     };
 @endphp
@@ -83,7 +83,7 @@
 
                     <div class="row g-4 mb-5 justify-content-center">
                         @for ($i = 0; $i < $seats; $i++)
-                            <div class="col-12 col-md-6 col-lg-4" style="max-width: 400px;">
+                            <div class="{{ match (true) { $seats <= 1 => 'col-12', $seats == 2 => 'col-12 col-md-6', default => 'col-12 col-md-6 col-lg-4' } }}" style="max-width: 400px;">
                                 <div class="passenger-entry p-4 shadow-sm border h-100">
                                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-circle me-2"></i>Passenger #{{ $i + 1 }}</h6>
                                     <div class="mb-3">
