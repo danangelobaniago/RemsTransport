@@ -9,7 +9,7 @@
 
     <style>
         body { background: linear-gradient(135px, #f8fafc 0%, #e2e8f0 100%); min-height: 100vh; font-family: 'Inter', sans-serif; }
-        .form-container { max-width: 1200px; margin: 40px auto; }
+        .form-container { margin: 40px auto; transition: max-width 0.2s ease; }
         .booking-card { background: #ffffff; border: none; border-radius: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; }
         .card-header-custom { background: #2563eb; padding: 30px; text-align: center; color: white; }
         .trip-badge { background: rgba(255, 255, 255, 0.2); padding: 6px 16px; border-radius: 50px; font-size: 0.85rem; backdrop-filter: blur(4px); }
@@ -37,8 +37,17 @@
 </head>
 <body>
 
+@php
+    // Fewer passengers = a narrower card, so a 1-seat booking isn't a tiny
+    // form lost in a huge blank page.
+    $formMaxWidth = match (true) {
+        $seats <= 1 => '640px',
+        $seats == 2 => '880px',
+        default     => '1200px',
+    };
+@endphp
 <div class="container">
-    <div class="form-container">
+    <div class="form-container" style="max-width: {{ $formMaxWidth }};">
         {{-- IMPORTANT: Error visibility --}}
         @if ($errors->any() || session('error'))
             <div class="alert alert-danger shadow-sm mb-4" style="border-radius: 12px;">
@@ -106,7 +115,7 @@
                     </div>
 
                     <div class="row align-items-stretch g-4 mt-2">
-                        <div class="col-lg-7">
+                        <div class="{{ $seats <= 2 ? 'col-12' : 'col-lg-7' }}">
                             <div class="p-4 rounded-4 h-100 d-flex flex-column justify-content-center" style="background: #fff7ed; border: 1px solid #ffedd5;">
                                 <h6 class="fw-bold text-warning-emphasis mb-2"><i class="fas fa-shield-alt me-1"></i> Terms & Data Privacy</h6>
                                 <p class="small text-muted mb-3">Please review our terms regarding cancellations and data handling.</p>
@@ -119,7 +128,7 @@
                             </div>
                         </div>
 
-                        <div class="col-lg-5">
+                        <div class="{{ $seats <= 2 ? 'col-12' : 'col-lg-5' }}">
                             @php
                                 $pricePerSeat = $trip->price_per_seat;
                                 $totalPrice = $pricePerSeat * $seats;
