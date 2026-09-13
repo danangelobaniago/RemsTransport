@@ -653,6 +653,51 @@ public function deleteVan($id)
     return back()->with('success', 'Van deleted successfully!');
 }
 
+// ✅ ADD PHOTOS TO A VAN'S GALLERY (shown as a carousel on the public van page)
+public function addVanImages(Request $request, $id)
+{
+    $van = DB::table('vans')->where('id', $id)->first();
+    if (!$van) {
+        return back()->with('error', 'Van not found.');
+    }
+
+    $request->validate([
+        'images'   => 'required|array|max:10',
+        'images.*' => 'image|mimes:jpg,jpeg,png|max:2048',
+    ]);
+
+    $nextOrder = (int) (DB::table('van_images')->where('van_id', $id)->max('sort_order')) + 1;
+
+    foreach ($request->file('images') as $file) {
+        $path = $file->store('vans', 'public');
+
+        DB::table('van_images')->insert([
+            'van_id'     => $id,
+            'image'      => $path,
+            'sort_order' => $nextOrder++,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    return back()->with('success', 'Photo(s) added to the gallery!');
+}
+
+// ✅ REMOVE ONE PHOTO FROM A VAN'S GALLERY
+public function deleteVanImage($imageId)
+{
+    $image = DB::table('van_images')->where('id', $imageId)->first();
+
+    if (!$image) {
+        return back()->with('error', 'Photo not found.');
+    }
+
+    \Storage::disk('public')->delete($image->image);
+    DB::table('van_images')->where('id', $imageId)->delete();
+
+    return back()->with('success', 'Photo removed.');
+}
+
 public function customers()
 {
     $customers = DB::table('users')

@@ -63,6 +63,7 @@
             align-items: center;
             justify-content: center;
             padding: 20px;
+            position: relative;
         }
 
         .image-hero img {
@@ -71,6 +72,62 @@
             object-fit: contain; /* Shows whole van without cropping */
             filter: drop-shadow(0 20px 30px rgba(0,0,0,0.1));
         }
+
+        /* CAROUSEL — only rendered when the van has more than one photo */
+        .carousel-track {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.35s ease;
+        }
+        .carousel-slide {
+            flex: 0 0 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .carousel-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(15, 23, 42, 0.55);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2;
+            transition: background 0.2s;
+        }
+        .carousel-arrow:hover { background: rgba(15, 23, 42, 0.8); }
+        .carousel-arrow.prev { left: 16px; }
+        .carousel-arrow.next { right: 16px; }
+        .carousel-dots {
+            position: absolute;
+            bottom: 14px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            z-index: 2;
+        }
+        .carousel-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.25);
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.2s, transform 0.2s;
+        }
+        .carousel-dot.active { background: var(--primary); transform: scale(1.25); }
 
         .vehicle-info { padding: 40px; }
         .badge-status {
@@ -181,7 +238,33 @@
         <section>
             <div class="vehicle-display">
                 <div class="image-hero">
-                    <img src="{{ \Storage::disk('public')->url($van->image) }}" alt="{{ $van->name }}">
+                    @if($images->count() > 1)
+                        <div class="carousel-track" id="vanCarouselTrack">
+                            @foreach($images as $img)
+                                <div class="carousel-slide">
+                                    <img src="{{ \Storage::disk('public')->url($img) }}" alt="{{ $van->name }} — photo {{ $loop->iteration }}">
+                                </div>
+                            @endforeach
+                        </div>
+                        <button type="button" class="carousel-arrow prev" onclick="vanCarouselMove(-1)" aria-label="Previous photo">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="carousel-arrow next" onclick="vanCarouselMove(1)" aria-label="Next photo">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                        <div class="carousel-dots">
+                            @foreach($images as $img)
+                                <button type="button" class="carousel-dot {{ $loop->first ? 'active' : '' }}" onclick="vanCarouselGoTo({{ $loop->index }})" aria-label="Go to photo {{ $loop->iteration }}"></button>
+                            @endforeach
+                        </div>
+                    @elseif($images->isNotEmpty())
+                        <img src="{{ \Storage::disk('public')->url($images->first()) }}" alt="{{ $van->name }}">
+                    @else
+                        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;color:#94a3b8;">
+                            <i class="fa-solid fa-van-shuttle" style="font-size:48px;"></i>
+                            <span style="font-size:14px;">No photo yet</span>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="vehicle-info">
@@ -251,6 +334,38 @@
         </aside>
 
     </main>
+
+    @if($images->count() > 1)
+    <script>
+        (function () {
+            const track = document.getElementById('vanCarouselTrack');
+            const dots  = document.querySelectorAll('.carousel-dot');
+            let index   = 0;
+
+            window.vanCarouselGoTo = function (i) {
+                index = i;
+                track.style.transform = `translateX(-${index * 100}%)`;
+                dots.forEach((d, di) => d.classList.toggle('active', di === index));
+            };
+
+            window.vanCarouselMove = function (delta) {
+                const total = dots.length;
+                vanCarouselGoTo((index + delta + total) % total);
+            };
+
+            // Swipe support on touch devices
+            let touchStartX = null;
+            track.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+            track.addEventListener('touchend', e => {
+                if (touchStartX === null) return;
+                const delta = e.changedTouches[0].clientX - touchStartX;
+                if (Math.abs(delta) > 40) vanCarouselMove(delta < 0 ? 1 : -1);
+                touchStartX = null;
+            }, { passive: true });
+        })();
+    </script>
+    @endif
+
 <script src="/js/pwa.js"></script>
 </body>
 </html>
