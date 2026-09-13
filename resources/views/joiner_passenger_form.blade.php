@@ -117,7 +117,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Age</label>
-                                        <input type="number" class="age-field form-control" placeholder="—" readonly style="background:#f3f4f6;cursor:default;">
+                                        <input type="text" class="age-field form-control" placeholder="—" readonly style="background:#f3f4f6;cursor:default;">
                                     </div>
                                     <div class="mb-0">
                                         <label class="small fw-bold text-muted">Gender</label>
@@ -279,10 +279,16 @@
         const ageField = box.querySelector('.age-field');
         if (!dateInput.value || isNaN(dob)) { ageField.value = ''; return; }
         const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-        ageField.value = age >= 0 ? age : '';
+
+        let totalMonths = (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
+        if (today.getDate() < dob.getDate()) totalMonths--;
+        if (totalMonths < 0) { ageField.value = ''; return; }
+
+        if (totalMonths < 12) {
+            ageField.value = totalMonths + (totalMonths === 1 ? ' month' : ' months');
+        } else {
+            ageField.value = Math.floor(totalMonths / 12);
+        }
     }
 
     // Whole years old as of today, or null if the date is invalid/empty.
