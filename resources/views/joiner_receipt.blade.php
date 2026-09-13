@@ -220,12 +220,23 @@
         .pay-balance-box {
             margin-top: 20px;
             padding: 20px;
-            background: #fffbeb;
-            border: 1px solid #fde68a;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
             border-radius: 16px;
         }
-        .pay-balance-box h4 { margin: 0 0 4px; font-size: 0.95rem; color: #b45309; }
+        .pay-balance-box h4 { margin: 0 0 4px; font-size: 0.95rem; color: var(--primary); }
         .pay-balance-box p { margin: 0 0 14px; font-size: 0.8rem; color: var(--gray); }
+
+        .installment-field { margin-bottom: 14px; }
+        .installment-field label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--dark); margin-bottom: 6px; }
+        .installment-field .amount-wrap { position: relative; max-width: 220px; }
+        .installment-field .amount-wrap span { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--gray); font-weight: 700; }
+        .installment-field input[type="number"] {
+            width: 100%; padding: 10px 12px 10px 28px; border: 2px solid #e5e7eb;
+            border-radius: 10px; font-size: 0.9rem; font-weight: 700; outline: none;
+        }
+        .installment-field input[type="number"]:focus { border-color: var(--primary); }
+        .installment-hint { font-size: 0.72rem; color: var(--gray); margin-top: 6px; }
 
         .method-options { display: flex; gap: 10px; margin-bottom: 14px; }
         .method-option { flex: 1; }
@@ -238,10 +249,10 @@
         .method-option input:checked + label { border-color: var(--primary); background: #eff6ff; color: var(--primary); }
 
         .btn-pay-balance {
-            width: 100%; padding: 13px; background: #d97706; color: white; border: none;
+            width: 100%; padding: 13px; background: var(--primary); color: white; border: none;
             border-radius: 10px; font-size: 0.9rem; font-weight: 700; cursor: pointer;
         }
-        .btn-pay-balance:hover { background: #b45309; }
+        .btn-pay-balance:hover { background: #1d4ed8; }
 
         .alert-banner { padding: 12px 16px; border-radius: 10px; margin-bottom: 15px; font-size: 0.8rem; }
         .alert-banner.success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
@@ -356,11 +367,32 @@
 
         @if($balance > 0)
             <div class="pay-balance-box no-print">
-                <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
-                <p>You may settle your ₱{{ number_format($balance, 2) }} balance now instead of paying upon boarding.</p>
+                @if($installmentAllowed)
+                    <h4><i class="fas fa-hand-holding-dollar"></i> Pay in Installments</h4>
+                    <p>Your trip is still {{ $daysUntilTrip }} days away. Pay any amount now toward your
+                       ₱{{ number_format($balance, 2) }} balance — as many times as you like — or settle
+                       whatever's left with your driver on the trip.</p>
+                @else
+                    <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
+                    <p>Your trip is close, so installments are closed. You may pay the full
+                       ₱{{ number_format($balance, 2) }} balance now, or pay it to your driver on the trip.</p>
+                @endif
 
                 <form action="/joiner-booking/{{ $booking->id }}/pay-balance" method="POST">
                     @csrf
+
+                    @if($installmentAllowed)
+                        <div class="installment-field">
+                            <label for="jpay-amount">Amount to pay now</label>
+                            <div class="amount-wrap">
+                                <span>₱</span>
+                                <input type="number" id="jpay-amount" name="amount" min="100" max="{{ $balance }}"
+                                       step="0.01" value="{{ number_format($balance, 2, '.', '') }}" required>
+                            </div>
+                            <div class="installment-hint">Minimum ₱100. Maximum ₱{{ number_format($balance, 2) }} (your full balance).</div>
+                        </div>
+                    @endif
+
                     <div class="method-options">
                         <div class="method-option">
                             <input type="radio" name="payment_method" id="jpm-gcash" value="gcash" checked>
@@ -372,7 +404,7 @@
                         </div>
                     </div>
                     <button type="submit" class="btn-pay-balance">
-                        Pay ₱{{ number_format($balance, 2) }} Now
+                        {{ $installmentAllowed ? 'Pay Now' : 'Pay ₱' . number_format($balance, 2) . ' Now' }}
                     </button>
                 </form>
             </div>

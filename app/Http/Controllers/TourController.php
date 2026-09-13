@@ -207,7 +207,7 @@ class TourController extends Controller
             'before_or_equal:' . $maxStart,
         ],
         'preferred_end'  => 'required|date',
-        'payment_type'   => 'required|in:downpayment,full',
+        'payment_type'   => 'required|in:downpayment,installment,full',
         'amount_to_pay'  => 'nullable|numeric|min:0',
         'first_name'     => 'required|array',
         'first_name.*'   => 'required|string|max:255',
@@ -281,8 +281,12 @@ class TourController extends Controller
             'status'            => 'pending',
             'payment_status'    => 'pending',
             'booking_type'      => 'tour',
-            // Save the payment type so you know if it's 'full' or 'downpayment' later
-            'notes'             => $isFullPayment ? 'Full Payment Selection' : 'Downpayment Selection',
+            // Save the payment type so you know how the customer chose to pay
+            'notes'             => match ($request->payment_type) {
+                'full'        => 'Full Payment Selection',
+                'installment' => 'Installment Selection',
+                default       => 'Downpayment Selection',
+            },
             'created_at'        => now(),
             'updated_at'        => now(),
         ]);
@@ -318,8 +322,16 @@ class TourController extends Controller
                             [
                                 'currency' => 'PHP',
                                 'amount' => $amountInCents,
-                                'description' => $isFullPayment ? 'Full Payment for ' . $tour->name : 'Downpayment for ' . $tour->name,
-                                'name' => $isFullPayment ? 'Tour Full Payment' : 'Tour Downpayment',
+                                'description' => match ($request->payment_type) {
+                                    'full'        => 'Full Payment for ' . $tour->name,
+                                    'installment' => 'Initial Installment for ' . $tour->name,
+                                    default       => 'Downpayment for ' . $tour->name,
+                                },
+                                'name' => match ($request->payment_type) {
+                                    'full'        => 'Tour Full Payment',
+                                    'installment' => 'Tour Initial Installment',
+                                    default       => 'Tour Downpayment',
+                                },
                                 'quantity' => 1,
                             ]
                         ],

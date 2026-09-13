@@ -184,7 +184,8 @@ public function processBooking(Request $request, $id)
             'passenger_birthday' => 'required|array',
             'passenger_birthday.*' => 'required|date',
             'passenger_gender'   => 'required|array',
-            'payment_option'     => 'required|in:downpayment,full',
+            'payment_option'     => 'required|in:downpayment,installment,full',
+            'amount_to_pay'      => 'nullable|numeric|min:0',
         ]);
 
         $trip = DB::table('joiner_trips')->where('id', $id)->first();
@@ -199,13 +200,18 @@ public function processBooking(Request $request, $id)
         $seatsBooked = count($request->passenger_name);
         $totalPackagePrice = $trip->price_per_seat * $seatsBooked;
 
-        // 3. DETERMINE CHARGE AMOUNT (Full vs 20%)
+        // 3. DETERMINE CHARGE AMOUNT
+        $minDownpayment = $totalPackagePrice * 0.20;
+
         if ($request->payment_option === 'full') {
             $amountToCharge = $totalPackagePrice;
             $description = "Full Payment for " . $trip->destination . " ($seatsBooked seats)";
         } else {
-            $amountToCharge = $totalPackagePrice * 0.20;
-            $description = "20% Reservation Fee for " . $trip->destination . " ($seatsBooked seats)";
+            // Respect the customer's chosen amount, but never let it fall below the
+            // required 20% minimum or exceed the total price.
+            $amountToCharge = max($minDownpayment, min((float) $request->input('amount_to_pay', $minDownpayment), $totalPackagePrice));
+            $description = ($request->payment_option === 'installment' ? 'Initial Installment' : '20% Reservation Fee')
+                . ' for ' . $trip->destination . " ($seatsBooked seats)";
         }
 
         $amountInCents = (int)($amountToCharge * 100);
@@ -230,7 +236,11 @@ public function processBooking(Request $request, $id)
                             'currency' => 'PHP',
                             'amount' => $amountInCents,
                             'description' => "Booking for $seatsBooked seat(s)",
-                            'name' => ($request->payment_option === 'full') ? "Full Payment" : "Reservation Fee (20%)",
+                            'name' => match ($request->payment_option) {
+                                'full'        => 'Full Payment',
+                                'installment' => 'Initial Installment',
+                                default       => 'Reservation Fee',
+                            },
                             'quantity' => 1,
                         ]
                     ],
@@ -389,24 +399,44 @@ public function payBalanceCheckout(Request $request, $id)
 {
     $request->validate([
         'payment_method' => 'required|in:gcash,card',
+        'amount'         => 'nullable|numeric',
     ]);
 
-    $booking = DB::table('joiner_bookings')->where('id', $id)->first();
+    $booking = DB::table('joiner_bookings')
+        ->join('joiner_trips', 'joiner_bookings.joiner_trip_id', '=', 'joiner_trips.id')
+        ->where('joiner_bookings.id', $id)
+        ->select('joiner_bookings.*', 'joiner_trips.trip_date')
+        ->first();
     if (!$booking) {
         abort(404);
     }
 
     $totalPaid = (float) ($booking->downpayment ?? 0);
-    $balance   = max(0, (float) $booking->total_price - $totalPaid);
+    $balance   = round(max(0, (float) $booking->total_price - $totalPaid), 2);
 
     if ($balance <= 0) {
         return redirect("/joiner-receipt/{$id}")->with('error', 'This booking has no remaining balance.');
     }
 
-    $amountInCents = (int) round($balance * 100);
-    if ($amountInCents < 10000) {
-        $amountInCents = 10000;
+    // Installments only while the trip is more than a week away — otherwise the
+    // full balance must be settled in one go (matches BookingController's rule).
+    $daysUntilTrip       = now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
+    $installmentAllowed  = $daysUntilTrip > 7;
+
+    $amount = ($installmentAllowed && $request->filled('amount'))
+        ? round(min((float) $request->amount, $balance), 2)
+        : $balance;
+
+    if ($amount < 100) {
+        $amount = min($balance, 100.0);
     }
+    if ($amount < 100 && $amount < $balance) {
+        return redirect("/joiner-receipt/{$id}")->with('error',
+            'Minimum online payment is ₱100. Please pay the full balance or settle it with your driver.');
+    }
+
+    $isPartial     = $amount < $balance;
+    $amountInCents = (int) round($amount * 100);
 
     $response = Http::withHeaders([
         'Content-Type' => 'application/json',
@@ -417,7 +447,7 @@ public function payBalanceCheckout(Request $request, $id)
                 'line_items' => [[
                     'currency' => 'PHP',
                     'amount'   => $amountInCents,
-                    'name'     => 'Joiner Trip Balance Payment (Booking #' . $id . ')',
+                    'name'     => ($isPartial ? 'Joiner Trip Installment' : 'Joiner Trip Balance Payment') . ' (Booking #' . $id . ')',
                     'quantity' => 1,
                 ]],
                 'payment_method_types' => [$request->payment_method],
@@ -434,7 +464,7 @@ public function payBalanceCheckout(Request $request, $id)
     session([
         'pending_joiner_balance_checkout' => [
             'booking_id' => $id,
-            'amount'     => $balance,
+            'amount'     => $amount,
             'session_id' => $response['data']['id'],
         ],
     ]);
@@ -500,10 +530,14 @@ public function showReceipt($id)
     $totalPaid = $booking->downpayment;
 
     // 2. Define $balance as total price minus what was paid
-    $balance = $booking->total_price - $totalPaid;
+    $balance = round(max(0, $booking->total_price - $totalPaid), 2);
 
-    // 3. Pass ALL three variables to the view
-    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance'));
+    // Installments only while the trip is more than a week away
+    $daysUntilTrip      = now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
+    $installmentAllowed = $daysUntilTrip > 7;
+
+    // 3. Pass everything to the view
+    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed'));
 }
 
 public function completeTrip($id)

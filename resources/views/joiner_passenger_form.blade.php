@@ -17,6 +17,22 @@
         .passenger-entry { background: #ffffff; border-radius: 15px; border: 1px solid #e2e8f0; transition: all 0.3s ease; height: 100%; }
         .passenger-entry:hover { border-color: #2563eb; transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Payment Option (matches the van/tour booking passenger forms) */
+        .payment-title { margin: 0 0 15px; font-size: 15px; font-weight: 700; color: #1e293b; text-transform: uppercase; letter-spacing: 0.05em; }
+        .payment-selection { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 20px 12px; margin-bottom: 14px; }
+        .payment-selection .option-label { display: flex; align-items: center; cursor: pointer; color: #1e293b; font-size: 13.5px; font-weight: 600; margin-bottom: 10px; }
+        .payment-selection .option-label input { width: 16px; height: 16px; margin-right: 8px; flex-shrink: 0; }
+        .installment-note {
+            margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+            padding: 12px 14px; font-size: 12px; color: #1e40af; line-height: 1.55;
+        }
+        .joiner-amount-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; background: #111827; color: white; padding: 18px; border-radius: 12px; margin-bottom: 16px; }
+        .joiner-amount-row .amount-item label { font-size: 11px; color: #9ca3af; display: block; }
+        .joiner-amount-row .amount-item p { margin: 4px 0 0; font-size: 1.05rem; font-weight: 700; color: white; }
+        .joiner-amount-row .green { color: #4ade80; }
+        .joiner-amount-row .red { color: #f87171; }
+        @media (max-width: 480px) { .joiner-amount-row { grid-template-columns: 1fr; text-align: center; } }
     </style>
 </head>
 <body>
@@ -38,7 +54,7 @@
             <i class="fas fa-chevron-left me-1"></i> Return to Details
         </a>
 
-        <form action="/joiner/book/{{ $trip->id }}" method="POST">
+        <form action="/joiner/book/{{ $trip->id }}" method="POST" onsubmit="return validateJoinerForm();">
             @csrf
             <input type="hidden" name="seats_count" value="{{ $seats }}">
 
@@ -109,31 +125,64 @@
                                 $totalPrice = $pricePerSeat * $seats;
                                 $downpaymentAmount = $totalPrice * 0.20;
                             @endphp
-                            <div class="mb-3 p-3 rounded-4 border shadow-sm" style="background: #f8fafc;">
-                                <label class="small fw-bold text-muted mb-2 d-block">CHOOSE PAYMENT:</label>
-                                <div class="d-flex gap-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="payment_option" id="payDown" value="downpayment" checked onchange="updateJoinerPaymentDisplay()">
-                                        <label class="form-check-label small fw-bold" for="payDown">Downpayment (20%)</label>
+
+                            <h2 class="payment-title"><i class="fas fa-credit-card me-2"></i>Payment Option</h2>
+
+                            <div class="payment-selection">
+                                <div>
+                                    <label class="option-label">
+                                        <input type="radio" name="payment_option" id="payDown" value="downpayment" checked onchange="updateJoinerPaymentDisplay()">
+                                        Pay Downpayment (min. 20%)
+                                    </label>
+                                    <label class="option-label">
+                                        <input type="radio" name="payment_option" id="payInstallment" value="installment" onchange="updateJoinerPaymentDisplay()">
+                                        Pay in Installments (min. 20% now)
+                                    </label>
+                                    <label class="option-label">
+                                        <input type="radio" name="payment_option" id="payFull" value="full" onchange="updateJoinerPaymentDisplay()">
+                                        Pay Full Amount
+                                    </label>
+                                </div>
+
+                                <div id="customDownpaymentWrap" style="margin-top: 6px;">
+                                    <label for="downpaymentInput" style="display:block; font-size:12.5px; color:#374151; margin-bottom:6px; font-weight:600;">
+                                        How much would you like to pay now? (minimum ₱{{ number_format($downpaymentAmount, 2) }} / 20%)
+                                    </label>
+                                    <input type="number" id="downpaymentInput" min="{{ $downpaymentAmount }}" max="{{ $totalPrice }}" step="0.01"
+                                           value="{{ $downpaymentAmount }}" oninput="updateJoinerPaymentDisplay()" onblur="updateJoinerPaymentDisplay()"
+                                           style="padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; width:100%; max-width:260px; text-align:left; display:block;">
+                                    <div id="downpaymentError" style="display:none; color:#b91c1c; font-size:12px; font-weight:600; margin-top:6px;">
+                                        You must pay at least ₱{{ number_format($downpaymentAmount, 2) }} (20% of the total amount).
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="payment_option" id="payFull" value="full" onchange="updateJoinerPaymentDisplay()">
-                                        <label class="form-check-label small fw-bold" for="payFull">Full Payment</label>
-                                    </div>
+                                </div>
+
+                                <div id="installmentNote" class="installment-note" style="display:none;">
+                                    <i class="fas fa-circle-info"></i>
+                                    Pay at least 20% now to reserve your seat(s). You can then pay the rest in parts
+                                    from <strong>My Bookings &rsaquo; Receipt</strong> any time until <strong>7 days before</strong> the trip.
+                                    Whatever is left after that is collected by your driver on the trip.
                                 </div>
                             </div>
-                            <div class="p-4 bg-light rounded-4 mb-3 border">
-                                <div class="d-flex justify-content-between mb-2">
-                                    <span class="text-muted small" id="payment-label">Reservation Fee (20% x {{ $seats }}):</span>
-                                    <span class="fw-bold text-dark" id="payment-amount">₱{{ number_format($downpaymentAmount, 2) }}</span>
+
+                            <input type="hidden" name="amount_to_pay" id="amount_to_pay" value="{{ $downpaymentAmount }}">
+
+                            <div class="joiner-amount-row">
+                                <div class="amount-item">
+                                    <label id="payment-label">Paying Now</label>
+                                    <p class="green" id="payment-amount">₱{{ number_format($downpaymentAmount, 2) }}</p>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <span class="text-muted small">Total Package Price:</span>
-                                    <span class="fs-4 fw-bold text-primary">₱{{ number_format($totalPrice, 2) }}</span>
+                                <div class="amount-item">
+                                    <label>Remaining Balance</label>
+                                    <p class="red" id="display-balance">₱{{ number_format($totalPrice - $downpaymentAmount, 2) }}</p>
+                                </div>
+                                <div class="amount-item">
+                                    <label>Total Package Price</label>
+                                    <p>₱{{ number_format($totalPrice, 2) }}</p>
                                 </div>
                             </div>
+
                             <button type="submit" class="btn btn-primary w-100 shadow py-3 fw-bold" id="confirm-btn" style="border-radius: 12px;">
-                                PAY DOWNPAYMENT <i class="fas fa-lock ms-2"></i>
+                                Continue to Secure Payment <i class="fas fa-arrow-right ms-2"></i>
                             </button>
                         </div>
                     </div>
@@ -175,13 +224,69 @@
         if (val.length > 1 && val[1] !== '9') val = '0';
         input.value = val;
     }
+    const JOINER_TOTAL = {{ $totalPrice }};
+    const JOINER_MIN_DOWNPAYMENT = {{ $downpaymentAmount }}; // 20% of total
+
     function updateJoinerPaymentDisplay() {
-        const isFull = document.getElementById('payFull').checked;
-        const total = {{ $totalPrice }};
-        const down = total * 0.20;
-        document.getElementById('payment-label').innerText = isFull ? "Full Payment Amount:" : "Reservation Fee (20% x {{ $seats }}):";
-        document.getElementById('payment-amount').innerText = "₱" + (isFull ? total : down).toLocaleString(undefined, {minimumFractionDigits: 2});
-        document.getElementById('confirm-btn').innerHTML = isFull ? 'PAY FULL AMOUNT <i class="fas fa-lock ms-2"></i>' : 'PAY DOWNPAYMENT <i class="fas fa-lock ms-2"></i>';
+        const paymentType = document.querySelector('input[name="payment_option"]:checked').value;
+        const total = JOINER_TOTAL;
+
+        const label = document.getElementById('payment-label');
+        const displayAmount = document.getElementById('payment-amount');
+        const displayBalance = document.getElementById('display-balance');
+        const hiddenAmount = document.getElementById('amount_to_pay');
+        const customWrap = document.getElementById('customDownpaymentWrap');
+        const downInput = document.getElementById('downpaymentInput');
+        const downError = document.getElementById('downpaymentError');
+        const installmentNote = document.getElementById('installmentNote');
+
+        installmentNote.style.display = (paymentType === 'installment') ? 'block' : 'none';
+
+        if (paymentType === 'full') {
+            customWrap.style.display = 'none';
+            downError.style.display = 'none';
+            label.innerText = "Full Payment Amount";
+            displayAmount.innerText = "₱" + total.toLocaleString(undefined, {minimumFractionDigits: 2});
+            displayBalance.innerText = "₱0.00";
+            hiddenAmount.value = total;
+        } else {
+            customWrap.style.display = 'block';
+            let amount = parseFloat(downInput.value);
+            if (isNaN(amount)) amount = JOINER_MIN_DOWNPAYMENT;
+
+            // Never allow the amount to exceed the total — snap it back immediately.
+            if (amount > total) {
+                amount = total;
+                downInput.value = total;
+            }
+
+            const isValid = amount >= JOINER_MIN_DOWNPAYMENT;
+            downError.style.display = isValid ? 'none' : 'block';
+
+            const safeAmount = Math.max(amount, JOINER_MIN_DOWNPAYMENT);
+
+            label.innerText = (paymentType === 'installment') ? "Paying Now" : "Downpayment Amount";
+            displayAmount.innerText = "₱" + safeAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
+            displayBalance.innerText = "₱" + (total - safeAmount).toLocaleString(undefined, {minimumFractionDigits: 2});
+            hiddenAmount.value = amount;
+        }
+    }
+
+    function validateJoinerForm() {
+        const paymentType = document.querySelector('input[name="payment_option"]:checked').value;
+        if (paymentType === 'downpayment' || paymentType === 'installment') {
+            updateJoinerPaymentDisplay();
+            const downInput = document.getElementById('downpaymentInput');
+            const downError = document.getElementById('downpaymentError');
+            const amount = parseFloat(downInput.value);
+            if (isNaN(amount) || amount < JOINER_MIN_DOWNPAYMENT || amount > JOINER_TOTAL) {
+                downError.style.display = 'block';
+                downInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                downInput.focus();
+                return false;
+            }
+        }
+        return true;
     }
 </script>
 </body>
