@@ -32,7 +32,7 @@
 
         .passenger-row {
             display: grid;
-            grid-template-columns: 1.2fr 1fr 1.2fr 0.8fr 1fr 0.5fr 0.8fr 40px;
+            grid-template-columns: 1.1fr 0.9fr 1.1fr 0.75fr 1fr 1.1fr 0.8fr 40px;
             gap: 12px;
             margin-bottom: 15px;
             padding: 20px;
@@ -45,6 +45,7 @@
 
         label { display: block; font-size: 11px; font-weight: 700; color: #64748b; margin-bottom: 6px; text-transform: uppercase; }
         input, select { width: 100%; padding: 11px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; transition: 0.2s; }
+        input.age-field { padding-left: 8px; padding-right: 8px; font-size: 13px; }
         input:focus { border-color: #2563eb; outline: none; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
 
         .add-btn { background: #f1f5f9; color: #475569; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; margin-top: 10px; transition: 0.2s; }
