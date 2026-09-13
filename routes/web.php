@@ -140,10 +140,18 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
 
     Route::get('/admin/drivers', function () {
+        $ratings = \App\Support\DriverRating::averages();
+
         $drivers = DB::table('drivers')
             ->leftJoin('users', 'drivers.user_id', '=', 'users.id')
             ->select('drivers.*', 'users.email as account_email')
-            ->get();
+            ->get()
+            ->map(function ($driver) use ($ratings) {
+                $driver->avg_rating   = $ratings[$driver->id]->avg_rating ?? null;
+                $driver->rating_count = $ratings[$driver->id]->rating_count ?? 0;
+                return $driver;
+            });
+
         return view('admin.drivers', compact('drivers'));
     })->name('admin.drivers');
     Route::get('/admin/live-map', [AdminController::class, 'liveMap'])->name('admin.live_map');

@@ -201,7 +201,12 @@ class DriverController extends Controller
             })
             ->first();
 
-        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages', 'nextTrip'));
+        $ratingStats = DB::table('feedbacks')
+            ->where('driver_name', $driver->name)
+            ->selectRaw('ROUND(AVG(driver_rating), 1) as avg_rating, COUNT(*) as rating_count')
+            ->first();
+
+        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages', 'nextTrip', 'ratingStats'));
     }
 
     public function updateLocation(Request $request)

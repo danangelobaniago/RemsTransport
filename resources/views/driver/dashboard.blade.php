@@ -373,6 +373,11 @@
                 @if(\App\Support\Weekday::label($driver->day_off ?? null))
                     <span><i class="fas fa-mug-hot"></i> Day off: {{ \App\Support\Weekday::label($driver->day_off) }}</span>
                 @endif
+                @if($ratingStats->avg_rating)
+                    <span><i class="fas fa-star" style="color:#facc15;"></i> {{ number_format($ratingStats->avg_rating, 1) }} ({{ $ratingStats->rating_count }} rating{{ $ratingStats->rating_count == 1 ? '' : 's' }})</span>
+                @else
+                    <span style="opacity:0.6;"><i class="fas fa-star"></i> No ratings yet</span>
+                @endif
             </div>
         </div>
         <div class="stat-box">

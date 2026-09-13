@@ -131,6 +131,7 @@
                         <th>License</th>
                         <th>Status</th>
                         <th>Day Off</th>
+                        <th>Rating</th>
                         <th>Login Account</th>
                         <th style="text-align:center;">Actions</th>
                     </tr>
@@ -159,6 +160,14 @@
                         </td>
                         <td style="font-size:12px;color:#374151;">
                             {{ \App\Support\Weekday::label($driver->day_off ?? null) ?? '—' }}
+                        </td>
+                        <td style="font-size:12px;">
+                            @if($driver->avg_rating)
+                                <span style="font-weight:700;color:#1e293b;"><i class="fas fa-star" style="color:#eda100;"></i> {{ number_format($driver->avg_rating, 1) }}</span>
+                                <span style="color:#94a3b8;">({{ $driver->rating_count }})</span>
+                            @else
+                                <span style="color:#cbd5e1;">No ratings yet</span>
+                            @endif
                         </td>
                         <td>
                             @if($driver->user_id)
@@ -226,7 +235,7 @@
                         </td>
                     </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af;">No drivers found.</td></tr>
+                        <tr><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af;">No drivers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
