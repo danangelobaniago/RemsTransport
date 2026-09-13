@@ -169,7 +169,14 @@
                             </span>
                         </td>
                         <td>
-                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;width:fit-content;margin:0 auto;">
+                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;width:fit-content;margin:0 auto;">
+                                {{-- Photos --}}
+                                <button class="btn small" style="background:#0891b2;color:white;"
+                                        onclick="openGallery({{ $van->id }}, '{{ addslashes($van->name) }}', {{ $van->images->toJson() }})"
+                                        title="Manage Photos">
+                                    <i class="fas fa-images"></i>
+                                </button>
+
                                 {{-- Calendar --}}
                                 <button class="btn small" style="background:#7c3aed;color:white;"
                                         onclick="openCalendar({{ $van->id }}, '{{ addslashes($van->name) }} ({{ $van->plate_number }})')"
@@ -236,6 +243,30 @@
             <div class="btn-row">
                 <button type="submit" class="btn" style="background:#f59e0b;color:white;padding:10px 20px;">Save Record</button>
                 <button type="button" class="btn gray" onclick="closeModal('maintenanceModal')">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- GALLERY MODAL --}}
+<div class="modal-overlay" id="galleryModal">
+    <div class="modal-box" style="width:520px;">
+        <button class="modal-close" onclick="closeModal('galleryModal')">&times;</button>
+        <h3><i class="fas fa-images" style="color:#0891b2;"></i> Manage Photos</h3>
+        <p id="galleryVanName" style="color:#6b7280;font-size:14px;margin-bottom:16px;"></p>
+
+        <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;"></div>
+        <p id="galleryEmpty" style="display:none;color:#9ca3af;font-size:13px;margin-bottom:18px;">No extra photos yet — the van's main image (from the Add Van form) is always shown first.</p>
+
+        <form method="POST" id="galleryForm" enctype="multipart/form-data">
+            @csrf
+            <label>Add Photos (JPG/PNG, up to 10 at once)</label>
+            <input type="file" name="images[]" accept="image/*" multiple required>
+            <div class="btn-row">
+                <button type="submit" class="btn" style="background:#0891b2;color:white;padding:10px 20px;">
+                    <i class="fas fa-upload"></i> Upload
+                </button>
+                <button type="button" class="btn gray" onclick="closeModal('galleryModal')">Close</button>
             </div>
         </form>
     </div>
@@ -379,6 +410,38 @@ function closeModal(id) {
 function viewImage(src) {
     document.getElementById('imgModalSrc').src = src;
     document.getElementById('imgModal').classList.add('open');
+}
+
+const STORAGE_BASE = "{{ rtrim(\Storage::disk('public')->url(''), '/') }}/";
+
+function openGallery(vanId, vanName, images) {
+    document.getElementById('galleryVanName').textContent = 'Van: ' + vanName;
+    document.getElementById('galleryForm').action = '/admin/vans/' + vanId + '/images';
+
+    const grid  = document.getElementById('galleryGrid');
+    const empty = document.getElementById('galleryEmpty');
+    grid.innerHTML = '';
+
+    if (!images.length) {
+        empty.style.display = 'block';
+    } else {
+        empty.style.display = 'none';
+        images.forEach(img => {
+            const tile = document.createElement('div');
+            tile.style.cssText = 'position:relative;border-radius:8px;overflow:hidden;border:1px solid #e2e8f0;aspect-ratio:1;';
+            tile.innerHTML = `
+                <img src="${STORAGE_BASE}${img.image}" style="width:100%;height:100%;object-fit:cover;display:block;">
+                <a href="/admin/vans/images/delete/${img.id}"
+                   onclick="return confirm('Remove this photo?')"
+                   title="Remove photo"
+                   style="position:absolute;top:4px;right:4px;background:rgba(220,38,38,0.9);color:white;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;text-decoration:none;">
+                    <i class="fas fa-times"></i>
+                </a>`;
+            grid.appendChild(tile);
+        });
+    }
+
+    document.getElementById('galleryModal').classList.add('open');
 }
 
 document.querySelectorAll('.modal-overlay').forEach(el => {

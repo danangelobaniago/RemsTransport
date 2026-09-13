@@ -22,7 +22,21 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/van/details/{id}', function ($id) {
     $van = DB::table('vans')->where('id', $id)->first();
     $pricing = DB::table('pricing')->where('id', 1)->first();
-    return view('van-details', compact('van', 'pricing'));
+
+    // Cover image first, then the gallery, in display order — one combined
+    // list so the page can show a plain image for 1 photo and a carousel
+    // once there's more than one.
+    $images = collect();
+    if ($van && $van->image) {
+        $images->push($van->image);
+    }
+    if ($van) {
+        $images = $images->merge(
+            DB::table('van_images')->where('van_id', $van->id)->orderBy('sort_order')->pluck('image')
+        );
+    }
+
+    return view('van-details', compact('van', 'pricing', 'images'));
 });
 
 Route::get('/tour/details/{id}', [TourController::class, 'show'])->name('tour.details');
@@ -127,8 +141,16 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/vans', function () {
         $pricing = DB::table('pricing')->where('id', 1)->first();
+
+        $galleries = DB::table('van_images')->orderBy('sort_order')->get()->groupBy('van_id');
+
+        $vans = DB::table('vans')->get()->map(function ($van) use ($galleries) {
+            $van->images = $galleries->get($van->id, collect())->values();
+            return $van;
+        });
+
         return view('admin.vans', [
-            'vans' => DB::table('vans')->get(),
+            'vans' => $vans,
             'baseFare' => $pricing ? $pricing->base_fare : 0,
         ]);
     })->name('admin.vans');
@@ -137,6 +159,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/vans/delete/{id}', [AdminController::class, 'deleteVan'])->name('admin.vans.delete');
     Route::get('/admin/vans/toggle/{id}', [AdminController::class, 'toggleVan'])->name('admin.vans.toggle');
     Route::post('/admin/vans/maintenance/{id}', [AdminController::class, 'updateVanMaintenance'])->name('admin.vans.maintenance');
+    Route::post('/admin/vans/{id}/images', [AdminController::class, 'addVanImages'])->name('admin.vans.images.add');
+    Route::get('/admin/vans/images/delete/{imageId}', [AdminController::class, 'deleteVanImage'])->name('admin.vans.images.delete');
 
 
     Route::get('/admin/drivers', function () {
