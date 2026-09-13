@@ -33,6 +33,11 @@
         .joiner-amount-row .green { color: #4ade80; }
         .joiner-amount-row .red { color: #f87171; }
         @media (max-width: 480px) { .joiner-amount-row { grid-template-columns: 1fr; text-align: center; } }
+
+        /* Terms modal body (matches the van/tour booking passenger forms) */
+        .terms-body p { margin: 0 0 16px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; }
+        .terms-body p:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+        .terms-body strong { display: block; color: #111827; font-size: 13.5px; font-weight: 700; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -116,15 +121,17 @@
 
                     <div class="row align-items-stretch g-4 mt-2">
                         <div class="{{ $seats <= 2 ? 'col-12' : 'col-lg-7' }}">
-                            <div class="p-4 rounded-4 h-100 d-flex flex-column justify-content-center" style="background: #fff7ed; border: 1px solid #ffedd5;">
-                                <h6 class="fw-bold text-warning-emphasis mb-2"><i class="fas fa-shield-alt me-1"></i> Terms & Data Privacy</h6>
-                                <p class="small text-muted mb-3">Please review our terms regarding cancellations and data handling.</p>
-                                <div class="form-check small text-start">
-                                    <input class="form-check-input" type="checkbox" id="agreeCheck" required>
-                                    <label class="form-check-label text-muted fw-bold" for="agreeCheck">
-                                        I agree to the <a href="javascript:void(0)" onclick="openTermsModal()" style="color: #2563eb; text-decoration: underline;">Terms and Data Privacy Act</a>.
-                                    </label>
+                            <div class="h-100 d-flex align-items-center" style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 24px; gap: 16px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 220px;">
+                                    <h6 style="font-weight: 700; color: #111827; margin: 0 0 4px; font-size: 15px;">Terms &amp; Data Privacy</h6>
+                                    <p style="font-size: 13px; color: #6b7280; margin: 0;">Please open and read the full Terms and Data Privacy Act before proceeding with your booking.</p>
+                                    <p id="termsStatus" style="display:none; margin: 8px 0 0; font-size: 13px; font-weight: 600; color: #16a34a;">
+                                        <i class="fas fa-circle-check"></i> You've read the Terms and Data Privacy Act.
+                                    </p>
                                 </div>
+                                <button type="button" onclick="openTermsModal()" style="padding:10px 18px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; white-space:nowrap; display:inline-flex; align-items:center; gap:8px;">
+                                    <i class="fas fa-file-lines"></i> Read Terms
+                                </button>
                             </div>
                         </div>
 
@@ -190,7 +197,7 @@
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-primary w-100 shadow py-3 fw-bold" id="confirm-btn" style="border-radius: 12px;">
+                            <button type="submit" class="btn btn-primary w-100 shadow py-3 fw-bold" id="confirm-btn" disabled style="border-radius: 12px; opacity: 0.5; cursor: not-allowed;">
                                 Continue to Secure Payment <i class="fas fa-arrow-right ms-2"></i>
                             </button>
                         </div>
@@ -201,15 +208,43 @@
     </div>
 </div>
 
-{{-- MODAL AND SCRIPTS SAME AS BEFORE --}}
-<div id="termsModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; padding: 20px;">
-    <div style="background:white; padding:30px; border-radius:15px; max-width:700px; width:100%; max-height:80vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: fadeIn 0.3s ease;">
-        <h2 style="margin-bottom:20px; color: #1e293b; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">Terms and Conditions</h2>
-        <div style="font-size: 14px; color: #475569; line-height: 1.6;">
-            <p>1. Reservation Policy: A non-refundable 20% downpayment is required.</p>
-            <p>2. Data Privacy: We collect data per Data Privacy Act of 2012.</p>
+{{-- Terms Modal (matches the van/tour booking passenger forms) --}}
+<div id="termsModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:16px; max-width:720px; width:100%; max-height:85vh; box-shadow:0 20px 50px rgba(0,0,0,0.25); display:flex; flex-direction:column; overflow:hidden; animation: fadeIn 0.3s ease;">
+
+        <div style="padding:22px 28px; border-bottom:1px solid #e5e7eb; display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-shrink:0;">
+            <div>
+                <h2 style="margin:0 0 2px; color:#111827; font-size:19px; font-weight:700;">Terms and Conditions</h2>
+                <p style="margin:0; color:#6b7280; font-size:13px;">Rem's Transport Booking Agreement &amp; Data Privacy Notice</p>
+            </div>
+            <button type="button" onclick="closeTermsModal()" aria-label="Close" style="background:#f3f4f6; border:none; width:32px; height:32px; border-radius:8px; color:#6b7280; cursor:pointer; font-size:14px; flex-shrink:0;">
+                <i class="fas fa-xmark"></i>
+            </button>
         </div>
-        <button type="button" onclick="closeTermsModal()" class="btn btn-primary w-100 mt-4 py-2 fw-bold">Close</button>
+
+        <div class="terms-body" style="padding:22px 28px; overflow-y:auto; font-size:14px; color:#475569; line-height:1.7;">
+            <p><strong>1. Reservation Policy</strong> A non-refundable downpayment of at least 20% of the total fare is required to confirm your booking. The remaining balance must be settled in cash upon boarding, before the vehicle departs from the pickup point.</p>
+            <p><strong>2. Passenger Responsibility</strong> All passengers must be present at the designated pickup point at the agreed date and time. Rem's Transport is not liable for missed trips, delays, or additional charges arising from passenger tardiness or incomplete/incorrect booking information.</p>
+            <p><strong>3. Passenger Information Accuracy</strong> Passengers are responsible for providing true, accurate, and complete details (name, birthday, age, and gender) during booking. Rem's Transport may refuse boarding if a passenger's identity cannot be reasonably verified against the submitted booking details.</p>
+            <p><strong>4. Cancellation Policy</strong> Cancellations made at least 3 days before the scheduled trip may be rebooked to another available date, subject to vehicle availability. Cancellations made within 72 hours of the trip, or no-shows on the day of the trip, will forfeit the downpayment.</p>
+            <p><strong>5. Rescheduling</strong> Trip rescheduling requests must be made at least 48 hours before the original schedule and are subject to driver and vehicle availability. Repeated rescheduling of the same booking may incur additional fees.</p>
+            <p><strong>6. Vehicle, Route, and Driver Changes</strong> Rem's Transport reserves the right to assign a different but comparable vehicle, driver, or route in case of mechanical issues, road conditions, weather disturbances, or other circumstances beyond our control, without reducing the agreed service inclusions.</p>
+            <p><strong>7. Passenger Conduct</strong> Passengers must not bring illegal, hazardous, or prohibited items on board. Rem's Transport reserves the right to deny or discontinue service to passengers who engage in unruly, abusive, or unsafe behavior, without refund.</p>
+            <p><strong>8. Luggage and Belongings</strong> Passengers are responsible for their own personal belongings at all times. Rem's Transport shall not be held liable for any loss, theft, or damage to items left unattended inside or outside the vehicle.</p>
+            <p><strong>9. Liability and Insurance</strong> While reasonable safety measures are observed, Rem's Transport's liability for any injury, loss, or damage arising from the trip shall be limited to what is covered by the vehicle's applicable insurance policy, except where caused by our proven gross negligence.</p>
+            <p><strong>10. Force Majeure</strong> Rem's Transport shall not be held liable for delays, cancellations, or service interruptions caused by events beyond its reasonable control, including but not limited to natural disasters, government-imposed restrictions, road closures, and civil disturbances. Affected bookings will be rescheduled or credited whenever possible.</p>
+            <p><strong>11. Data Privacy</strong> We collect and process personal information (including passenger names, birthdays, ages, gender, and contact details) in compliance with the Data Privacy Act of 2012 (RA 10173). Your data is used solely for booking confirmation, trip coordination, safety, and legal compliance purposes, and will not be sold or shared with third parties except as required by law or to complete the booked service.</p>
+            <p><strong>12. Data Retention</strong> Booking and passenger information will be retained only for as long as necessary to fulfill the purposes stated above and to comply with legal, accounting, or reporting requirements, after which it will be securely disposed of.</p>
+            <p><strong>13. Amendments</strong> Rem's Transport may update these Terms and the Data Privacy Notice from time to time. Continued use of our booking system after changes are posted constitutes acceptance of the revised terms.</p>
+            <p><strong>14. Governing Law</strong> These Terms shall be governed by and interpreted in accordance with the laws of the Republic of the Philippines. Any disputes arising from this agreement shall be resolved through good-faith negotiation before resorting to formal legal action.</p>
+            <p><strong>15. Contact Information</strong> For questions, concerns, or data privacy requests regarding your booking, you may reach Rem's Transport through the contact details provided on our booking confirmation or official channels.</p>
+        </div>
+
+        <div style="padding:16px 28px; border-top:1px solid #e5e7eb; background:#f9fafb; flex-shrink:0;">
+            <button type="button" onclick="closeTermsModal()" style="width:100%; padding:13px; background:#2563eb; color:white; border:none; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px;">
+                <i class="fas fa-check"></i> I Have Read and Understood
+            </button>
+        </div>
     </div>
 </div>
 
@@ -225,7 +260,15 @@
         if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
         ageField.value = age >= 0 ? age : '';
     }
-    function openTermsModal() { document.getElementById('termsModal').style.display = 'flex'; }
+    function openTermsModal() {
+        document.getElementById('termsModal').style.display = 'flex';
+        // Opening the terms counts as having read them — unlock the submit button right away.
+        document.getElementById('termsStatus').style.display = 'block';
+        const btn = document.getElementById('confirm-btn');
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    }
     function closeTermsModal() { document.getElementById('termsModal').style.display = 'none'; }
     function validatePHNumber(input) {
         let val = input.value.replace(/[^0-9]/g, '');
