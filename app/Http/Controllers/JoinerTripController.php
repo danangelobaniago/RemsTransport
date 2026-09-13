@@ -179,14 +179,26 @@ public function processBooking(Request $request, $id)
         $request->validate([
             'passenger_name'     => 'required|array|min:1',
             'passenger_name.*'   => 'required|string|max:255', // Removed strict regex to allow dots/dashes
+            'passenger_suffix.*' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
             'passenger_contact'  => 'required|array',
             'passenger_contact.*'=> ['required', 'regex:/^09\d{9}$/'],
             'passenger_birthday' => 'required|array',
-            'passenger_birthday.*' => 'required|date',
+            'passenger_birthday.*' => ['required', 'date', 'before_or_equal:' . now()->subMonth()->format('Y-m-d')],
             'passenger_gender'   => 'required|array',
             'payment_option'     => 'required|in:downpayment,installment,full',
             'amount_to_pay'      => 'nullable|numeric|min:0',
         ]);
+
+        // Minor-without-guardian + suffix whitelist (server-side backstop for the
+        // same checks enforced client-side in joiner_passenger_form.blade.php)
+        $joinerPassengers = collect($request->passenger_name)->keys()->map(fn ($i) => [
+            'suffix'   => $request->passenger_suffix[$i]   ?? null,
+            'birthday' => $request->passenger_birthday[$i] ?? null,
+        ])->all();
+
+        if ($error = $this->validatePassengerAgesAndSuffixes($joinerPassengers)) {
+            return redirect()->back()->withInput()->with('error', $error);
+        }
 
         $trip = DB::table('joiner_trips')->where('id', $id)->first();
         if (!$trip) {
@@ -281,6 +293,7 @@ public function processBooking(Request $request, $id)
                 DB::table('joiner_passengers')->insert([
                     'joiner_booking_id' => $bookingId,
                     'name'              => $name,
+                    'suffix'            => $request->passenger_suffix[$key] ?? null,
                     'contact'           => $request->passenger_contact[$key],
                     'birthday'          => $request->passenger_birthday[$key],
                     'gender'            => $request->passenger_gender[$key],

@@ -821,47 +821,4 @@ public function showReceipt($id)
     return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
 }
 
-/**
- * Server-side backstop for the passenger rules enforced in passengers.blade.php's
- * JS: minors need an accompanying adult and suffixes must be real ones. Returns
- * an error message, or null if everything checks out.
- */
-private function validatePassengerAgesAndSuffixes($passengersData): ?string
-{
-    $suffixWhitelist = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
-    $minBirthday     = now()->subMonth()->format('Y-m-d');
-
-    $hasAdult = false;
-    $hasMinor = false;
-
-    foreach ((array) $passengersData as $p) {
-        if (!is_array($p)) {
-            continue;
-        }
-
-        $suffix = trim($p['suffix'] ?? '');
-        if ($suffix !== '' && !in_array($suffix, $suffixWhitelist, true)) {
-            return 'Please choose a valid suffix (Jr., Sr., II, III, IV, or V) or leave it blank.';
-        }
-
-        if (!empty($p['birthday'])) {
-            if ($p['birthday'] > $minBirthday) {
-                return 'Each passenger must be at least 1 month old.';
-            }
-
-            if (Carbon::parse($p['birthday'])->age >= 18) {
-                $hasAdult = true;
-            } else {
-                $hasMinor = true;
-            }
-        }
-    }
-
-    if ($hasMinor && !$hasAdult) {
-        return 'A passenger under 18 cannot travel alone — this booking needs at least one passenger who is 18 or older.';
-    }
-
-    return null;
-}
-
 }

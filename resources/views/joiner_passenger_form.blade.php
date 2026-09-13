@@ -96,12 +96,24 @@
                                         <input type="text" name="passenger_name[]" class="form-control bg-light" placeholder="Enter name" required>
                                     </div>
                                     <div class="mb-3">
+                                        <label class="small fw-bold text-muted">Suffix</label>
+                                        <select name="passenger_suffix[]" class="form-select bg-light">
+                                            <option value="">None</option>
+                                            <option value="Jr.">Jr.</option>
+                                            <option value="Sr.">Sr.</option>
+                                            <option value="II">II</option>
+                                            <option value="III">III</option>
+                                            <option value="IV">IV</option>
+                                            <option value="V">V</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
                                         <label class="small fw-bold text-muted">Contact Number</label>
                                         <input type="tel" name="passenger_contact[]" class="form-control bg-light" placeholder="09XXXXXXXXX" maxlength="11" oninput="validatePHNumber(this)" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Birthday</label>
-                                        <input type="date" name="passenger_birthday[]" class="form-control bg-light" max="{{ date('Y-m-d') }}" required oninput="calcAge(this)">
+                                        <input type="date" name="passenger_birthday[]" class="form-control bg-light" max="{{ date('Y-m-d', strtotime('-1 month')) }}" required oninput="calcAge(this)">
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Age</label>
@@ -117,6 +129,16 @@
                                 </div>
                             </div>
                         @endfor
+                    </div>
+
+                    <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Passengers must be at least 1 month old. Please fix the highlighted birthday field(s).</span>
+                    </div>
+
+                    <div id="guardianWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>A passenger under 18 cannot travel alone — add at least one passenger who is 18 or older to this booking.</span>
                     </div>
 
                     <div class="row align-items-stretch g-4 mt-2">
@@ -249,6 +271,8 @@
 </div>
 
 <script>
+    const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-1 month')) }}"; // birthday must be on/before this date
+
     function calcAge(dateInput) {
         const dob = new Date(dateInput.value);
         const box = dateInput.closest('.passenger-entry');
@@ -259,6 +283,18 @@
         const m = today.getMonth() - dob.getMonth();
         if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
         ageField.value = age >= 0 ? age : '';
+    }
+
+    // Whole years old as of today, or null if the date is invalid/empty.
+    function getAgeYears(dateStr) {
+        if (!dateStr) return null;
+        const dob = new Date(dateStr);
+        if (isNaN(dob)) return null;
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        return age;
     }
     function openTermsModal() {
         document.getElementById('termsModal').style.display = 'flex';
@@ -325,6 +361,51 @@
     }
 
     function validateJoinerForm() {
+        const ageWarning = document.getElementById('ageWarning');
+        const guardianWarning = document.getElementById('guardianWarning');
+        const entries = document.querySelectorAll('.passenger-entry');
+
+        entries.forEach(entry => {
+            const birthdayInput = entry.querySelector('input[name="passenger_birthday[]"]');
+            if (birthdayInput) birthdayInput.style.borderColor = '';
+        });
+
+        let underageFound = false;
+        let firstBadEntry = null;
+
+        entries.forEach(entry => {
+            const birthdayInput = entry.querySelector('input[name="passenger_birthday[]"]');
+            if (birthdayInput && birthdayInput.value && birthdayInput.value > MIN_BIRTHDAY) {
+                underageFound = true;
+                birthdayInput.style.borderColor = '#dc2626';
+                firstBadEntry = firstBadEntry || entry;
+            }
+        });
+
+        // A minor (under 18) may not book/travel without at least one adult (18+)
+        // passenger on the same booking.
+        const ages = Array.from(entries).map(entry => {
+            const birthdayInput = entry.querySelector('input[name="passenger_birthday[]"]');
+            return { entry, years: birthdayInput ? getAgeYears(birthdayInput.value) : null };
+        });
+        const hasAdult = ages.some(a => a.years !== null && a.years >= 18);
+        let minorWithoutGuardian = false;
+        ages.forEach(({ entry, years }) => {
+            if (years !== null && years < 18 && !hasAdult) {
+                minorWithoutGuardian = true;
+                entry.style.borderColor = '#dc2626';
+                firstBadEntry = firstBadEntry || entry;
+            }
+        });
+
+        ageWarning.style.display = underageFound ? 'flex' : 'none';
+        guardianWarning.style.display = minorWithoutGuardian ? 'flex' : 'none';
+
+        if (underageFound || minorWithoutGuardian) {
+            firstBadEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
         const paymentType = document.querySelector('input[name="payment_option"]:checked').value;
         if (paymentType === 'downpayment' || paymentType === 'installment') {
             updateJoinerPaymentDisplay();
