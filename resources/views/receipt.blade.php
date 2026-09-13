@@ -268,7 +268,7 @@
                 @foreach($passengers as $i => $p)
                 <tr>
                     <td>{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</td>
-                    <td style="font-weight: 600;">{{ trim($p->first_name . ' ' . $p->middle_name . ' ' . $p->last_name) }}</td>
+                    <td style="font-weight: 600;">{{ trim($p->first_name . ' ' . $p->middle_name . ' ' . $p->last_name . ' ' . ($p->suffix ?? '')) }}</td>
                     <td>{{ $p->birthday ? date('M d, Y', strtotime($p->birthday)) : '-' }}</td>
                     <td>{{ $p->gender ?? '-' }}</td>
                 </tr>

@@ -188,13 +188,21 @@
                     </div>
                     <div class="form-group">
                         <label>Suffix</label>
-                        <input type="text" name="passengers_data[{{ $i }}][suffix]" placeholder="Jr., Sr., III" maxlength="20" pattern="[A-Za-zÀ-ÿ .'\-]+" title="Letters only, no numbers" oninput="letterOnlyInput(this)">
+                        <select name="passengers_data[{{ $i }}][suffix]">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                        </select>
                     </div>
                 </div>
                 <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr;">
                     <div class="form-group">
                         <label>Birthday</label>
-                        <input type="date" name="passengers_data[{{ $i }}][birthday]" max="{{ date('Y-m-d', strtotime('-3 months')) }}" required oninput="calcAge(this)">
+                        <input type="date" name="passengers_data[{{ $i }}][birthday]" max="{{ date('Y-m-d', strtotime('-1 month')) }}" required oninput="calcAge(this)">
                     </div>
                     <div class="form-group">
                         <label>Age</label>
@@ -220,7 +228,12 @@
 
         <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:-5px 0 20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
             <i class="fas fa-triangle-exclamation"></i>
-            <span>Passengers must be at least 3 months old. Please fix the highlighted birthday field(s).</span>
+            <span>Passengers must be at least 1 month old. Please fix the highlighted birthday field(s).</span>
+        </div>
+
+        <div id="guardianWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:-5px 0 20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+            <i class="fas fa-triangle-exclamation"></i>
+            <span>A passenger under 18 cannot travel alone — add at least one passenger who is 18 or older to this booking.</span>
         </div>
 
         <!-- Add this before the .amount-row div -->
@@ -363,12 +376,25 @@ function calcAge(dateInput) {
         ageField.value = Math.floor(totalMonths / 12);
     }
 }
-const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-3 months')) }}"; // birthday must be on/before this date
+const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-1 month')) }}"; // birthday must be on/before this date
+
+// Whole years old as of today, or null if the date is invalid/empty.
+function getAgeYears(dateStr) {
+    if (!dateStr) return null;
+    const dob = new Date(dateStr);
+    if (isNaN(dob)) return null;
+    const today = new Date();
+    let age = today.getFullYear() - dob.getFullYear();
+    const m = today.getMonth() - dob.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+    return age;
+}
 
 function validatePassengers() {
     const boxes = document.querySelectorAll('.passenger-box');
     const dupWarning = document.getElementById('duplicateWarning');
     const ageWarning = document.getElementById('ageWarning');
+    const guardianWarning = document.getElementById('guardianWarning');
     const seen = new Map();
     let duplicateFound = false;
     let underageFound = false;
@@ -403,10 +429,27 @@ function validatePassengers() {
         }
     });
 
+    // A minor (under 18) may not book/travel without at least one adult (18+)
+    // passenger on the same booking.
+    const ages = Array.from(boxes).map(box => {
+        const birthdayInput = box.querySelector('input[name*="[birthday]"]');
+        return { box, years: birthdayInput ? getAgeYears(birthdayInput.value) : null };
+    });
+    const hasAdult = ages.some(a => a.years !== null && a.years >= 18);
+    let minorWithoutGuardian = false;
+    ages.forEach(({ box, years }) => {
+        if (years !== null && years < 18 && !hasAdult) {
+            minorWithoutGuardian = true;
+            box.style.borderColor = '#dc2626';
+            firstBadBox = firstBadBox || box;
+        }
+    });
+
     dupWarning.style.display = duplicateFound ? 'flex' : 'none';
     ageWarning.style.display = underageFound ? 'flex' : 'none';
+    guardianWarning.style.display = minorWithoutGuardian ? 'flex' : 'none';
 
-    if (duplicateFound || underageFound) {
+    if (duplicateFound || underageFound || minorWithoutGuardian) {
         firstBadBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
         return false;
     }

@@ -206,6 +206,12 @@ class BookingController extends Controller
     $formData['driverFee'] = $request->input('driverFee');
     $formData['passengers_data'] = $request->passengers_data;
 
+    // 1b. Passenger rules: minimum age 1 month, and any passenger under 18
+    // must be traveling with at least one passenger who is 18 or older.
+    if ($error = $this->validatePassengerAgesAndSuffixes($formData['passengers_data'] ?? [])) {
+        return back()->withInput()->with('error', $error);
+    }
+
     // 2. NEW: Capture the specific amount and payment type
     $amountToPay = (float) $request->input('amount_to_pay');
     $paymentType = $request->input('payment_type'); // 'downpayment' or 'full'
@@ -345,6 +351,7 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
                     'first_name' => $p['first_name'] ?? '',
                     'middle_name' => $p['middle_name'] ?? '',
                     'last_name' => $p['last_name'] ?? '',
+                    'suffix' => $p['suffix'] ?? null,
                     'birthday' => $p['birthday'] ?? null,
                     'gender' => $p['gender'] ?? null,
                     'created_at' => now(),
@@ -812,6 +819,49 @@ public function showReceipt($id)
     $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
 
     return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
+}
+
+/**
+ * Server-side backstop for the passenger rules enforced in passengers.blade.php's
+ * JS: minors need an accompanying adult and suffixes must be real ones. Returns
+ * an error message, or null if everything checks out.
+ */
+private function validatePassengerAgesAndSuffixes($passengersData): ?string
+{
+    $suffixWhitelist = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
+    $minBirthday     = now()->subMonth()->format('Y-m-d');
+
+    $hasAdult = false;
+    $hasMinor = false;
+
+    foreach ((array) $passengersData as $p) {
+        if (!is_array($p)) {
+            continue;
+        }
+
+        $suffix = trim($p['suffix'] ?? '');
+        if ($suffix !== '' && !in_array($suffix, $suffixWhitelist, true)) {
+            return 'Please choose a valid suffix (Jr., Sr., II, III, IV, or V) or leave it blank.';
+        }
+
+        if (!empty($p['birthday'])) {
+            if ($p['birthday'] > $minBirthday) {
+                return 'Each passenger must be at least 1 month old.';
+            }
+
+            if (Carbon::parse($p['birthday'])->age >= 18) {
+                $hasAdult = true;
+            } else {
+                $hasMinor = true;
+            }
+        }
+    }
+
+    if ($hasMinor && !$hasAdult) {
+        return 'A passenger under 18 cannot travel alone — this booking needs at least one passenger who is 18 or older.';
+    }
+
+    return null;
 }
 
 }
