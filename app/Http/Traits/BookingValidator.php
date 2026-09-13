@@ -104,4 +104,50 @@ trait BookingValidator
 
         return false;
     }
+
+    /**
+     * Server-side backstop for the passenger rules enforced client-side in
+     * passengers.blade.php / tour_manifesto.blade.php / joiner_passenger_form.blade.php:
+     * minors need an accompanying adult, minimum age is 1 month, and suffixes
+     * must be real ones. Pass a flat list of passengers, each as an array
+     * with 'suffix' and 'birthday' keys (other keys are ignored). Returns an
+     * error message, or null if everything checks out.
+     */
+    private function validatePassengerAgesAndSuffixes($passengers): ?string
+    {
+        $suffixWhitelist = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
+        $minBirthday     = now()->subMonth()->format('Y-m-d');
+
+        $hasAdult = false;
+        $hasMinor = false;
+
+        foreach ((array) $passengers as $p) {
+            if (!is_array($p)) {
+                continue;
+            }
+
+            $suffix = trim($p['suffix'] ?? '');
+            if ($suffix !== '' && !in_array($suffix, $suffixWhitelist, true)) {
+                return 'Please choose a valid suffix (Jr., Sr., II, III, IV, or V) or leave it blank.';
+            }
+
+            if (!empty($p['birthday'])) {
+                if ($p['birthday'] > $minBirthday) {
+                    return 'Each passenger must be at least 1 month old.';
+                }
+
+                if (Carbon::parse($p['birthday'])->age >= 18) {
+                    $hasAdult = true;
+                } else {
+                    $hasMinor = true;
+                }
+            }
+        }
+
+        if ($hasMinor && !$hasAdult) {
+            return 'A passenger under 18 cannot travel alone — this booking needs at least one passenger who is 18 or older.';
+        }
+
+        return null;
+    }
 }

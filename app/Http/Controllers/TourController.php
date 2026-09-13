@@ -212,12 +212,24 @@ class TourController extends Controller
         'first_name'     => 'required|array',
         'first_name.*'   => 'required|string|max:255',
         'last_name.*'    => 'required|string|max:255',
-        'birthday.*'     => 'required|date|before_or_equal:today',
+        'suffix.*'       => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
+        'birthday.*'     => ['required', 'date', 'before_or_equal:' . now()->subMonth()->format('Y-m-d')],
         'gender.*'       => 'required|in:Male,Female',
     ]);
 
     if (count($request->first_name) > $tour->max_passengers) {
         return back()->withErrors(['pax' => "This tour only allows a maximum of {$tour->max_passengers} passengers."])->withInput();
+    }
+
+    // Minor-without-guardian + suffix whitelist (server-side backstop for the
+    // same checks enforced client-side in tour_manifesto.blade.php)
+    $tourPassengers = collect($request->first_name)->keys()->map(fn ($i) => [
+        'suffix'   => $request->suffix[$i]   ?? null,
+        'birthday' => $request->birthday[$i] ?? null,
+    ])->all();
+
+    if ($error = $this->validatePassengerAgesAndSuffixes($tourPassengers)) {
+        return back()->withInput()->withErrors(['passengers' => $error]);
     }
 
     $preferredStart = \Carbon\Carbon::parse($request->preferred_date);
@@ -294,13 +306,15 @@ class TourController extends Controller
         // 3. Save each passenger
         foreach ($request->first_name as $key => $fname) {
             DB::table('passengers')->insert([
-                'booking_id' => $bookingId,
-                'first_name' => $fname,
-                'last_name'  => $request->last_name[$key],
-                'birthday'   => $request->birthday[$key],
-                'gender'     => $request->gender[$key],
-                'created_at' => now(),
-                'updated_at' => now(),
+                'booking_id'  => $bookingId,
+                'first_name'  => $fname,
+                'middle_name' => $request->middle_name[$key] ?? null,
+                'last_name'   => $request->last_name[$key],
+                'suffix'      => $request->suffix[$key] ?? null,
+                'birthday'    => $request->birthday[$key],
+                'gender'      => $request->gender[$key],
+                'created_at'  => now(),
+                'updated_at'  => now(),
             ]);
         }
 

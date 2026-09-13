@@ -32,7 +32,7 @@
 
         .passenger-row {
             display: grid;
-            grid-template-columns: 1.2fr 1fr 1.2fr 1fr 0.5fr 0.8fr 40px;
+            grid-template-columns: 1.2fr 1fr 1.2fr 0.8fr 1fr 0.5fr 0.8fr 40px;
             gap: 12px;
             margin-bottom: 15px;
             padding: 20px;
@@ -148,8 +148,20 @@
                         <input type="text" name="last_name[]" placeholder="Last name" required>
                     </div>
                     <div>
+                        <label>Suffix</label>
+                        <select name="suffix[]">
+                            <option value="">None</option>
+                            <option value="Jr.">Jr.</option>
+                            <option value="Sr.">Sr.</option>
+                            <option value="II">II</option>
+                            <option value="III">III</option>
+                            <option value="IV">IV</option>
+                            <option value="V">V</option>
+                        </select>
+                    </div>
+                    <div>
                         <label>Birthday</label>
-                        <input type="date" name="birthday[]" max="{{ date('Y-m-d') }}" required oninput="calcAge(this)">
+                        <input type="date" name="birthday[]" max="{{ date('Y-m-d', strtotime('-1 month')) }}" required oninput="calcAge(this)">
                     </div>
                     <div>
                         <label>Age</label>
@@ -169,6 +181,16 @@
             <button type="button" class="add-btn" id="add-passenger-btn" onclick="addPassenger()">
                 <i class="fas fa-plus-circle"></i> Add Another Passenger
             </button>
+
+            <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:20px 0 0; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Passengers must be at least 1 month old. Please fix the highlighted birthday field(s).</span>
+            </div>
+
+            <div id="guardianWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:20px 0 0; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>A passenger under 18 cannot travel alone — add at least one passenger who is 18 or older to this booking.</span>
+            </div>
 
             <input type="hidden" name="amount_to_pay" id="amount_to_pay" value="{{ $tour->price * 0.20 }}">
 
@@ -292,7 +314,19 @@
     const MAX_LIMIT = {{ $tour->max_passengers }};
     const passengerList = document.getElementById('passenger-list');
     const addBtn = document.getElementById('add-passenger-btn');
-    const TODAY = new Date().toISOString().split('T')[0];
+    const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-1 month')) }}"; // birthday must be on/before this date
+
+    // Whole years old as of today, or null if the date is invalid/empty.
+    function getAgeYears(dateStr) {
+        if (!dateStr) return null;
+        const dob = new Date(dateStr);
+        if (isNaN(dob)) return null;
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const m = today.getMonth() - dob.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+        return age;
+    }
 
     // --- MODAL CONTROLS ---
     function openTermsModal() {
@@ -359,6 +393,51 @@
     }
 
     function validateTourForm() {
+        const ageWarning = document.getElementById('ageWarning');
+        const guardianWarning = document.getElementById('guardianWarning');
+        const rows = document.querySelectorAll('.passenger-row');
+
+        rows.forEach(row => {
+            const birthdayInput = row.querySelector('input[name="birthday[]"]');
+            if (birthdayInput) birthdayInput.style.borderColor = '';
+        });
+
+        let underageFound = false;
+        let firstBadRow = null;
+
+        rows.forEach(row => {
+            const birthdayInput = row.querySelector('input[name="birthday[]"]');
+            if (birthdayInput && birthdayInput.value && birthdayInput.value > MIN_BIRTHDAY) {
+                underageFound = true;
+                birthdayInput.style.borderColor = '#dc2626';
+                firstBadRow = firstBadRow || row;
+            }
+        });
+
+        // A minor (under 18) may not book/travel without at least one adult (18+)
+        // passenger on the same booking.
+        const ages = Array.from(rows).map(row => {
+            const birthdayInput = row.querySelector('input[name="birthday[]"]');
+            return { row, years: birthdayInput ? getAgeYears(birthdayInput.value) : null };
+        });
+        const hasAdult = ages.some(a => a.years !== null && a.years >= 18);
+        let minorWithoutGuardian = false;
+        ages.forEach(({ row, years }) => {
+            if (years !== null && years < 18 && !hasAdult) {
+                minorWithoutGuardian = true;
+                row.style.borderColor = '#dc2626';
+                firstBadRow = firstBadRow || row;
+            }
+        });
+
+        ageWarning.style.display = underageFound ? 'flex' : 'none';
+        guardianWarning.style.display = minorWithoutGuardian ? 'flex' : 'none';
+
+        if (underageFound || minorWithoutGuardian) {
+            firstBadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return false;
+        }
+
         const paymentType = document.querySelector('input[name="payment_type"]:checked').value;
         if (paymentType === 'downpayment' || paymentType === 'installment') {
             updatePaymentSummary(); // re-sync/clamp in case submit happened without a blur event
@@ -396,8 +475,9 @@
             const newRow = firstRow.cloneNode(true);
             newRow.querySelectorAll('input').forEach(input => {
                 input.value = '';
-                if (input.type === 'date') input.max = TODAY;
+                if (input.type === 'date') input.max = MIN_BIRTHDAY;
             });
+            newRow.querySelectorAll('select').forEach(select => { select.selectedIndex = 0; });
             const removeBtnCell = newRow.querySelector('div:last-child');
             removeBtnCell.innerHTML = `<button type="button" class="remove-btn" onclick="removeRow(this)"><i class="fas fa-times"></i></button>`;
             passengerList.appendChild(newRow);
