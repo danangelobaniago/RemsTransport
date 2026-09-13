@@ -145,7 +145,7 @@ class BookingController extends Controller
     public function showBooking($id)
     {
         $van = Van::findOrFail($id);
-        $drivers = DB::table('drivers')->get();
+        $drivers = $this->driversWithRatings();
         $pricing = DB::table('pricing')->first();
         return view('booking', compact('van', 'drivers', 'pricing'));
     }
@@ -153,9 +153,24 @@ class BookingController extends Controller
     public function showMultiBooking($id)
     {
         $van = Van::findOrFail($id);
-        $drivers = DB::table('drivers')->get();
+        $drivers = $this->driversWithRatings();
         $pricing = DB::table('pricing')->first();
         return view('booking-multi', compact('van', 'drivers', 'pricing'));
+    }
+
+    /**
+     * All drivers, each carrying ->avg_rating / ->rating_count so the
+     * "Preferred Driver" picker can show reputation alongside the name.
+     */
+    private function driversWithRatings()
+    {
+        $ratings = \App\Support\DriverRating::averages();
+
+        return DB::table('drivers')->get()->map(function ($driver) use ($ratings) {
+            $driver->avg_rating   = $ratings[$driver->id]->avg_rating ?? null;
+            $driver->rating_count = $ratings[$driver->id]->rating_count ?? 0;
+            return $driver;
+        });
     }
 
     public function storeBooking(Request $request)

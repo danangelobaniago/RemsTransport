@@ -11,6 +11,34 @@
     <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
     <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+    /* ANALYTICS DASHBOARD */
+    .kpi-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+    .kpi-tile {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 16px 18px;
+    }
+    .kpi-tile .kpi-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-tile .kpi-value { font-size: 1.6rem; font-weight: 800; color: #1e293b; }
+    .kpi-tile .kpi-value small { font-size: 0.9rem; font-weight: 700; color: #64748b; }
+    @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+
+    .chart-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+    .chart-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; }
+    .chart-box h4 { margin: 0 0 4px; font-size: 13px; font-weight: 700; color: #1e293b; }
+    .chart-box p { margin: 0 0 14px; font-size: 12px; color: #94a3b8; }
+    .chart-box canvas { max-height: 260px; }
+    .chart-empty { text-align: center; padding: 40px 0; color: #94a3b8; font-size: 13px; }
+    @media (max-width: 900px) { .chart-grid { grid-template-columns: 1fr; } }
+    </style>
     <style>
     .section-card {
         background: #fff;
@@ -206,6 +234,47 @@
             <button class="rev-print-btn" onclick="printRevenue()">
                 <i class="fas fa-print"></i> Print Revenue Report
             </button>
+        </div>
+
+        <!-- ANALYTICS OVERVIEW -->
+        <div class="section-card">
+            <div class="section-title"><i class="fas fa-chart-simple"></i> Analytics Overview</div>
+
+            <div class="kpi-row">
+                <div class="kpi-tile">
+                    <div class="kpi-label">Completed Trips</div>
+                    <div class="kpi-value">{{ number_format($completedTripsCount) }}</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-label">Registered Customers</div>
+                    <div class="kpi-value">{{ number_format($customerCount) }}</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-label">Avg. Booking Value</div>
+                    <div class="kpi-value"><small>₱</small>{{ number_format($avgBookingValue, 0) }}</div>
+                </div>
+                <div class="kpi-tile">
+                    <div class="kpi-label">Total Bookings (All Time)</div>
+                    <div class="kpi-value">{{ number_format($privateCount + $joinerCount) }}</div>
+                </div>
+            </div>
+
+            <div class="chart-grid">
+                <div class="chart-box">
+                    <h4>Revenue Trend</h4>
+                    <p>Completed revenue by month, last 6 months</p>
+                    <canvas id="revenueTrendChart" role="img" aria-label="Line chart of completed revenue for each of the last six months"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h4>Bookings per Van</h4>
+                    <p>Private rentals, excluding cancelled/rejected</p>
+                    @if($bookingsPerVan->isEmpty())
+                        <div class="chart-empty">No van bookings yet.</div>
+                    @else
+                        <canvas id="vanBookingsChart" role="img" aria-label="Bar chart ranking vans by number of bookings"></canvas>
+                    @endif
+                </div>
+            </div>
         </div>
 
         <!-- ② RECENT TRANSACTIONS -->
@@ -407,6 +476,86 @@ function switchTab(period, btn) {
 // Pass PHP data to JS
 const transactions = @json($recentEarnings);
 const vansData     = @json($vans);
+
+// ---- ANALYTICS CHARTS ----
+const CHART_BLUE      = '#2563eb';
+const CHART_BLUE_FILL = 'rgba(37, 99, 235, 0.12)';
+const CHART_GRID      = '#eef1f5';
+const CHART_INK       = '#64748b';
+
+Chart.defaults.font.family = "'Segoe UI', system-ui, -apple-system, sans-serif";
+
+new Chart(document.getElementById('revenueTrendChart'), {
+    type: 'line',
+    data: {
+        labels: @json($monthlyRevenue->pluck('label')),
+        datasets: [{
+            data: @json($monthlyRevenue->pluck('total')),
+            borderColor: CHART_BLUE,
+            backgroundColor: CHART_BLUE_FILL,
+            borderWidth: 2,
+            pointRadius: 4,
+            pointBackgroundColor: CHART_BLUE,
+            pointBorderColor: '#fff',
+            pointBorderWidth: 1.5,
+            fill: true,
+            tension: 0.3,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { display: false }, // single series — the chart title already names it
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => '₱' + ctx.parsed.y.toLocaleString('en-PH', { minimumFractionDigits: 2 })
+                }
+            }
+        },
+        scales: {
+            x: { grid: { display: false }, ticks: { color: CHART_INK, font: { size: 11 } } },
+            y: {
+                beginAtZero: true,
+                grid: { color: CHART_GRID },
+                ticks: {
+                    color: CHART_INK, font: { size: 11 },
+                    callback: (v) => '₱' + v.toLocaleString('en-PH')
+                }
+            }
+        }
+    }
+});
+
+@if($bookingsPerVan->isNotEmpty())
+new Chart(document.getElementById('vanBookingsChart'), {
+    type: 'bar',
+    data: {
+        labels: @json($bookingsPerVan->pluck('name')),
+        datasets: [{
+            data: @json($bookingsPerVan->pluck('bookings')),
+            backgroundColor: CHART_BLUE,
+            borderRadius: 4,
+            maxBarThickness: 28,
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: {
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: (ctx) => ctx.parsed.x + (ctx.parsed.x === 1 ? ' booking' : ' bookings')
+                }
+            }
+        },
+        scales: {
+            x: { beginAtZero: true, grid: { color: CHART_GRID }, ticks: { color: CHART_INK, font: { size: 11 }, precision: 0 } },
+            y: { grid: { display: false }, ticks: { color: CHART_INK, font: { size: 11 } } }
+        }
+    }
+});
+@endif
 
 function printRevenue() {
     const activePanel = document.querySelector('.rev-panel.active');

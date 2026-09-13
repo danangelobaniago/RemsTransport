@@ -123,7 +123,7 @@
 <select id="driver" name="driver" required>
     <option value="" disabled selected>Select a Driver</option>
     @foreach($drivers as $d)
-        <option value="{{ $d->id }}" data-driver-id="{{ $d->id }}">{{ $d->name }}</option>
+        <option value="{{ $d->id }}" data-driver-id="{{ $d->id }}">{{ $d->name }}{{ $d->avg_rating ? ' — ' . number_format($d->avg_rating, 1) . '★ (' . $d->rating_count . ')' : '' }}</option>
     @endforeach
 </select>
 <small id="driver-hint" style="color:#6b7280;font-size:12px;margin-top:4px;display:none;">

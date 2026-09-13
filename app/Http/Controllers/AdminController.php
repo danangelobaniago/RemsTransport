@@ -983,9 +983,47 @@ public function reports()
         ->orderBy('vans.name')
         ->get();
 
+    // ---- Analytics dashboard data ----
+
+    // Revenue trend, last 6 months (completed private + joiner bookings)
+    $monthlyRevenue = collect(range(5, 0))->map(function ($monthsAgo) {
+        $start = now()->subMonths($monthsAgo)->startOfMonth();
+        $end   = now()->subMonths($monthsAgo)->endOfMonth();
+
+        $private = DB::table('bookings')->where('status', 'completed')
+            ->whereBetween('updated_at', [$start, $end])->sum('total');
+        $joiner  = DB::table('joiner_bookings')->where('status', 'completed')
+            ->whereBetween('updated_at', [$start, $end])->sum('total_price');
+
+        return [
+            'label' => $start->format('M Y'),
+            'total' => round((float) $private + (float) $joiner, 2),
+        ];
+    })->values();
+
+    // Bookings per van (private rentals) — vans are a small, clean, bounded
+    // category set, unlike free-text destinations, so this is the reliable
+    // "what's in demand" chart.
+    $bookingsPerVan = DB::table('bookings')
+        ->join('vans', 'bookings.van_id', '=', 'vans.id')
+        ->whereNotIn('bookings.status', ['cancelled', 'rejected'])
+        ->select('vans.name', DB::raw('COUNT(*) as bookings'))
+        ->groupBy('vans.id', 'vans.name')
+        ->orderByDesc('bookings')
+        ->limit(6)
+        ->get();
+
+    $completedTripsCount = DB::table('bookings')->where('status', 'completed')->count()
+        + DB::table('joiner_bookings')->where('status', 'completed')->count();
+
+    $customerCount = DB::table('users')->where('role', 'customer')->count();
+
+    $avgBookingValue = $completedTripsCount > 0 ? $totalRevenue / $completedTripsCount : 0;
+
     return view('admin.reports', compact(
         'totalRevenue', 'weekRevenue', 'monthRevenue', 'yearRevenue',
-        'privateCount', 'joinerCount', 'recentEarnings', 'vans'
+        'privateCount', 'joinerCount', 'recentEarnings', 'vans',
+        'monthlyRevenue', 'bookingsPerVan', 'completedTripsCount', 'customerCount', 'avgBookingValue'
     ));
 }
 
