@@ -165,7 +165,7 @@
                     </div>
                     <div>
                         <label>Age</label>
-                        <input type="number" name="age[]" class="age-field" placeholder="—" readonly style="background:#f1f5f9;cursor:default;">
+                        <input type="text" name="age[]" class="age-field" placeholder="—" readonly style="background:#f1f5f9;cursor:default;">
                     </div>
                     <div>
                         <label>Gender</label>
@@ -461,10 +461,16 @@
         const ageField = row.querySelector('.age-field');
         if (!dateInput.value || isNaN(dob)) { ageField.value = ''; return; }
         const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const m = today.getMonth() - dob.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
-        ageField.value = age >= 0 ? age : '';
+
+        let totalMonths = (today.getFullYear() - dob.getFullYear()) * 12 + (today.getMonth() - dob.getMonth());
+        if (today.getDate() < dob.getDate()) totalMonths--;
+        if (totalMonths < 0) { ageField.value = ''; return; }
+
+        if (totalMonths < 12) {
+            ageField.value = totalMonths + (totalMonths === 1 ? ' month' : ' months');
+        } else {
+            ageField.value = Math.floor(totalMonths / 12);
+        }
     }
 
     // --- PASSENGER MANAGEMENT ---
