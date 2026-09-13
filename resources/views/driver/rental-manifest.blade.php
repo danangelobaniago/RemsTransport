@@ -182,7 +182,7 @@
                         @foreach($passengers as $i => $p)
                         <tr>
                             <td class="pax-num">{{ str_pad($i + 1, 2, '0', STR_PAD_LEFT) }}</td>
-                            <td class="pax-name">{{ trim($p->first_name . ' ' . ($p->middle_name ?? '') . ' ' . $p->last_name) }}</td>
+                            <td class="pax-name">{{ trim($p->first_name . ' ' . ($p->middle_name ?? '') . ' ' . $p->last_name . ' ' . ($p->suffix ?? '')) }}</td>
                             <td>{{ $p->birthday ? date('M d, Y', strtotime($p->birthday)) : '—' }}</td>
                             <td>
                                 @if($p->birthday)
