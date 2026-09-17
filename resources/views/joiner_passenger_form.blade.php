@@ -131,6 +131,11 @@
                         @endfor
                     </div>
 
+                    <div id="duplicateWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        <span>Two passengers cannot have the same Full Name and Suffix. Please fix the highlighted boxes.</span>
+                    </div>
+
                     <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
                         <i class="fas fa-triangle-exclamation"></i>
                         <span>Passengers must be at least 1 month old. Please fix the highlighted birthday field(s).</span>
@@ -367,17 +372,37 @@
     }
 
     function validateJoinerForm() {
+        const duplicateWarning = document.getElementById('duplicateWarning');
         const ageWarning = document.getElementById('ageWarning');
         const guardianWarning = document.getElementById('guardianWarning');
         const entries = document.querySelectorAll('.passenger-entry');
 
         entries.forEach(entry => {
+            entry.style.borderColor = '';
             const birthdayInput = entry.querySelector('input[name="passenger_birthday[]"]');
             if (birthdayInput) birthdayInput.style.borderColor = '';
         });
 
-        let underageFound = false;
+        // Two passengers cannot be the same person (same full name + suffix).
+        let duplicateFound = false;
         let firstBadEntry = null;
+        const seenNames = new Map();
+        entries.forEach((entry, i) => {
+            const name = (entry.querySelector('input[name="passenger_name[]"]')?.value || '').trim().toLowerCase();
+            const suffix = (entry.querySelector('select[name="passenger_suffix[]"]')?.value || '').trim().toLowerCase();
+            const key = `${name}|${suffix}`;
+
+            if (seenNames.has(key)) {
+                duplicateFound = true;
+                entry.style.borderColor = '#dc2626';
+                entries[seenNames.get(key)].style.borderColor = '#dc2626';
+                firstBadEntry = firstBadEntry || entry;
+            } else {
+                seenNames.set(key, i);
+            }
+        });
+
+        let underageFound = false;
 
         entries.forEach(entry => {
             const birthdayInput = entry.querySelector('input[name="passenger_birthday[]"]');
@@ -404,10 +429,11 @@
             }
         });
 
+        duplicateWarning.style.display = duplicateFound ? 'flex' : 'none';
         ageWarning.style.display = underageFound ? 'flex' : 'none';
         guardianWarning.style.display = minorWithoutGuardian ? 'flex' : 'none';
 
-        if (underageFound || minorWithoutGuardian) {
+        if (duplicateFound || underageFound || minorWithoutGuardian) {
             firstBadEntry.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }
