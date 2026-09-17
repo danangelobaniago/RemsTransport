@@ -522,7 +522,7 @@ public function addDriver(Request $request)
         'phone' => $request->phone,
         'license_number' => $request->license, // Matched to your DB screenshot
         'license_image' => $imagePath,
-        'status' => 'AVAILABLE',
+        'status' => 'available', // lowercase — matches toggleDriverStatus() and every "status = 'available'" filter elsewhere
         'day_off' => $request->filled('day_off') ? (int) $request->day_off : null,
         'created_at' => now(),
         'updated_at' => now(),
