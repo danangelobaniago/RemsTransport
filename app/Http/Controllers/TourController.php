@@ -440,6 +440,26 @@ public function showMyBookings(Request $request)
                     'updated_at'     => now(),
                 ]);
 
+            // Log the initial payment for the admin's payment-history popup —
+            // guarded so refreshing this success page doesn't double-log it.
+            $alreadyLogged = DB::table('booking_payments')
+                ->where('booking_id', $targetBooking->id)
+                ->where('reference', $actualPaymentId)
+                ->exists();
+
+            if (!$alreadyLogged) {
+                DB::table('booking_payments')->insert([
+                    'booking_id'   => $targetBooking->id,
+                    'amount'       => (float) $targetBooking->downpayment,
+                    'method'       => 'paymongo',
+                    'reference'    => $actualPaymentId,
+                    'collected_by' => 'customer',
+                    'paid_at'      => now(),
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+
             try {
                 $user = DB::table('users')->find($targetBooking->user_id);
                 if ($user && $user->email) {
