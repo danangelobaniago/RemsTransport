@@ -183,6 +183,11 @@
                 <i class="fas fa-plus-circle"></i> Add Another Passenger
             </button>
 
+            <div id="duplicateWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:20px 0 0; font-size:14px; font-weight:600; align-items:center; gap:8px;">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span>Two passengers cannot have the same First Name, Middle Name, Last Name, and Suffix. Please fix the highlighted boxes.</span>
+            </div>
+
             <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin:20px 0 0; font-size:14px; font-weight:600; align-items:center; gap:8px;">
                 <i class="fas fa-triangle-exclamation"></i>
                 <span>Passengers must be at least 1 month old. Please fix the highlighted birthday field(s).</span>
@@ -394,17 +399,39 @@
     }
 
     function validateTourForm() {
+        const duplicateWarning = document.getElementById('duplicateWarning');
         const ageWarning = document.getElementById('ageWarning');
         const guardianWarning = document.getElementById('guardianWarning');
         const rows = document.querySelectorAll('.passenger-row');
 
         rows.forEach(row => {
+            row.style.borderColor = '';
             const birthdayInput = row.querySelector('input[name="birthday[]"]');
             if (birthdayInput) birthdayInput.style.borderColor = '';
         });
 
-        let underageFound = false;
+        // Two passengers cannot be the same person (same full name + suffix).
+        let duplicateFound = false;
         let firstBadRow = null;
+        const seen = new Map();
+        rows.forEach((row, i) => {
+            const first = (row.querySelector('input[name="first_name[]"]')?.value || '').trim().toLowerCase();
+            const middle = (row.querySelector('input[name="middle_name[]"]')?.value || '').trim().toLowerCase();
+            const last = (row.querySelector('input[name="last_name[]"]')?.value || '').trim().toLowerCase();
+            const suffix = (row.querySelector('select[name="suffix[]"]')?.value || '').trim().toLowerCase();
+            const key = `${first}|${middle}|${last}|${suffix}`;
+
+            if (seen.has(key)) {
+                duplicateFound = true;
+                row.style.borderColor = '#dc2626';
+                rows[seen.get(key)].style.borderColor = '#dc2626';
+                firstBadRow = firstBadRow || row;
+            } else {
+                seen.set(key, i);
+            }
+        });
+
+        let underageFound = false;
 
         rows.forEach(row => {
             const birthdayInput = row.querySelector('input[name="birthday[]"]');
@@ -431,10 +458,11 @@
             }
         });
 
+        duplicateWarning.style.display = duplicateFound ? 'flex' : 'none';
         ageWarning.style.display = underageFound ? 'flex' : 'none';
         guardianWarning.style.display = minorWithoutGuardian ? 'flex' : 'none';
 
-        if (underageFound || minorWithoutGuardian) {
+        if (duplicateFound || underageFound || minorWithoutGuardian) {
             firstBadRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return false;
         }

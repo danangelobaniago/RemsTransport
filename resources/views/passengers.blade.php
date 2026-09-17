@@ -410,7 +410,8 @@ function validatePassengers() {
         const first = (box.querySelector('input[name*="[first_name]"]')?.value || '').trim().toLowerCase();
         const middle = (box.querySelector('input[name*="[middle_name]"]')?.value || '').trim().toLowerCase();
         const last = (box.querySelector('input[name*="[last_name]"]')?.value || '').trim().toLowerCase();
-        const key = `${first}|${middle}|${last}`;
+        const suffix = (box.querySelector('select[name*="[suffix]"]')?.value || '').trim().toLowerCase();
+        const key = `${first}|${middle}|${last}|${suffix}`;
 
         if (seen.has(key)) {
             duplicateFound = true;
