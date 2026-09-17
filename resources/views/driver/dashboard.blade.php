@@ -1065,6 +1065,39 @@ if ('geolocation' in navigator) {
     setLocationStatus('Unsupported', '#ef4444');
 }
 
+// ── KEEP THE SCREEN AWAKE ──
+// Mobile browsers pause location updates once the screen locks or this tab
+// gets backgrounded — that's the OS saving battery, not a bug here. The Wake
+// Lock API keeps the screen on while this page is open so tracking doesn't
+// quietly stop; it only helps while the tab itself stays in front (switching
+// to another app still pauses it — no website can prevent that).
+let wakeLock = null;
+
+async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', () => { wakeLock = null; });
+    } catch (err) {
+        // Denied, unsupported, or low battery mode — nothing more we can do.
+    }
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+        requestWakeLock();
+        // Push a fresh reading right away to close most of the gap left by
+        // whatever time this tab spent hidden.
+        if ('geolocation' in navigator) {
+            navigator.geolocation.getCurrentPosition(sendLocation, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+        }
+    } else {
+        setLocationStatus('Paused (tab hidden)', '#f59e0b');
+    }
+});
+
+requestWakeLock();
+
 // ── SECTION COLLAPSE TOGGLE ──
 const sectionState = {};
 
