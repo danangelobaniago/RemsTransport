@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PaymentReceiptMail;
+use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
 use App\Http\Traits\BookingValidator;
 use GuzzleHttp\Client;
@@ -60,9 +61,19 @@ class TourController extends Controller
 
     public function approveTourBooking($id)
     {
+        $booking = DB::table('bookings')->where('id', $id)->first();
+
         DB::table('bookings')->where('id', $id)
             ->whereIn('status', ['pending', 'downpayment_paid', 'fully_paid'])
             ->update(['status' => 'approved', 'updated_at' => now()]);
+
+        if ($booking) {
+            $user = User::find($booking->user_id);
+            if ($user) {
+                $user->notify(new BookingApproved($booking));
+            }
+        }
+
         return back()->with('success', 'Booking #' . $id . ' approved.');
     }
 
