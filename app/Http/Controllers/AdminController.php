@@ -9,6 +9,8 @@ use Illuminate\Support\Str;
 use App\Models\User;
 use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
+use App\Notifications\NewTripAssigned;
+use App\Notifications\TripCompletedFeedbackRequest;
 use App\Http\Traits\BookingValidator;
 
 class AdminController extends Controller
@@ -60,6 +62,21 @@ class AdminController extends Controller
             if ($user) {
                 $user->notify(new BookingApproved($booking));
             }
+
+            if ($driverRef) {
+                [$driverId, ] = $this->resolveDriverIdAndName($driverRef);
+                if ($driverId) {
+                    $driverUserId = DB::table('drivers')->where('id', $driverId)->value('user_id');
+                    if ($driverUserId) {
+                        $driverUser = User::find($driverUserId);
+                        if ($driverUser) {
+                            $tripType = $booking->tour_id ? 'tour booking' : 'van rental';
+                            $destination = $booking->destination ?? $booking->package_name ?? 'a trip';
+                            $driverUser->notify(new NewTripAssigned($tripType, $destination, $booking->start_date));
+                        }
+                    }
+                }
+            }
         }
 
         // ❌ REJECT
@@ -92,6 +109,12 @@ class AdminController extends Controller
                     'amount_paid' => $booking->total,
                     'remaining_balance' => 0,
                 ]);
+
+            $user = User::find($booking->user_id);
+            if ($user) {
+                $destination = $booking->destination ?? $booking->package_name ?? 'your trip';
+                $user->notify(new TripCompletedFeedbackRequest($booking->id, $destination));
+            }
         }
 
         return back()->with('success', 'Status updated successfully');

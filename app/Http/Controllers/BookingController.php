@@ -9,8 +9,12 @@ use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use App\Models\Van;
 use App\Models\TourPackage;
+use App\Models\User;
 use App\Mail\PaymentReceiptMail;
 use App\Http\Traits\BookingValidator;
+use App\Notifications\NewBookingReceived;
+use App\Notifications\PaymentReceived;
+use Illuminate\Support\Facades\Notification;
 
 class BookingController extends Controller
 {
@@ -423,6 +427,17 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
             \Log::error('Payment receipt email failed (van): ' . $e->getMessage());
         }
 
+        $notifyUser = User::find($bookingUserId);
+        if ($notifyUser) {
+            $notifyUser->notify(new PaymentReceived($bookingId, 'Van Rental', $paid, $remaining));
+        }
+
+        $admins = User::where('role', 'admin')->get();
+        if ($admins->isNotEmpty()) {
+            $customerName = trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: 'A customer';
+            Notification::send($admins, new NewBookingReceived($bookingId, 'Van Rental', $customerName, $formData['destination'] ?? 'N/A', $paid));
+        }
+
         if ($actingCustomerId) {
             session()->forget('admin_acting_customer_id');
             return redirect('/admin/bookings')->with('success', 'Booking created for ' . trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) . '.');
@@ -809,6 +824,11 @@ public function payBalanceSuccess(Request $request, $id)
         'created_at'   => now(),
         'updated_at'   => now(),
     ]);
+
+    $notifyUser = User::find($booking->user_id);
+    if ($notifyUser) {
+        $notifyUser->notify(new PaymentReceived($id, $booking->tour_id ? 'Tour Package' : 'Van Rental', (float) $pending['amount'], $newBalance));
+    }
 
     session()->forget('pending_balance_checkout');
 

@@ -8,6 +8,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PaymentReceiptMail;
+use App\Models\User;
+use App\Notifications\NewBookingReceived;
+use App\Notifications\PaymentReceived;
+use App\Notifications\NewTripAssigned;
+use App\Notifications\TripCompletedFeedbackRequest;
+use Illuminate\Support\Facades\Notification;
 use App\Http\Traits\BookingValidator; // 1. Import the Trait
 
 class JoinerTripController extends Controller
@@ -78,6 +84,13 @@ public function store(Request $request)
         'created_at'            => now(),
         'updated_at'            => now(),
     ]);
+
+    if (!empty($driver->user_id)) {
+        $driverUser = User::find($driver->user_id);
+        if ($driverUser) {
+            $driverUser->notify(new NewTripAssigned('joiner trip', $request->destination, $request->trip_date));
+        }
+    }
 
     return back()->with('success', 'Joiner trip scheduled successfully!');
 }
@@ -298,6 +311,14 @@ public function processBooking(Request $request, $id)
             }
 
             DB::commit();
+
+            $admins = User::where('role', 'admin')->get();
+            if ($admins->isNotEmpty()) {
+                $customer = DB::table('users')->find($bookingUserId);
+                $customerName = $customer ? trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) : 'A customer';
+                Notification::send($admins, new NewBookingReceived($bookingId, 'Joiner Trip', $customerName, $trip->destination, $amountToCharge));
+            }
+
             return redirect()->away($checkoutUrl);
 
         } catch (\Exception $e) {
@@ -322,6 +343,12 @@ public function processBooking(Request $request, $id)
                     'payment_method' => $paymentMethod,
                     'updated_at'     => now(),
                 ]);
+
+            $notifyUser = User::find($booking->user_id);
+            if ($notifyUser) {
+                $remainingBal = max(0, (float) $booking->total_price - (float) $booking->downpayment);
+                $notifyUser->notify(new PaymentReceived($booking->id, 'Joiner Trip', (float) $booking->downpayment, $remainingBal));
+            }
 
             try {
                 $user = DB::table('users')->find($booking->user_id);
@@ -507,6 +534,11 @@ public function payBalanceSuccess(Request $request, $id)
         'updated_at'     => now(),
     ]);
 
+    $notifyUser = User::find($booking->user_id);
+    if ($notifyUser) {
+        $notifyUser->notify(new PaymentReceived($id, 'Joiner Trip', (float) $pending['amount'], $newBalance));
+    }
+
     session()->forget('pending_joiner_balance_checkout');
 
     return redirect("/joiner-receipt/{$id}")->with('success', 'Payment received! Thank you.');
@@ -569,6 +601,19 @@ public function completeTrip($id)
                 'status' => 'completed',
                 'updated_at' => now()
             ]);
+
+        $trip = DB::table('joiner_trips')->where('id', $id)->first();
+        $affectedBookings = DB::table('joiner_bookings')
+            ->where('joiner_trip_id', $id)
+            ->where('status', 'completed')
+            ->get();
+
+        foreach ($affectedBookings as $jb) {
+            $notifyUser = User::find($jb->user_id);
+            if ($notifyUser) {
+                $notifyUser->notify(new TripCompletedFeedbackRequest($jb->id, $trip->destination ?? 'your trip'));
+            }
+        }
 
         DB::commit();
         return back()->with('success', '✅ Trip completed! Feedback is now enabled for all passengers.');

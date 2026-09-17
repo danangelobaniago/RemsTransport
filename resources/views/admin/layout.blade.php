@@ -54,11 +54,29 @@
 <div class="main">
 
 <!-- TOP BAR -->
-<div class="topbar">
+<div class="topbar" style="display:flex;align-items:center;">
     <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
         <span></span><span></span><span></span>
     </button>
     <h2>@yield('title')</h2>
+
+    <div class="notification-wrapper" style="margin-left:auto;">
+        <button class="notif-btn" onclick="toggleNotif(event)" style="position:relative;background:none;border:none;cursor:pointer;font-size:18px;color:#334155;">
+            <i class="fa fa-bell"></i>
+            @if(auth()->user()->unreadNotifications->count())
+                <span class="notif-count">{{ auth()->user()->unreadNotifications->count() }}</span>
+            @endif
+        </button>
+        <div class="notif-dropdown" id="notifDropdown">
+            @forelse(auth()->user()->notifications as $notif)
+                <a href="/notifications/read" class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
+                    {{ $notif->data['message'] ?? 'Notification' }}
+                </a>
+            @empty
+                <p class="no-notif">No notifications</p>
+            @endforelse
+        </div>
+    </div>
 </div>
 
 <!-- CONTENT -->
@@ -75,6 +93,21 @@ function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');
 }
+
+function toggleNotif(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('notifDropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
+
+document.addEventListener('click', function () {
+    const dropdown = document.getElementById('notifDropdown');
+    if (dropdown) dropdown.classList.remove('show');
+});
+
+document.querySelectorAll('.notif-dropdown').forEach(function (dd) {
+    dd.addEventListener('click', function (e) { e.stopPropagation(); });
+});
 </script>
 <script src="/js/pwa.js"></script>
 </body>
