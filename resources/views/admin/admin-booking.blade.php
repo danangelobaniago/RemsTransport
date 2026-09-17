@@ -127,7 +127,6 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Payment ID</th>
                         <th>Customer</th>
                         <th>Van</th>
                         <th>Pickup</th>
@@ -159,7 +158,6 @@
                         @endphp
                         <tr>
                             <td>#{{ $booking->id }}</td>
-                            <td style="max-width:130px; word-break:break-all; font-size:11px;">{{ $booking->payment_id ?? 'N/A' }}</td>
                             <td>
                                 <div>{{ $booking->first_name ?? 'Guest' }} {{ $booking->last_name ?? '' }}</div>
                                 @if($booking->contact_number)
@@ -185,7 +183,14 @@
 
                             <td>
                                 <div style="font-size:12px; line-height:1.4;">
-                                    <div><strong>Paid:</strong> <span style="color:green;">₱{{ number_format($booking->amount_paid ?? 0, 2) }}</span></div>
+                                    <div>
+                                        <strong>Paid:</strong>
+                                        <span style="color:green;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;"
+                                              title="View payment history"
+                                              onclick='openPaymentHistory({{ $booking->id }}, {{ $booking->payments->toJson() }})'>
+                                            ₱{{ number_format($booking->amount_paid ?? 0, 2) }}
+                                        </span>
+                                    </div>
                                     <div><strong>Balance:</strong> <span style="color:{{ ($booking->computed_balance ?? 0) > 0 ? 'red' : 'green' }};">₱{{ number_format($booking->computed_balance ?? 0, 2) }}</span></div>
                                 </div>
                             </td>
@@ -272,7 +277,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="12" style="text-align:center; padding: 20px;">No bookings found</td></tr>
+                        <tr><td colspan="11" style="text-align:center; padding: 20px;">No bookings found</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -350,6 +355,32 @@
     </div>
 </div>
 
+{{-- PAYMENT HISTORY MODAL --}}
+<div id="paymentHistoryModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:14px; max-width:560px; width:100%; max-height:85vh; box-shadow:0 20px 50px rgba(0,0,0,0.25); display:flex; flex-direction:column; overflow:hidden;">
+        <div style="padding:20px 24px; border-bottom:1px solid #e5e7eb;">
+            <h3 id="paymentHistoryTitle" style="margin:0; color:#111827; font-size:16px; font-weight:700;">Payment History</h3>
+        </div>
+        <div style="padding:20px 24px; overflow-y:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb;">Date</th>
+                        <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb;">Method</th>
+                        <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb;">Received by</th>
+                        <th style="text-align:left; padding:6px 8px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb;">Payment ID</th>
+                        <th style="text-align:right; padding:6px 8px; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody id="paymentHistoryBody"></tbody>
+            </table>
+        </div>
+        <div style="padding:14px 24px; border-top:1px solid #e5e7eb; background:#f9fafb; display:flex; justify-content:flex-end;">
+            <button type="button" onclick="closePaymentHistoryModal()" style="padding:9px 16px; background:#2563eb; color:white; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
 function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
@@ -395,6 +426,35 @@ function showReasonModal(btn) {
 }
 function closeReasonModal() {
     document.getElementById('reasonModal').style.display = 'none';
+}
+
+function openPaymentHistory(bookingId, payments) {
+    document.getElementById('paymentHistoryTitle').innerText = 'Payment History — Booking #' + bookingId;
+
+    const body = document.getElementById('paymentHistoryBody');
+    if (!payments || !payments.length) {
+        body.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:16px; color:#9ca3af;">No payments recorded yet.</td></tr>';
+    } else {
+        body.innerHTML = payments.map(p => {
+            const date = new Date((p.paid_at || p.created_at).replace(' ', 'T'));
+            const dateStr = date.toLocaleString('en-PH', { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+            const method = (p.method || 'online').charAt(0).toUpperCase() + (p.method || 'online').slice(1);
+            const receivedBy = p.collected_by === 'driver' ? 'Driver (cash)' : 'Online';
+            const reference = p.reference ? `<span style="font-size:11px;word-break:break-all;">${p.reference}</span>` : '<span style="color:#9ca3af;">—</span>';
+            return `<tr>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${dateStr}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${method}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${receivedBy}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6;">${reference}</td>
+                <td style="padding:8px; border-bottom:1px solid #f3f4f6; text-align:right; font-weight:600; color:#166534;">₱${parseFloat(p.amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    document.getElementById('paymentHistoryModal').style.display = 'flex';
+}
+function closePaymentHistoryModal() {
+    document.getElementById('paymentHistoryModal').style.display = 'none';
 }
 </script>
 <script src="/js/pwa.js"></script>
