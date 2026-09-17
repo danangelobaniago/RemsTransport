@@ -109,14 +109,14 @@ class TourController extends Controller
                 "❌ {$driver->name} has a weekly day off (" . \App\Support\Weekday::label($driver->day_off) . ") within the selected tour dates.");
         }
 
-        $isAvailable = $this->checkAvailability(
-            $van->plate_number,
-            $driver->name,
-            $request->tour_date
-        );
-
-        if (!$isAvailable) {
-            return back()->withInput()->with('error', '❌ Conflict: Van or Driver is already scheduled on that date.');
+        // Check every day of the package's own range, not just the first day —
+        // a van/driver conflict on day 2 of a multi-day tour would otherwise
+        // go unnoticed.
+        for ($d = strtotime($request->tour_date); $d <= strtotime($request->end_date); $d = strtotime('+1 day', $d)) {
+            $checkDate = date('Y-m-d', $d);
+            if (!$this->checkAvailability($van->plate_number, $driver->id, $checkDate)) {
+                return back()->withInput()->with('error', "❌ Conflict: Van or Driver is already scheduled on {$checkDate}.");
+            }
         }
 
         $path = $request->hasFile('image') ? $request->file('image')->store('tours', 'public') : null;
@@ -255,6 +255,17 @@ class TourController extends Controller
         return back()->withErrors(['preferred_date' => 'The selected dates are already booked. Please choose different dates.'])->withInput();
     }
 
+    // The check above only guards against another booking on this SAME
+    // package; also make sure the package's assigned van/driver aren't
+    // already committed elsewhere (a private rental, another tour package,
+    // or a joiner trip) on these dates.
+    for ($d = strtotime($startYMD); $d <= strtotime($endYMD); $d = strtotime('+1 day', $d)) {
+        $checkDate = date('Y-m-d', $d);
+        if (!$this->checkAvailability($tour->plate_number ?? null, $tour->driver_id ?? $tour->driver_name ?? null, $checkDate)) {
+            return back()->withErrors(['preferred_date' => "This tour's van or driver is already booked on {$checkDate}. Please choose different dates."])->withInput();
+        }
+    }
+
     // 1. DYNAMIC CALCULATION BASED ON SELECTION
     $isFullPayment = $request->payment_type === 'full';
     $minDownpayment = $tour->price * 0.20;
@@ -282,6 +293,9 @@ class TourController extends Controller
         $bookingId = DB::table('bookings')->insertGetId([
             'user_id'           => $bookingUserId,
             'tour_id'           => $tour->id,
+            'van_id'            => $tour->van_id ?? null,
+            'plate_number'      => $tour->plate_number ?? null,
+            'driver'            => $tour->driver_id ?? null,
             'package_name'      => $tour->name,
             'destination'       => $tour->name,
             'pickup'            => $tour->pickup_point,

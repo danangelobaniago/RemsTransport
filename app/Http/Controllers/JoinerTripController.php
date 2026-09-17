@@ -47,18 +47,14 @@ public function store(Request $request)
 
     $imagePath = $request->hasFile('image') ? $request->file('image')->store('joiner-trips', 'public') : null;
 
-    $conflict = DB::table('joiner_trips')
-        ->where('trip_date', $request->trip_date)
-        ->where(function($q) use ($van, $driver) {
-            $q->where('plate_number', $van->plate_number)
-              ->orWhere('driver_name', $driver->name);
-        })->first();
-
-    if ($conflict) {
-        $msg = ($conflict->plate_number === $van->plate_number)
-            ? "Van ({$van->plate_number}) is already scheduled on this date."
-            : "Driver ({$driver->name}) is already assigned on this date.";
-        return back()->withInput()->with('error', '❌ ' . $msg);
+    // Check every day of the trip's own range against every other source
+    // (other joiner trips, private van rentals, tour packages) — not just
+    // the start date against other joiner trips.
+    for ($d = strtotime($request->trip_date); $d <= strtotime($request->end_date); $d = strtotime('+1 day', $d)) {
+        $checkDate = date('Y-m-d', $d);
+        if (!$this->checkAvailability($van->plate_number, $driver->id, $checkDate)) {
+            return back()->withInput()->with('error', "❌ The van or driver is already booked/assigned on {$checkDate}.");
+        }
     }
 
     DB::table('joiner_trips')->insert([

@@ -7,12 +7,26 @@ use Illuminate\Support\Facades\DB;
 
 trait BookingValidator
 {
-    private function checkAvailability($vanName, $driverName, $date, $excludeBookingId = null)
+    /**
+     * True if the van (by plate number — the one identifier every table
+     * reliably stores and that's actually unique, unlike a van's model name)
+     * and/or driver (id or name — resolved to both below) are free on $date.
+     *
+     * Pass the van's plate_number, not its name: bookings/joiner_trips/
+     * tour_packages all store plate_number, so matching on it works across
+     * every source. A caller with only a van_id should resolve the plate
+     * first (vans.plate_number is unique, so there's no ambiguity).
+     */
+    private function checkAvailability($vanPlate, $driver, $date, $excludeBookingId = null)
     {
         // Driver's weekly rest day — a hard block, no assignment on that weekday.
-        if ($this->driverRestsOn($driverName, $date)) {
+        if ($this->driverRestsOn($driver, $date)) {
             return false;
         }
+
+        // bookings.driver stores an id; joiner_trips/tour_packages.driver_name
+        // store a name. Resolve both forms once so either storage convention matches.
+        [$driverId, $driverName] = $this->resolveDriverIdAndName($driver);
 
         // Check bookings — date range (start_date to end_date), skip rejected/cancelled/completed
         $conflictBookings = DB::table('bookings')
@@ -20,20 +34,27 @@ trait BookingValidator
             ->where('end_date', '>=', $date)
             ->whereNotIn('status', ['rejected', 'cancelled', 'completed'])
             ->when($excludeBookingId, fn($q) => $q->where('id', '!=', $excludeBookingId))
-            ->where(function ($q) use ($vanName, $driverName) {
-                $q->where('van', $vanName)
-                  ->orWhere('driver', $driverName);
+            ->where(function ($q) use ($vanPlate, $driverId) {
+                $q->whereRaw('1 = 0'); // neutral base so the ORs below are purely additive
+                if ($vanPlate) $q->orWhere('plate_number', $vanPlate);
+                if ($driverId) $q->orWhere('driver', $driverId);
             })
             ->exists();
 
         if ($conflictBookings) return false;
 
-        // Check joiner_trips — single date
+        // Check joiner_trips — its own date range (trip_date..end_date, or just
+        // trip_date for a single-day trip), not only the exact start date.
         $conflictJoiner = DB::table('joiner_trips')
-            ->where('trip_date', $date)
-            ->where(function ($q) use ($vanName, $driverName) {
-                $q->where('van', $vanName)
-                  ->orWhere('driver_name', $driverName);
+            ->where('trip_date', '<=', $date)
+            ->where(function ($q) use ($date) {
+                $q->whereNull('end_date')->orWhere('end_date', '>=', $date);
+            })
+            ->where('status', '!=', 'completed') // joiner_trips has no "cancelled" status — only "completed" frees the resource
+            ->where(function ($q) use ($vanPlate, $driverName) {
+                $q->whereRaw('1 = 0');
+                if ($vanPlate) $q->orWhere('plate_number', $vanPlate);
+                if ($driverName) $q->orWhere('driver_name', $driverName);
             })
             ->exists();
 
@@ -47,15 +68,36 @@ trait BookingValidator
             ->where('bookings.start_date', '<=', $date)
             ->where('bookings.end_date', '>=', $date)
             ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
-            ->where(function ($q) use ($vanName, $driverName) {
-                $q->where('tour_packages.van', $vanName)
-                  ->orWhere('tour_packages.driver_name', $driverName);
+            ->when($excludeBookingId, fn($q) => $q->where('bookings.id', '!=', $excludeBookingId))
+            ->where(function ($q) use ($vanPlate, $driverName) {
+                $q->whereRaw('1 = 0');
+                if ($vanPlate) $q->orWhere('tour_packages.plate_number', $vanPlate);
+                if ($driverName) $q->orWhere('tour_packages.driver_name', $driverName);
             })
             ->exists();
 
         if ($conflictTours) return false;
 
         return true;
+    }
+
+    /**
+     * Resolves a driver id-or-name into both forms: [id, name]. Either half
+     * may come back null if the driver can't be found or none was given.
+     */
+    private function resolveDriverIdAndName($driver): array
+    {
+        if ($driver === null || $driver === '') {
+            return [null, null];
+        }
+
+        if (is_numeric($driver)) {
+            $name = DB::table('drivers')->where('id', $driver)->value('name');
+            return [(int) $driver, $name];
+        }
+
+        $id = DB::table('drivers')->where('name', $driver)->value('id');
+        return [$id, $driver];
     }
 
     /**
