@@ -201,7 +201,7 @@ class BookingController extends Controller
         for ($date = $start; $date <= $end; $date = strtotime("+1 day", $date)) {
             $currentDate = date('Y-m-d', $date);
 
-            if (!$this->checkAvailability($van->name, $request->driver, $currentDate)) {
+            if (!$this->checkAvailability($van->plate_number, $request->driver, $currentDate)) {
                 return back()->with('error', "❌ Conflict: The van or driver is busy on $currentDate.");
             }
         }
@@ -324,9 +324,34 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
         $actingCustomerId = session('admin_acting_customer_id');
         $bookingUserId = $actingCustomerId ?? auth()->id();
 
+        $van = DB::table('vans')->where('id', $formData['van_id'])->first();
+
+        // Final availability re-check, right before the row that actually
+        // claims the van/driver is written. The initial check (storeBooking())
+        // ran before the passenger form and the PayMongo checkout — both take
+        // real time, so another customer could have booked the same van/driver
+        // in the meantime. Payment already succeeded by this point, so we still
+        // create the booking (can't just drop the money) but flag it clearly
+        // for admin review instead of silently double-booking.
+        $conflictDate = null;
+        for ($d = strtotime($start); $d <= strtotime($end); $d = strtotime('+1 day', $d)) {
+            $checkDate = date('Y-m-d', $d);
+            if (!$this->checkAvailability($van->plate_number ?? null, $formData['driver'] ?? null, $checkDate)) {
+                $conflictDate = $checkDate;
+                break;
+            }
+        }
+
+        $notes = null;
+        if ($conflictDate) {
+            $notes = "⚠️ POSSIBLE DOUBLE-BOOKING: van/driver already had another booking on {$checkDate} at the time payment completed. Please verify and reassign if needed.";
+            \Log::warning("Booking conflict detected at payment time for van_id={$formData['van_id']}, driver={$formData['driver']}, date={$conflictDate}");
+        }
+
         $bookingId = DB::table('bookings')->insertGetId([
             'user_id' => $bookingUserId,
             'van_id' => $formData['van_id'],
+            'plate_number' => $van->plate_number ?? null,
             'pickup' => $formData['pickup'],
             'destination' => $formData['destination'],
             'start_date' => $start,
@@ -343,6 +368,7 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
             'amount_paid' => $paid,
             'remaining_balance' => $remaining,
             'payment_id' => $paymentId,
+            'notes' => $notes,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -627,12 +653,12 @@ public function rescheduleBooking(Request $request, $id)
     $newEnd   = date('Y-m-d', strtotime($newStart . ' +' . ($days - 1) . ' days'));
 
     $van = $booking->van_id ? DB::table('vans')->find($booking->van_id) : null;
-    $vanName = $van->name ?? $booking->van;
+    $vanPlate = $van->plate_number ?? $booking->plate_number;
 
     // Make sure the van/driver is actually free on every day of the new range.
     for ($d = strtotime($newStart); $d <= strtotime($newEnd); $d = strtotime('+1 day', $d)) {
         $checkDate = date('Y-m-d', $d);
-        if (!$this->checkAvailability($vanName, $booking->driver, $checkDate, $booking->id)) {
+        if (!$this->checkAvailability($vanPlate, $booking->driver, $checkDate, $booking->id)) {
             return back()->with('error', "The van/driver is already booked on {$checkDate}. Please pick a different date.");
         }
     }

@@ -27,6 +27,31 @@ class AdminController extends Controller
 
         // ✅ APPROVE
         if ($request->status == 'approved') {
+            // Approving is the moment the van/driver are actually committed —
+            // make sure nothing else already claims them on these dates.
+            if ($booking->tour_id) {
+                $tour = DB::table('tour_packages')->where('id', $booking->tour_id)->first();
+                $vanPlate  = $tour->plate_number ?? null;
+                $driverRef = $tour->driver_name ?? null;
+            } else {
+                $vanPlate  = $booking->plate_number
+                    ?: DB::table('vans')->where('id', $booking->van_id)->value('plate_number');
+                $driverRef = $booking->driver;
+            }
+
+            $conflictDate = null;
+            for ($d = strtotime($booking->start_date); $d <= strtotime($booking->end_date); $d = strtotime('+1 day', $d)) {
+                $checkDate = date('Y-m-d', $d);
+                if (!$this->checkAvailability($vanPlate, $driverRef, $checkDate, $booking->id)) {
+                    $conflictDate = $checkDate;
+                    break;
+                }
+            }
+
+            if ($conflictDate) {
+                return back()->with('error', "❌ Cannot approve booking #{$booking->id}: the van or driver already has another active booking on {$conflictDate}. Reassign the van/driver, or resolve the conflicting booking first.");
+            }
+
             DB::table('bookings')
                 ->where('id', $request->booking_id)
                 ->update(['status' => 'approved']);
