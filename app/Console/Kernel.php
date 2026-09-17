@@ -14,6 +14,9 @@ class Kernel extends ConsoleKernel
     {
         // Send booking reminders every day at 9:00 AM
         $schedule->command('booking:send-reminders')->dailyAt('09:00');
+
+        // Remind customers with an outstanding balance as their trip approaches
+        $schedule->command('booking:send-balance-reminders')->dailyAt('09:15');
     }
 
     /**

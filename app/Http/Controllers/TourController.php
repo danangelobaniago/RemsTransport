@@ -12,7 +12,11 @@ use Illuminate\Support\Facades\Mail;
 use App\Mail\PaymentReceiptMail;
 use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
+use App\Notifications\NewBookingReceived;
+use App\Notifications\PaymentReceived;
+use App\Notifications\NewTripAssigned;
 use App\Http\Traits\BookingValidator;
+use Illuminate\Support\Facades\Notification;
 use GuzzleHttp\Client;
 
 class TourController extends Controller
@@ -71,6 +75,17 @@ class TourController extends Controller
             $user = User::find($booking->user_id);
             if ($user) {
                 $user->notify(new BookingApproved($booking));
+            }
+
+            if (!empty($booking->driver)) {
+                $driverUserId = DB::table('drivers')->where('id', $booking->driver)->value('user_id');
+                if ($driverUserId) {
+                    $driverUser = User::find($driverUserId);
+                    if ($driverUser) {
+                        $destination = $booking->package_name ?? $booking->destination ?? 'a tour';
+                        $driverUser->notify(new NewTripAssigned('tour booking', $destination, $booking->start_date));
+                    }
+                }
             }
         }
 
@@ -345,6 +360,13 @@ class TourController extends Controller
 
         DB::commit();
 
+        $admins = User::where('role', 'admin')->get();
+        if ($admins->isNotEmpty()) {
+            $customer = DB::table('users')->find($bookingUserId);
+            $customerName = $customer ? trim(($customer->first_name ?? '') . ' ' . ($customer->last_name ?? '')) : 'A customer';
+            Notification::send($admins, new NewBookingReceived($bookingId, 'Tour Package', $customerName, $tour->name, $amountToPay));
+        }
+
         if ($actingCustomerId) {
             session()->forget('admin_acting_customer_id');
         }
@@ -483,6 +505,12 @@ public function showMyBookings(Request $request)
                     'created_at'   => now(),
                     'updated_at'   => now(),
                 ]);
+
+                $notifyUser = User::find($targetBooking->user_id);
+                if ($notifyUser) {
+                    $remainingBal = max(0, (float) $targetBooking->total - (float) $targetBooking->downpayment);
+                    $notifyUser->notify(new PaymentReceived($targetBooking->id, 'Tour Package', (float) $targetBooking->downpayment, $remainingBal));
+                }
             }
 
             try {

@@ -37,6 +37,31 @@
         }
         .install-btn:hover { background: rgba(255,255,255,0.2); }
 
+        /* ── NOTIFICATIONS ── */
+        .notification-wrapper { position: relative; }
+        .notif-btn {
+            background: none; border: none; color: #f1f5f9; font-size: 17px;
+            cursor: pointer; position: relative; padding: 6px;
+        }
+        .notif-count {
+            position: absolute; top: 0; right: 0; background: #ef4444; color: white;
+            font-size: 10px; font-weight: 700; border-radius: 50%; width: 16px; height: 16px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .notif-dropdown {
+            display: none; position: absolute; right: 0; top: 36px; width: 280px;
+            max-height: 340px; overflow-y: auto; background: #1e293b; border: 1px solid #334155;
+            border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.4); z-index: 200;
+        }
+        .notif-dropdown.show { display: block; }
+        .notif-item {
+            display: block; padding: 10px 14px; color: #cbd5e1; text-decoration: none;
+            font-size: 12.5px; border-bottom: 1px solid #334155; line-height: 1.4;
+        }
+        .notif-item:hover { background: #273449; }
+        .notif-item.unread { background: #1e3a5f; color: #f1f5f9; font-weight: 600; }
+        .no-notif { padding: 14px; color: #64748b; font-size: 12.5px; text-align: center; }
+
         /* ── MAIN ── */
         .main { max-width: 1200px; margin: 24px auto; padding: 0 20px; }
 
@@ -343,6 +368,23 @@
     <div class="nav-right">
         <div class="driver-badge"><span class="dot-green"></span> <strong style="color:#f1f5f9;">{{ $driver->name }}</strong></div>
         <div class="driver-badge" id="locationStatus"><i class="fas fa-location-crosshairs" style="color:#94a3b8;"></i> Location: Off</div>
+        <div class="notification-wrapper">
+            <button class="notif-btn" onclick="toggleNotif(event)">
+                <i class="fa fa-bell"></i>
+                @if(auth()->user()->unreadNotifications->count())
+                    <span class="notif-count">{{ auth()->user()->unreadNotifications->count() }}</span>
+                @endif
+            </button>
+            <div class="notif-dropdown" id="notifDropdown">
+                @forelse(auth()->user()->notifications as $notif)
+                    <a href="/notifications/read" class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
+                        {{ $notif->data['message'] ?? 'Notification' }}
+                    </a>
+                @empty
+                    <p class="no-notif">No notifications</p>
+                @endforelse
+            </div>
+        </div>
         <button id="pwa-install-btn" class="install-btn" style="display:none;">
             <i class="fas fa-download"></i> Install App
         </button>
@@ -716,6 +758,20 @@
 </div>
 
 <script>
+// ── NOTIFICATIONS ──
+function toggleNotif(event) {
+    event.stopPropagation();
+    const dropdown = document.getElementById('notifDropdown');
+    if (dropdown) dropdown.classList.toggle('show');
+}
+document.addEventListener('click', function () {
+    const dropdown = document.getElementById('notifDropdown');
+    if (dropdown) dropdown.classList.remove('show');
+});
+document.querySelectorAll('.notif-dropdown').forEach(function (dd) {
+    dd.addEventListener('click', function (e) { e.stopPropagation(); });
+});
+
 // ── BOOKINGS DATA FROM PHP ──
 const bookings = @json($bookingsForJs);
 

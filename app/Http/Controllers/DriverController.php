@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use App\Notifications\PaymentReceived;
+use App\Notifications\TripCompletedFeedbackRequest;
 
 class DriverController extends Controller
 {
@@ -300,6 +303,18 @@ class DriverController extends Controller
                 ->where('joiner_trip_id', $id)
                 ->whereNotIn('status', ['cancelled'])
                 ->update(['status' => 'completed', 'updated_at' => now()]);
+
+            $affectedBookings = DB::table('joiner_bookings')
+                ->where('joiner_trip_id', $id)
+                ->where('status', 'completed')
+                ->get();
+
+            foreach ($affectedBookings as $jb) {
+                $notifyUser = User::find($jb->user_id);
+                if ($notifyUser) {
+                    $notifyUser->notify(new TripCompletedFeedbackRequest($jb->id, $trip->destination ?? 'your trip'));
+                }
+            }
         }
 
         $messages = [
@@ -330,6 +345,11 @@ class DriverController extends Controller
             'status'         => 'fully_paid',
             'updated_at'     => now(),
         ]);
+
+        $notifyUser = User::find($booking->user_id);
+        if ($notifyUser) {
+            $notifyUser->notify(new PaymentReceived($bookingId, 'Joiner Trip', $balance, 0));
+        }
 
         return back()->with('success', $booking->passenger_name . ' — ₱' . number_format($balance, 2) . ' collected.');
     }
@@ -489,6 +509,11 @@ class DriverController extends Controller
             'updated_at'   => now(),
         ]);
 
+        $notifyUser = User::find($booking->user_id);
+        if ($notifyUser) {
+            $notifyUser->notify(new PaymentReceived($request->booking_id, $booking->tour_id ? 'Tour Package' : 'Van Rental', $balance, 0));
+        }
+
         return back()->with('success', '₱' . number_format($balance, 2) . ' collected successfully. Trip is now fully paid.');
     }
 
@@ -557,8 +582,19 @@ class DriverController extends Controller
         }
 
         $updateData = ['trip_status' => $request->trip_status, 'updated_at' => now()];
+        if ($request->trip_status === 'completed') {
+            $updateData['status'] = 'completed';
+        }
 
         DB::table('bookings')->where('id', $request->booking_id)->update($updateData);
+
+        if ($request->trip_status === 'completed') {
+            $notifyUser = User::find($booking->user_id);
+            if ($notifyUser) {
+                $destination = $booking->destination ?? $booking->package_name ?? 'your trip';
+                $notifyUser->notify(new TripCompletedFeedbackRequest($booking->id, $destination));
+            }
+        }
 
         $messages = [
             'arrived'     => 'Marked as arrived at pickup point.',

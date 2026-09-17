@@ -14,12 +14,15 @@ class NotificationController extends Controller
 {
     $user = auth()->user();
 
-
     if ($user->unreadNotifications) {
         $user->unreadNotifications->markAsRead();
     }
 
-    return redirect('/my-bookings');
+    return match ($user->role) {
+        'admin'  => redirect('/admin/bookings'),
+        'driver' => redirect('/driver/dashboard'),
+        default  => redirect('/my-bookings'),
+    };
 }
 
     /**
