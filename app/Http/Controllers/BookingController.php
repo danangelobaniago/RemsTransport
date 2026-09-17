@@ -166,7 +166,7 @@ class BookingController extends Controller
     {
         $ratings = \App\Support\DriverRating::averages();
 
-        return DB::table('drivers')->get()->map(function ($driver) use ($ratings) {
+        return DB::table('drivers')->where('status', 'available')->get()->map(function ($driver) use ($ratings) {
             $driver->avg_rating   = $ratings[$driver->id]->avg_rating ?? null;
             $driver->rating_count = $ratings[$driver->id]->rating_count ?? 0;
             return $driver;
