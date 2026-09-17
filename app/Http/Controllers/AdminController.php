@@ -195,6 +195,18 @@ class AdminController extends Controller
         ->orderBy('bookings.id', 'desc')
         ->get();
 
+    // Payment history per booking, for the "Paid" popup — grouped in one
+    // query instead of one per row.
+    $paymentHistories = DB::table('booking_payments')
+        ->orderBy('paid_at')
+        ->get()
+        ->groupBy('booking_id');
+
+    $bookings = $bookings->map(function ($booking) use ($paymentHistories) {
+        $booking->payments = $paymentHistories->get($booking->id, collect())->values();
+        return $booking;
+    });
+
     // Counts for filter badges
     $counts = DB::table('bookings')
         ->select(
