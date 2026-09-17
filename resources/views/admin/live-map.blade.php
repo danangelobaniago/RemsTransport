@@ -89,6 +89,7 @@ function toggleSidebar() {
 
 let map;
 const markers = {}; // driver id -> google.maps.Marker
+const accuracyCircles = {}; // driver id -> google.maps.Circle
 const STALE_AFTER_MS = 2 * 60 * 1000; // 2 minutes without an update = stale
 
 function initMap() {
@@ -120,6 +121,11 @@ function fetchLocations() {
         .catch(() => {});
 }
 
+function accuracyLabel(accuracy) {
+    if (!accuracy) return '';
+    return ` &bull; &plusmn;${Math.round(accuracy)}m`;
+}
+
 function tripSummary(trip) {
     if (!trip) return 'No active trip';
     const who = trip.customer ? ` &bull; ${trip.customer}` : '';
@@ -138,7 +144,7 @@ function renderDrivers(drivers) {
             const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
             return `<div class="driver-list-item" onclick="showDriver(${d.id})">
                 <div class="driver-list-name"><span class="dot ${isStale ? 'dot-stale' : 'dot-live'}"></span>${d.name}</div>
-                <div class="driver-list-meta">Updated ${timeAgo(d.location_updated_at)} &bull; ${d.status}</div>
+                <div class="driver-list-meta">Updated ${timeAgo(d.location_updated_at)} &bull; ${d.status}${accuracyLabel(d.location_accuracy)}</div>
                 <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
             </div>`;
         }).join('');
@@ -149,6 +155,7 @@ function renderDrivers(drivers) {
         driverById[d.id] = d;
         const pos = { lat: parseFloat(d.current_lat), lng: parseFloat(d.current_lng) };
         const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
+        const accuracy = d.location_accuracy ? parseFloat(d.location_accuracy) : null;
 
         if (markers[d.id]) {
             markers[d.id].setPosition(pos);
@@ -170,13 +177,41 @@ function renderDrivers(drivers) {
             });
             markers[d.id].addListener('click', () => showDriver(d.id));
         }
+
+        // A faint circle showing the GPS fix's own margin of error, so a
+        // wide, hazy circle reads as "don't fully trust this pin."
+        if (accuracy && !isStale) {
+            if (accuracyCircles[d.id]) {
+                accuracyCircles[d.id].setCenter(pos);
+                accuracyCircles[d.id].setRadius(accuracy);
+            } else {
+                accuracyCircles[d.id] = new google.maps.Circle({
+                    center: pos,
+                    radius: accuracy,
+                    map: map,
+                    fillColor: '#2563eb',
+                    fillOpacity: 0.08,
+                    strokeColor: '#2563eb',
+                    strokeOpacity: 0.25,
+                    strokeWeight: 1,
+                    clickable: false,
+                });
+            }
+        } else if (accuracyCircles[d.id]) {
+            accuracyCircles[d.id].setMap(null);
+            delete accuracyCircles[d.id];
+        }
     });
 
-    // Remove markers for drivers no longer reporting a location.
+    // Remove markers (and circles) for drivers no longer reporting a location.
     Object.keys(markers).forEach(id => {
         if (!seenIds.has(Number(id))) {
             markers[id].setMap(null);
             delete markers[id];
+            if (accuracyCircles[id]) {
+                accuracyCircles[id].setMap(null);
+                delete accuracyCircles[id];
+            }
         }
     });
 }
@@ -195,7 +230,7 @@ function showDriver(id) {
         <div style="font-size:13px;min-width:180px;">
             <div style="font-weight:700;margin-bottom:4px;">${d.name}</div>
             <div style="color:#64748b;margin-bottom:2px;">${tripSummary(d.current_trip)}</div>
-            <div style="color:#94a3b8;font-size:11px;">Updated ${timeAgo(d.location_updated_at)}</div>
+            <div style="color:#94a3b8;font-size:11px;">Updated ${timeAgo(d.location_updated_at)}${accuracyLabel(d.location_accuracy)}</div>
         </div>
     `);
     infoWindow.open(map, markers[id]);
