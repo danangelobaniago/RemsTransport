@@ -975,19 +975,64 @@ init();
 
 // ── LIVE LOCATION SHARING ──
 // Shares this driver's position with the admin dashboard while this tab stays open.
-// Sends at most once every 15 seconds, even if the browser reports position more often.
-const LOCATION_SEND_INTERVAL_MS = 15000;
+// Sends at most once every 8 seconds, even if the browser reports position more often.
+const LOCATION_SEND_INTERVAL_MS = 8000;
+const MAX_ACCEPTABLE_ACCURACY_M = 150; // GPS fixes worse than this are likely cell/Wi-Fi triangulation, not GPS
+const MAX_PLAUSIBLE_SPEED_MPS = 55;    // ~200 km/h — faster than that between two fixes is a bad reading, not real travel
 let lastLocationSendAt = 0;
+let lastSentFix = null;   // { lat, lng, time } — for the implausible-jump check
+let bestPendingFix = null; // best-accuracy fix seen since the last send, in case every recent fix is weak
 
 function setLocationStatus(text, color) {
     const el = document.getElementById('locationStatus');
     el.innerHTML = `<i class="fas fa-location-crosshairs" style="color:${color};"></i> Location: ${text}`;
 }
 
+// Great-circle distance in meters between two lat/lng points.
+function haversineMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371000;
+    const toRad = d => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 function sendLocation(position) {
     const now = Date.now();
+    const { latitude, longitude, accuracy } = position.coords;
+
+    // Remember the best (lowest-accuracy-number) fix seen even when we're not
+    // due to send yet, so a driver with a weak signal still reports the best
+    // reading available instead of going dark for the whole interval.
+    if (!bestPendingFix || accuracy < bestPendingFix.accuracy) {
+        bestPendingFix = { lat: latitude, lng: longitude, accuracy, time: now };
+    }
+
     if (now - lastLocationSendAt < LOCATION_SEND_INTERVAL_MS) return;
+
+    let fix = { lat: latitude, lng: longitude, accuracy };
+
+    // This fix is unusually imprecise — prefer the best one seen this
+    // window instead, unless we haven't sent anything in a while (better to
+    // report a rough position than to go silent).
+    if (accuracy > MAX_ACCEPTABLE_ACCURACY_M && bestPendingFix && (now - lastLocationSendAt) < 60000) {
+        fix = bestPendingFix;
+    }
+
+    // Discard an implausible "jump" — almost always a bad multipath GPS
+    // reading, not the van actually teleporting.
+    if (lastSentFix) {
+        const elapsedSec = (now - lastSentFix.time) / 1000;
+        const meters = haversineMeters(lastSentFix.lat, lastSentFix.lng, fix.lat, fix.lng);
+        if (elapsedSec > 0 && (meters / elapsedSec) > MAX_PLAUSIBLE_SPEED_MPS) {
+            return; // skip this one, wait for the next fix to confirm
+        }
+    }
+
     lastLocationSendAt = now;
+    lastSentFix = { lat: fix.lat, lng: fix.lng, time: now };
+    bestPendingFix = null;
 
     fetch("{{ route('driver.update_location') }}", {
         method: 'POST',
@@ -997,8 +1042,9 @@ function sendLocation(position) {
                 || document.querySelector('input[name="_token"]').value,
         },
         body: JSON.stringify({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
+            lat: fix.lat,
+            lng: fix.lng,
+            accuracy: fix.accuracy,
         }),
     }).then(r => {
         if (r.ok) {
@@ -1013,7 +1059,7 @@ if ('geolocation' in navigator) {
     navigator.geolocation.watchPosition(
         sendLocation,
         (err) => setLocationStatus('Denied', '#ef4444'),
-        { enableHighAccuracy: false, maximumAge: 10000, timeout: 20000 }
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
 } else {
     setLocationStatus('Unsupported', '#ef4444');

@@ -212,8 +212,9 @@ class DriverController extends Controller
     public function updateLocation(Request $request)
     {
         $request->validate([
-            'lat' => 'required|numeric|between:-90,90',
-            'lng' => 'required|numeric|between:-180,180',
+            'lat'      => 'required|numeric|between:-90,90',
+            'lng'      => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0',
         ]);
 
         $driver = DB::table('drivers')->where('user_id', Auth::id())->first();
@@ -224,6 +225,7 @@ class DriverController extends Controller
         DB::table('drivers')->where('id', $driver->id)->update([
             'current_lat'         => $request->lat,
             'current_lng'         => $request->lng,
+            'location_accuracy'   => $request->accuracy !== null ? round($request->accuracy) : null,
             'location_updated_at' => now(),
         ]);
 

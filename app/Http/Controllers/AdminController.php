@@ -324,7 +324,7 @@ class AdminController extends Controller
         $drivers = DB::table('drivers')
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
-            ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_updated_at')
+            ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_accuracy', 'location_updated_at')
             ->get()
             ->map(function ($driver) {
                 $driver->current_trip = $this->currentTripForDriver($driver);
