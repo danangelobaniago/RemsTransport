@@ -290,6 +290,10 @@ class DriverController extends Controller
             return back()->with('error', 'Invalid status transition.');
         }
 
+        if ($request->trip_status === 'arrived' && now()->toDateString() < $trip->trip_date) {
+            return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($trip->trip_date)->format('M d, Y') . '.');
+        }
+
         $updateData = ['trip_status' => $request->trip_status, 'updated_at' => now()];
         if ($request->trip_status === 'completed') {
             $updateData['status'] = 'completed';
@@ -437,6 +441,10 @@ class DriverController extends Controller
         }
 
         if ($request->trip_status === 'arrived') {
+            if (now()->toDateString() < $tour->tour_date) {
+                return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($tour->tour_date)->format('M d, Y') . '.');
+            }
+
             $hasApproved = DB::table('bookings')
                 ->where('tour_id', $id)
                 ->where('status', 'approved')
@@ -584,6 +592,10 @@ class DriverController extends Controller
 
         if ($next !== $current + 1) {
             return back()->with('error', 'Invalid trip status transition.');
+        }
+
+        if ($request->trip_status === 'arrived' && now()->toDateString() < $booking->start_date) {
+            return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($booking->start_date)->format('M d, Y') . '.');
         }
 
         // For completing: require full payment

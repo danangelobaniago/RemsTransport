@@ -162,18 +162,23 @@
         </div>
 
         @if($ts === 'not_started')
-            @if($hasApprovedBookings)
+            @if(!$hasApprovedBookings)
+            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:10px;font-size:14px;color:#92400e;font-weight:600;">
+                <i class="fas fa-clock" style="font-size:18px;"></i>
+                Waiting for admin approval — trip cannot be started yet.
+            </div>
+            @elseif(now()->toDateString() < $tour->tour_date)
+            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:10px;font-size:14px;color:#92400e;font-weight:600;">
+                <i class="fas fa-calendar-day" style="font-size:18px;"></i>
+                This trip is scheduled for {{ \Carbon\Carbon::parse($tour->tour_date)->format('M d, Y') }} — you can't mark arrival before then.
+            </div>
+            @else
             <form method="POST" action="{{ route('driver.tour.status', $tour->id) }}">
                 @csrf <input type="hidden" name="trip_status" value="arrived">
                 <button type="submit" class="action-btn btn-arrived" onclick="return confirm('Confirm: You have arrived at the meetup point?')">
                     <i class="fas fa-map-marker-alt"></i> Arrived at Meetup Point
                 </button>
             </form>
-            @else
-            <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:center;gap:10px;font-size:14px;color:#92400e;font-weight:600;">
-                <i class="fas fa-clock" style="font-size:18px;"></i>
-                Waiting for admin approval — trip cannot be started yet.
-            </div>
             @endif
         @elseif($ts === 'arrived')
             <form method="POST" action="{{ route('driver.tour.status', $tour->id) }}">
