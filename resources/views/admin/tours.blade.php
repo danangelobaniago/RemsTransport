@@ -108,6 +108,23 @@
 
         @if(session('success')) <div class="alert success" style="background:#dcfce7; color:#16a34a; padding:15px; border-radius:8px; margin-bottom:20px;"><i class="fas fa-check-circle"></i> {{ session('success') }}</div> @endif
 
+        @if(session('error'))
+            <div class="alert" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <i class="fas fa-times-circle"></i> {{ session('error') }}
+            </div>
+        @endif
+
+        @if($errors->any())
+            <div class="alert" style="background:#fee2e2; color:#991b1b; border:1px solid #fecaca; padding:15px; border-radius:8px; margin-bottom:20px;">
+                <i class="fas fa-times-circle"></i> Tour package was not created:
+                <ul style="margin:6px 0 0 20px; padding:0;">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
         <div class="card">
             <h3>Add Fixed Tour Package</h3>
             <form method="POST" action="/admin/tours/add" enctype="multipart/form-data">
