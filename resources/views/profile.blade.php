@@ -36,93 +36,129 @@
 
 <!-- MAIN -->
 <div class="container">
-    <div class="card">
-        <h2>My Profile</h2>
+    <div class="profile-stack">
 
         @if(session('success'))
-            <p class="success">{{ session('success') }}</p>
+            <div class="alert-banner success"><i class="fa fa-check-circle"></i> {{ session('success') }}</div>
         @endif
-
         @if(session('error'))
-            <p class="error">{{ session('error') }}</p>
+            <div class="alert-banner error"><i class="fa fa-exclamation-circle"></i> {{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div class="alert-banner error">
+                <i class="fa fa-exclamation-circle"></i>
+                <ul>
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
         @endif
 
         <!-- UPDATE PROFILE -->
-        <form method="POST" action="/profile/update">
-            @csrf
+        <div class="card">
+            <h2><i class="fa fa-user-circle section-icon"></i> My Profile</h2>
 
-            <script>
-                function allowLettersOnly(input) {
-                    input.value = input.value.replace(/[^A-Za-z\s]/g, '').replace(/^\s+/, '').slice(0, 30);
-                }
-                function allowNumbersOnly(input) {
-                    input.value = input.value.replace(/[^0-9]/g, '');
-                }
-            </script>
+            <form method="POST" action="/profile/update">
+                @csrf
 
-            <label>First Name</label>
-            <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                <div class="field-row">
+                    <div class="field">
+                        <label>First Name</label>
+                        <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                    </div>
+                    <div class="field">
+                        <label>Middle Name</label>
+                        <input type="text" name="middle_name" value="{{ auth()->user()->middle_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                    </div>
+                </div>
 
-            <label>Middle Name</label>
-            <input type="text" name="middle_name" value="{{ auth()->user()->middle_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                <label>Last Name</label>
+                <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" maxlength="30" oninput="allowLettersOnly(this)">
 
-            <label>Last Name</label>
-            <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                <label>Email</label>
+                <input type="email" name="email" value="{{ auth()->user()->email }}" required>
 
-            <label>Email</label>
-            <input type="email" name="email" value="{{ auth()->user()->email }}" required>
+                <div class="field-row">
+                    <div class="field">
+                        <label>Contact Number</label>
+                        <input type="text" name="phone_number" value="{{ auth()->user()->phone_number }}"
+                               maxlength="11" oninput="allowNumbersOnly(this)" pattern="^09\d{9}$"
+                               title="Must start with 09 and be 11 digits" required>
+                    </div>
+                    <div class="field">
+                        <label>Birthday</label>
+                        <input type="date" name="birthday" value="{{ auth()->user()->birthday }}"
+                               max="{{ date('Y-m-d') }}" required>
+                    </div>
+                </div>
 
-            {{-- NEW FIELDS ADDED HERE --}}
-            <label>Contact Number</label>
-            <input type="text" name="phone_number" value="{{ auth()->user()->phone_number }}"
-                   maxlength="11" oninput="allowNumbersOnly(this)" pattern="^09\d{9}$"
-                   title="Must start with 09 and be 11 digits" required>
-
-            <label>Birthday</label>
-            <input type="date" name="birthday" value="{{ auth()->user()->birthday }}"
-                   max="{{ date('Y-m-d') }}" required>
-
-            @error('email')
-                <p class="error">{{ $message }}</p>
-            @enderror
-
-            <button type="submit">Update Profile</button>
-        </form>
-
-        <hr>
+                <button type="submit"><i class="fa fa-check"></i> Update Profile</button>
+            </form>
+        </div>
 
         <!-- CHANGE PASSWORD -->
-        <h3>Change Password</h3>
-        <form method="POST" action="/profile/password">
+        <div class="card">
+            <h2><i class="fa fa-lock section-icon"></i> Change Password</h2>
+            <form method="POST" action="/profile/password">
+                @csrf
+                <label>Current Password</label>
+                <div class="input-box">
+                    <input type="password" id="currentPassword" name="current_password" required>
+                    <i class="fa fa-eye toggle-password" data-target="currentPassword"></i>
+                </div>
+
+                <label>New Password</label>
+                <div class="input-box">
+                    <input type="password" id="newPassword" name="password" required>
+                    <i class="fa fa-eye toggle-password" data-target="newPassword"></i>
+                </div>
+
+                <div class="strength-meter">
+                    <div id="strength-bar"></div>
+                </div>
+                <p id="strength-text"></p>
+
+                <label>Confirm Password</label>
+                <div class="input-box">
+                    <input type="password" id="confirmPassword" name="password_confirmation" required>
+                    <i class="fa fa-eye toggle-password" data-target="confirmPassword"></i>
+                </div>
+
+                <button type="submit" class="btn-secondary"><i class="fa fa-key"></i> Change Password</button>
+            </form>
+        </div>
+
+        <!-- DELETE ACCOUNT -->
+        <div class="card danger-zone">
+            <h2><i class="fa fa-triangle-exclamation section-icon"></i> Delete Account</h2>
+            <p class="danger-text">
+                This permanently anonymizes your profile (name, email, and phone number) and signs you out for good —
+                this cannot be undone. You can't delete your account while you have an active or upcoming booking;
+                wait until it's completed or cancel it first.
+            </p>
+            <button type="button" class="btn-danger" onclick="openDeleteModal()"><i class="fa fa-trash"></i> Delete My Account</button>
+        </div>
+
+    </div>
+</div>
+
+<!-- DELETE ACCOUNT MODAL -->
+<div class="modal-overlay" id="deleteAccountModal">
+    <div class="modal-box">
+        <button type="button" class="modal-close" onclick="closeDeleteModal()">&times;</button>
+        <h3><i class="fa fa-triangle-exclamation" style="color:#ef4444;"></i> Confirm Account Deletion</h3>
+        <p>This cannot be undone. Enter your password to confirm.</p>
+        <form method="POST" action="/profile/delete">
             @csrf
-            <label>Current Password</label>
             <div class="input-box">
-                <input type="password" id="currentPassword" name="current_password" required>
-                <i class="fa fa-eye toggle-password" data-target="currentPassword"></i>
+                <input type="password" id="deletePassword" name="password" placeholder="Your password" required>
+                <i class="fa fa-eye toggle-password" data-target="deletePassword"></i>
             </div>
-
-            <label>New Password</label>
-            <div class="input-box">
-                <input type="password" id="newPassword" name="password" required>
-                <i class="fa fa-eye toggle-password" data-target="newPassword"></i>
+            <div class="modal-btn-row">
+                <button type="button" class="btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button type="submit" class="btn-danger">Yes, Delete My Account</button>
             </div>
-
-            <div class="strength-meter">
-                <div id="strength-bar"></div>
-            </div>
-            <p id="strength-text"></p>
-
-            <label>Confirm Password</label>
-            <div class="input-box">
-                <input type="password" id="confirmPassword" name="password_confirmation" required>
-                <i class="fa fa-eye toggle-password" data-target="confirmPassword"></i>
-            </div>
-
-            @error('password')
-                <p class="error">{{ $message }}</p>
-            @enderror
-
-            <button type="submit" class="btn-danger">Change Password</button>
         </form>
     </div>
 </div>
@@ -156,10 +192,16 @@
 </div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-    @if($errors->has('email')) alert("{{ $errors->first('email') }}"); @endif
-    @if($errors->has('password')) alert("{{ $errors->first('password') }}"); @endif
+function allowLettersOnly(input) {
+    input.value = input.value.replace(/[^A-Za-z\s]/g, '').replace(/^\s+/, '').slice(0, 30);
+}
+function allowNumbersOnly(input) {
+    input.value = input.value.replace(/[^0-9]/g, '');
+}
+function openDeleteModal() { document.getElementById('deleteAccountModal').classList.add('open'); }
+function closeDeleteModal() { document.getElementById('deleteAccountModal').classList.remove('open'); }
 
+document.addEventListener("DOMContentLoaded", function () {
     const newPass = document.getElementById("newPassword");
     const confirmPass = document.getElementById("confirmPassword");
 
@@ -193,6 +235,10 @@ document.addEventListener("DOMContentLoaded", function () {
         bar.style.width = (strength * 25) + "%";
         bar.style.background = colors[strength];
         text.innerText = labels[strength];
+    });
+
+    document.getElementById('deleteAccountModal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeleteModal();
     });
 });
 </script>

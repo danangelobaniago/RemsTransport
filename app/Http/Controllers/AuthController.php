@@ -7,6 +7,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules\Password;
@@ -250,6 +251,56 @@ public function updateProfile(Request $request)
     ]);
 
     return back()->with('success', 'Profile updated successfully!');
+}
+
+public function deleteAccount(Request $request)
+{
+    $request->validate([
+        'password' => 'required',
+    ]);
+
+    $user = Auth::user();
+
+    // 1. Verification — must confirm with the current password.
+    if (!Hash::check($request->password, $user->password)) {
+        return back()->with('error', 'Incorrect password. Your account was not deleted.');
+    }
+
+    // 2. Dependency check — block deletion while anything is still unresolved.
+    $hasActiveBooking = DB::table('bookings')
+        ->where('user_id', $user->id)
+        ->whereNotIn('status', ['completed', 'cancelled', 'rejected'])
+        ->exists();
+
+    $hasActiveJoinerBooking = DB::table('joiner_bookings')
+        ->where('user_id', $user->id)
+        ->whereNotIn('status', ['completed', 'cancelled'])
+        ->exists();
+
+    if ($hasActiveBooking || $hasActiveJoinerBooking) {
+        return back()->with('error', 'You still have an active or upcoming booking. Please wait until it is completed, or cancel it, before deleting your account.');
+    }
+
+    // 3. Anonymize rather than hard-delete — past bookings/feedback/payment
+    // history still need a valid user row to report against, so we scrub the
+    // identifying fields and lock the account instead of removing the row.
+    $user->update([
+        'first_name'   => 'Deleted',
+        'middle_name'  => null,
+        'last_name'    => 'User',
+        'suffix'       => null,
+        'email'        => 'deleted-user-' . $user->id . '@deleted.remstransport.local',
+        'phone_number' => null,
+        'birthday'     => null,
+        'password'     => Hash::make(Str::random(40)),
+        'deleted_at'   => now(),
+    ]);
+
+    Auth::logout();
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/')->with('success', 'Your account has been deleted.');
 }
 
 

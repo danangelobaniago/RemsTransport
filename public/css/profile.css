@@ -94,21 +94,40 @@ nav {
     display: flex;
     justify-content: center;
     margin-bottom: 60px;
+    padding: 0 20px;
+}
+
+.profile-stack {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
 }
 
 /* ================= CARD ================= */
 .card {
-    width: 420px;
+    width: 100%;
     background: white;
     padding: 30px;
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    border: 1px solid #f1f5f9;
 }
 
 /* ================= HEADINGS ================= */
 .card h2 {
-    margin-bottom: 20px;
-    font-size: 22px;
+    margin-bottom: 22px;
+    font-size: 19px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #0f172a;
+}
+
+.section-icon {
+    color: #2563eb;
+    font-size: 17px;
 }
 
 .card h3 {
@@ -117,27 +136,43 @@ nav {
     font-size: 18px;
 }
 
+/* ================= FIELD LAYOUT ================= */
+.field-row {
+    display: flex;
+    gap: 14px;
+}
+
+.field-row .field {
+    flex: 1;
+    min-width: 0;
+}
+
 /* ================= INPUTS ================= */
 label {
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+    display: block;
+    margin-bottom: 6px;
 }
 
 input {
     width: 100%;
-    height: 42px;
-    margin-top: 5px;
-    margin-bottom: 15px;
-    padding: 0 12px;
-    border-radius: 8px;
-    border: 1px solid #ddd;
+    height: 44px;
+    margin-bottom: 16px;
+    padding: 0 14px;
+    border-radius: 9px;
+    border: 1px solid #dde3ec;
+    background: #f9fafb;
     outline: none;
+    font-size: 14px;
     transition: 0.2s;
 }
 
 input:focus {
     border-color: #2563eb;
-    box-shadow: 0 0 0 2px rgba(37,99,235,0.1);
+    background: white;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
 }
 
 /* ================= INPUT BOX (EYE ICON) ================= */
@@ -176,6 +211,16 @@ button:hover {
     background: #1e40af;
 }
 
+/* SECONDARY BUTTON */
+.btn-secondary {
+    background: #f1f5f9;
+    color: #334155;
+}
+
+.btn-secondary:hover {
+    background: #e2e8f0;
+}
+
 /* DANGER BUTTON */
 .btn-danger {
     background: #ef4444;
@@ -185,17 +230,126 @@ button:hover {
     background: #b91c1c;
 }
 
-/* ================= ALERTS ================= */
-.success {
-    color: #16a34a;
-    margin-bottom: 10px;
-    font-size: 14px;
+/* ================= DANGER ZONE ================= */
+.danger-zone {
+    border: 1px solid #fecaca;
 }
 
-.error {
-    color: #dc2626;
-    margin-bottom: 10px;
+.danger-zone h2 .section-icon {
+    color: #ef4444;
+}
+
+.danger-text {
+    font-size: 13.5px;
+    color: #64748b;
+    line-height: 1.6;
+    margin-bottom: 18px;
+}
+
+.danger-zone .btn-danger {
+    width: auto;
+    padding: 0 20px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ================= ALERTS ================= */
+.alert-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: 10px;
     font-size: 14px;
+    line-height: 1.5;
+}
+
+.alert-banner.success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.alert-banner.error {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.alert-banner ul {
+    margin: 0;
+    padding-left: 18px;
+}
+
+/* ================= MODAL ================= */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-box {
+    background: white;
+    border-radius: 16px;
+    padding: 28px;
+    width: 100%;
+    max-width: 380px;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+}
+
+.modal-box h3 {
+    font-size: 17px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f172a;
+}
+
+.modal-box p {
+    font-size: 13.5px;
+    color: #64748b;
+    margin-bottom: 18px;
+}
+
+.modal-close {
+    position: absolute;
+    top: 16px;
+    right: 18px;
+    width: auto;
+    height: auto;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    background: none;
+    color: #475569;
+}
+
+.modal-btn-row {
+    display: flex;
+    gap: 10px;
+}
+
+.modal-btn-row button {
+    flex: 1;
 }
 
 /* ================= DIVIDER ================= */
@@ -305,8 +459,9 @@ hr {
         font-size: 13px;
     }
 
-    .card {
-        width: 90%;
+    .field-row {
+        flex-direction: column;
+        gap: 0;
     }
 
     .contact-container {
