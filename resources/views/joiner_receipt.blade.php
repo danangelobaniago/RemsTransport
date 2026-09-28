@@ -200,6 +200,13 @@
             font-weight: 800;
         }
 
+        .payment-history { margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+        .payment-history h4 { font-size: 0.85rem; margin: 0 0 10px; color: var(--dark); display: flex; align-items: center; gap: 6px; }
+        .payment-history table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+        .payment-history th, .payment-history td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #f1f5f9; }
+        .payment-history th { color: var(--gray); font-weight: 700; text-transform: uppercase; font-size: 0.65rem; letter-spacing: 0.5px; }
+        .payment-history td.amt { text-align: right; font-weight: 700; color: var(--success); }
+
         .btn-action {
             width: 100%;
             padding: 16px;
@@ -364,6 +371,27 @@
                 </div>
             @endif
         </div>
+
+        @if($payments->count())
+            <div class="payment-history">
+                <h4><i class="fas fa-clock-rotate-left"></i> Payment History</h4>
+                <table>
+                    <thead>
+                        <tr><th>Date</th><th>Method</th><th>Received by</th><th style="text-align:right;">Amount</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach($payments as $p)
+                            <tr>
+                                <td>{{ \Carbon\Carbon::parse($p->paid_at ?? $p->created_at)->format('M d, Y g:i A') }}</td>
+                                <td>{{ ucfirst($p->method ?? 'online') }}</td>
+                                <td>{{ $p->collected_by === 'driver' ? 'Driver (cash)' : 'Online' }}</td>
+                                <td class="amt">₱{{ number_format($p->amount, 2) }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
 
         @if($balance > 0)
             <div class="pay-balance-box no-print">

@@ -497,6 +497,7 @@ public function showMyBookings(Request $request)
             if (!$alreadyLogged) {
                 DB::table('booking_payments')->insert([
                     'booking_id'   => $targetBooking->id,
+                    'source'       => 'bookings',
                     'amount'       => (float) $targetBooking->downpayment,
                     'method'       => 'paymongo',
                     'reference'    => $actualPaymentId,

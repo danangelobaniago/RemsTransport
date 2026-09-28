@@ -350,6 +350,28 @@ public function processBooking(Request $request, $id)
                 $notifyUser->notify(new PaymentReceived($booking->id, 'Joiner Trip', (float) $booking->downpayment, $remainingBal));
             }
 
+            // Log the initial payment for the receipt's payment-history table —
+            // guarded so refreshing this success page doesn't double-log it.
+            $alreadyLogged = DB::table('booking_payments')
+                ->where('booking_id', $booking->id)
+                ->where('source', 'joiner_bookings')
+                ->where('reference', $booking->payment_id ?? $reference)
+                ->exists();
+
+            if (!$alreadyLogged) {
+                DB::table('booking_payments')->insert([
+                    'booking_id'   => $booking->id,
+                    'source'       => 'joiner_bookings',
+                    'amount'       => (float) $booking->downpayment,
+                    'method'       => strtolower($paymentMethod),
+                    'reference'    => $booking->payment_id ?? $reference,
+                    'collected_by' => 'customer',
+                    'paid_at'      => now(),
+                    'created_at'   => now(),
+                    'updated_at'   => now(),
+                ]);
+            }
+
             try {
                 $user = DB::table('users')->find($booking->user_id);
                 $trip = DB::table('joiner_trips')->find($booking->joiner_trip_id);
@@ -534,6 +556,18 @@ public function payBalanceSuccess(Request $request, $id)
         'updated_at'     => now(),
     ]);
 
+    DB::table('booking_payments')->insert([
+        'booking_id'   => $id,
+        'source'       => 'joiner_bookings',
+        'amount'       => (float) $pending['amount'],
+        'method'       => strtolower($paymentMethod),
+        'reference'    => $pending['session_id'],
+        'collected_by' => 'customer',
+        'paid_at'      => now(),
+        'created_at'   => now(),
+        'updated_at'   => now(),
+    ]);
+
     $notifyUser = User::find($booking->user_id);
     if ($notifyUser) {
         $notifyUser->notify(new PaymentReceived($id, 'Joiner Trip', (float) $pending['amount'], $newBalance));
@@ -577,8 +611,14 @@ public function showReceipt($id)
     $daysUntilTrip      = now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
     $installmentAllowed = $daysUntilTrip > 7;
 
+    $payments = DB::table('booking_payments')
+        ->where('booking_id', $id)
+        ->where('source', 'joiner_bookings')
+        ->orderBy('paid_at')
+        ->get();
+
     // 3. Pass everything to the view
-    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed'));
+    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed', 'payments'));
 }
 
 public function completeTrip($id)
