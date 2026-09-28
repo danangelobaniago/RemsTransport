@@ -66,7 +66,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const cards = getCards();
             if (!cards.length) return;
             const clamped = Math.max(0, Math.min(i, cards.length - 1));
-            cards[clamped].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+            const card = cards[clamped];
+            // Compute the target scrollLeft ourselves and apply it straight to
+            // the slider — scrollIntoView() looks tempting here, but it walks
+            // every scrolling ancestor including the page itself, so it was
+            // also yanking the whole page down to the feedback section every
+            // time the carousel auto-advanced, even if the visitor was reading
+            // something higher up. This only ever touches the slider's own
+            // horizontal scroll position.
+            const targetLeft = card.offsetLeft - (slider.offsetWidth - card.offsetWidth) / 2;
+            slider.scrollTo({ left: targetLeft, behavior: 'smooth' });
         }
 
         function startAutoScroll() {
