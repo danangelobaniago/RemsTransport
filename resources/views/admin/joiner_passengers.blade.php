@@ -62,7 +62,8 @@
             </div>
         </div>
 
-        <table style="width: 100%; border-collapse: collapse;">
+        <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; min-width: 800px;">
             <thead>
                 <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                     <th style="padding: 15px;">Account</th>
@@ -168,6 +169,7 @@
                 @endforelse
             </tbody>
         </table>
+        </div>
     </div>
 </div>
 

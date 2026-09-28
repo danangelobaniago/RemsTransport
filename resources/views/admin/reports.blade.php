@@ -309,7 +309,8 @@
                 </div>
             </div>
             <div id="tx-count" style="font-size:12px; color:#94a3b8; margin-bottom:12px;"></div>
-            <table>
+            <div style="overflow-x:auto;">
+            <table style="min-width:700px;">
                 <thead>
                     <tr>
                         <th>Date</th>
@@ -345,6 +346,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
             <div id="tx-empty" style="display:none; text-align:center; padding:24px; color:#94a3b8; font-size:13px;">
                 No transactions found for the selected filter.
             </div>
@@ -358,7 +360,8 @@
                     <i class="fas fa-print"></i> Print Maintenance Report
                 </button>
             </div>
-            <table class="van-table">
+            <div style="overflow-x:auto;">
+            <table class="van-table" style="min-width:600px;">
                 <thead>
                     <tr>
                         <th>Van</th>
@@ -429,6 +432,7 @@
                     @endforeach
                 </tbody>
             </table>
+            </div>
         </div>
 
     </div>
