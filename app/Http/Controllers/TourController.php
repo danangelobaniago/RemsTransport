@@ -546,19 +546,22 @@ public function showMyBookings(Request $request)
     // 2. FETCH TOUR & PRIVATE BOOKINGS
     // We select specific columns so they align with the Joiner table
     $tourBookings = DB::table('bookings')
+        ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+        ->leftJoin('drivers', 'bookings.driver', '=', DB::raw('CAST(drivers.id AS CHAR)'))
         ->select(
-            'id',
-            DB::raw('COALESCE(package_name, destination) as destination'), // Handles both naming conventions
-            'status',
-            'pickup',
-            'start_date',
-            'passengers',
-            'booking_type',
-            'total',
-            'downpayment',
-            'created_at'
+            'bookings.id',
+            DB::raw('COALESCE(bookings.package_name, bookings.destination) as destination'), // Handles both naming conventions
+            'bookings.status',
+            'bookings.pickup',
+            'bookings.start_date',
+            'bookings.passengers',
+            'bookings.booking_type',
+            'bookings.total',
+            'bookings.downpayment',
+            'bookings.created_at',
+            DB::raw('COALESCE(tour_packages.driver_name, drivers.name, \'\') as driver')
         )
-        ->where('user_id', $userId);
+        ->where('bookings.user_id', $userId);
 
     // 3. FETCH JOINER TRIP BOOKINGS
     // Join with joiner_trips to get the destination and dates
@@ -581,7 +584,8 @@ $allBookings = DB::table('joiner_bookings')
         'joiner_bookings.total_price as total',
         'joiner_bookings.downpayment',
 
-        'joiner_bookings.created_at'
+        'joiner_bookings.created_at',
+        DB::raw('COALESCE(joiner_trips.driver_name, \'\') as driver')
     )
     ->where('joiner_bookings.user_id', $userId)
     ->union($tourBookings)
