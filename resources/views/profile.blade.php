@@ -137,7 +137,9 @@
                 this cannot be undone. You can't delete your account while you have an active or upcoming booking;
                 wait until it's completed or cancel it first.
             </p>
-            <button type="button" class="btn-danger" onclick="openDeleteModal()"><i class="fa fa-trash"></i> Delete My Account</button>
+            <div style="text-align:center;">
+                <button type="button" class="btn-danger" onclick="openDeleteModal()"><i class="fa fa-trash"></i> Delete My Account</button>
+            </div>
         </div>
 
     </div>
@@ -171,7 +173,7 @@
         <div class="contact-card">
             <i class="fa fa-phone"></i>
             <h4>Phone</h4>
-            <p>+63 912 345 6789</p>
+            <p>+63 999 883 4375</p>
         </div>
         <div class="contact-card">
             <i class="fa fa-envelope"></i>
@@ -181,7 +183,7 @@
         <div class="contact-card">
             <i class="fa fa-map-marker-alt"></i>
             <h4>Location</h4>
-            <p>Quezon City, Philippines</p>
+            <p>San Bartolome, Novaliches, QC</p>
         </div>
     </div>
 </section>
