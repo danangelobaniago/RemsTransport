@@ -36,25 +36,46 @@ document.addEventListener('DOMContentLoaded', () => {
         let autoScrollInterval;
         let resumeTimeout;
 
-        function cardStep() {
-            const card = slider.querySelector('.feedback-item');
-            if (!card) return 0;
-            const gap = parseFloat(getComputedStyle(slider).columnGap || getComputedStyle(slider).gap) || 0;
-            return card.offsetWidth + gap;
+        // Index-based navigation instead of scrollBy(pixel math) — scrollBy
+        // drifted out of alignment over time (each step's offsetWidth+gap
+        // guess didn't quite match the real spacing), eventually leaving two
+        // cards half-cut-off on screen instead of one fully in view. Always
+        // scrolling a real card element into view can't drift: it's measured
+        // fresh from the DOM every time.
+        function getCards() {
+            return Array.from(slider.querySelectorAll('.feedback-item'));
+        }
+
+        function currentIndex(cards) {
+            if (!cards.length) return 0;
+            const viewportCenter = slider.scrollLeft + slider.offsetWidth / 2;
+            let closest = 0;
+            let closestDist = Infinity;
+            cards.forEach((card, i) => {
+                const cardCenter = card.offsetLeft + card.offsetWidth / 2;
+                const dist = Math.abs(cardCenter - viewportCenter);
+                if (dist < closestDist) {
+                    closestDist = dist;
+                    closest = i;
+                }
+            });
+            return closest;
+        }
+
+        function scrollToIndex(i) {
+            const cards = getCards();
+            if (!cards.length) return;
+            const clamped = Math.max(0, Math.min(i, cards.length - 1));
+            cards[clamped].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
         function startAutoScroll() {
             clearInterval(autoScrollInterval); // Never stack multiple intervals
             autoScrollInterval = setInterval(() => {
-                const scrollAmount = cardStep();
-                if (!scrollAmount) return;
-
-                // If at the end, loop back
-                if (slider.scrollLeft + slider.offsetWidth >= slider.scrollWidth - 10) {
-                    slider.scrollTo({ left: 0, behavior: 'smooth' });
-                } else {
-                    slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-                }
+                const cards = getCards();
+                if (!cards.length) return;
+                const next = (currentIndex(cards) + 1) % cards.length; // loop back to the first card
+                scrollToIndex(next);
             }, 5000); // 5 seconds
         }
 
@@ -73,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function manualScroll(direction) {
             pauseAutoScroll();
-            slider.scrollBy({ left: direction * cardStep(), behavior: 'smooth' });
+            scrollToIndex(currentIndex(getCards()) + direction);
             resumeTimeout = setTimeout(startAutoScroll, 4000);
         }
         window.manualScroll = manualScroll;
