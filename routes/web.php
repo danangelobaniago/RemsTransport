@@ -119,6 +119,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/profile', function () { return view('profile', ['user' => Auth::user()]); });
     Route::post('/profile/update', [AuthController::class, 'updateProfile']);
     Route::post('/profile/password', [AuthController::class, 'changePassword']);
+    Route::post('/profile/delete', [AuthController::class, 'deleteAccount'])->name('profile.delete');
 
     Route::get('/my-bookings', function () {
         $bookings = DB::table('bookings')->where('user_id', Auth::id())->latest()->get();
