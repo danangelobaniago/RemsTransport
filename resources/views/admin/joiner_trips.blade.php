@@ -205,7 +205,8 @@
         {{-- LIST SECTION --}}
         <div class="card" style="margin-top: 30px;">
             <h3><i class="fas fa-list"></i> Active Trip List</h3>
-            <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-top: 15px; min-width: 700px;">
                 <thead>
                     <tr style="text-align: left; background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
                         <th style="padding: 12px;">Destination</th>
@@ -327,6 +328,7 @@
                     @endforelse
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
 </div>

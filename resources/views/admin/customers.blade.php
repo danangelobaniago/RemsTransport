@@ -19,7 +19,7 @@
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 table { width: 100%; border-collapse: collapse; }
@@ -202,6 +202,12 @@ tbody tr:hover { background: #f9fafb; }
 }
 .manifesto-table tr:last-child td { border-bottom: none; }
 .no-passengers { color: #9ca3af; font-size: 13px; padding: 16px 0; text-align: center; }
+
+@media (max-width: 768px) {
+    .page-header { flex-wrap: wrap; gap: 12px; align-items: flex-start !important; }
+    .page-header > div[style*="gap:8px"] { width: 100%; }
+    #search-input { width: 100% !important; flex: 1; }
+}
 </style>
 </head>
 <body>
