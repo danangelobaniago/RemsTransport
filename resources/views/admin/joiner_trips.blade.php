@@ -146,7 +146,6 @@
                     <div class="form-group">
                         <label>Total Seats</label>
                         <input type="number" name="total_seats" id="totalSeatsInput" placeholder="Choose a van first" readonly required>
-                        <small id="totalSeatsHint" style="display:block; margin-top:6px; color:#64748b;">Set automatically from the selected van's capacity.</small>
                     </div>
                     <div class="form-group">
                         <label>Price Per Seat (PHP)</label>
@@ -385,16 +384,8 @@ function toggleSidebar() {
 function fillJoinerVanInfo(select) {
     const opt = select.options[select.selectedIndex];
     const seatsInput = document.getElementById('totalSeatsInput');
-    const hint = document.getElementById('totalSeatsHint');
 
-    if (opt.value) {
-        const seats = opt.getAttribute('data-seats');
-        seatsInput.value = seats;
-        hint.textContent = 'Locked to ' + opt.getAttribute('data-name') + "'s capacity (" + seats + ' pax).';
-    } else {
-        seatsInput.value = '';
-        hint.textContent = "Set automatically from the selected van's capacity.";
-    }
+    seatsInput.value = opt.value ? opt.getAttribute('data-seats') : '';
 }
 
 function fillJoinerDriverInfo(select) {
