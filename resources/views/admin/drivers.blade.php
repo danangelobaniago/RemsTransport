@@ -69,6 +69,16 @@
                 <i class="fas fa-times-circle"></i> {{ session('error') }}
             </div>
         @endif
+        @if($errors->any())
+            <div class="alert" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca;padding:12px 18px;border-radius:8px;margin-bottom:16px;">
+                <i class="fas fa-times-circle"></i>
+                <ul style="margin:6px 0 0 20px;padding:0;">
+                    @foreach($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
 
         {{-- ADD DRIVER FORM --}}
         <div class="card" style="margin-bottom:24px;">
