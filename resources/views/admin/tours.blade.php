@@ -16,10 +16,9 @@
         /* --- CORE THEME --- */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
         body { background: #f5f7fb; color: #1f2937; }
-        .container { display: flex; min-height: 100vh; }
-
-        /* --- MAIN CONTENT --- */
-        .main { margin-left: 240px; padding: 40px; width: calc(100% - 240px); }
+        /* .container/.main layout comes from admin.css, which already handles
+           the mobile breakpoint (sidebar slides off-canvas, margin resets) —
+           redefining them here unconditionally broke that on small screens. */
         h1 { font-size: 26px; margin-bottom: 20px; }
         .card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); margin-bottom: 30px; }
 
@@ -76,6 +75,17 @@
         .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; border: none; cursor: pointer; }
         .primary { background: #2563eb; color: white; width: 100%; margin-top: 20px; padding: 14px; }
         .btn-delete { background: #fee2e2; color: #ef4444; }
+
+        /* This page's 3-column .form-grid has no built-in mobile behavior
+           (unlike admin.css's own .form-grid), and its unconditional .table
+           rules above would otherwise shadow admin.css's mobile table sizing. */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .full-width { grid-column: span 1; }
+            .table-card { overflow-x: auto; }
+            table { font-size: 12px; }
+            th, td { padding: 10px 8px; }
+        }
     </style>
 </head>
 <body>
