@@ -87,6 +87,19 @@
              to { transform: scale(1); opacity: 1; }
             }
 
+        @media (max-width: 700px) {
+            .passenger-row { grid-template-columns: repeat(2, 1fr); align-items: stretch; }
+        }
+        @media (max-width: 500px) {
+            .passenger-row { grid-template-columns: 1fr; }
+            .passenger-row > div:last-child { justify-self: end; }
+        }
+        @media (max-width: 600px) {
+            body { padding: 20px 12px; }
+            .card { padding: 20px; }
+            .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .header h2 { font-size: 22px; }
+        }
     </style>
 </head>
 <body>
