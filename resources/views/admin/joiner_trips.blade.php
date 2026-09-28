@@ -132,6 +132,9 @@
                         <label>Meetup Time</label>
                         <input type="text" name="meetup_time" id="meetup_time" placeholder="Select time" autocomplete="off" required>
                     </div>
+                </div>
+
+                <div class="form-grid">
                     <div class="form-group">
                          <label>Start Date</label>
                          <input type="date" name="trip_date" id="trip_date" min="{{ date('Y-m-d') }}" required>
@@ -142,7 +145,8 @@
                     </div>
                     <div class="form-group">
                         <label>Total Seats</label>
-                        <input type="number" name="total_seats" placeholder="15" required>
+                        <input type="number" name="total_seats" id="totalSeatsInput" placeholder="Choose a van first" readonly required>
+                        <small id="totalSeatsHint" style="display:block; margin-top:6px; color:#64748b;">Set automatically from the selected van's capacity.</small>
                     </div>
                     <div class="form-group">
                         <label>Price Per Seat (PHP)</label>
@@ -380,11 +384,16 @@ function toggleSidebar() {
 
 function fillJoinerVanInfo(select) {
     const opt = select.options[select.selectedIndex];
-    const info = document.getElementById('joinerVanInfo');
+    const seatsInput = document.getElementById('totalSeatsInput');
+    const hint = document.getElementById('totalSeatsHint');
+
     if (opt.value) {
-        info.value = opt.getAttribute('data-name') + ' | ' + opt.getAttribute('data-plate') + ' | ' + opt.getAttribute('data-seats') + ' pax';
+        const seats = opt.getAttribute('data-seats');
+        seatsInput.value = seats;
+        hint.textContent = 'Locked to ' + opt.getAttribute('data-name') + "'s capacity (" + seats + ' pax).';
     } else {
-        info.value = '';
+        seatsInput.value = '';
+        hint.textContent = "Set automatically from the selected van's capacity.";
     }
 }
 
