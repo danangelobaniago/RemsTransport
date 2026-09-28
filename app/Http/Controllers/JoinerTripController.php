@@ -45,6 +45,11 @@ public function store(Request $request)
     $van    = DB::table('vans')->where('id', $request->van_id)->first();
     $driver = DB::table('drivers')->where('id', $request->driver_id)->first();
 
+    // Total seats always matches the assigned van's real capacity — never
+    // trust the submitted value, the client only auto-fills/locks it as a UX
+    // convenience and that field could still be tampered with.
+    $totalSeats = $van->seats;
+
     // Driver's weekly rest day is a hard block
     if ($this->driverRestDayInRange($driver->id, $request->trip_date, $request->end_date)) {
         return back()->withInput()->with('error',
@@ -73,8 +78,8 @@ public function store(Request $request)
         'trip_date'             => $request->trip_date,
         'end_date'              => $request->end_date,
         'price_per_seat'        => $request->price_per_seat,
-        'total_seats'           => $request->total_seats,
-        'available_seats'       => $request->total_seats,
+        'total_seats'           => $totalSeats,
+        'available_seats'       => $totalSeats,
         'van'                   => $van->name,
         'plate_number'          => $van->plate_number,
         'driver_name'           => $driver->name,
