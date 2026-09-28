@@ -35,7 +35,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
 
     <script>
         function allowLettersOnly(input) {
-            input.value = input.value.replace(/[^A-Za-z\s]/g, '');
+            input.value = input.value.replace(/[^A-Za-z\s]/g, '').replace(/^\s+/, '').slice(0, 30);
         }
 
         function allowNumbersOnly(input) {
@@ -51,9 +51,9 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
     <label>Full Name <span class="req">*</span></label>
     <!-- Name Row using Flexbox -->
     <div class="name-row">
-        <input type="text" name="first_name" value="{{ old('first_name') }}" placeholder="First" title="First name" required maxlength="20" oninput="allowLettersOnly(this)">
-        <input type="text" name="middle_name" value="{{ old('middle_name') }}" placeholder="Middle" title="Middle name (optional)" maxlength="20" oninput="allowLettersOnly(this)">
-        <input type="text" name="last_name" value="{{ old('last_name') }}" placeholder="Last" title="Last name" required maxlength="20" oninput="allowLettersOnly(this)">
+        <input type="text" name="first_name" value="{{ old('first_name') }}" placeholder="First" title="First name" required maxlength="30" oninput="allowLettersOnly(this)">
+        <input type="text" name="middle_name" value="{{ old('middle_name') }}" placeholder="Middle" title="Middle name (optional)" maxlength="30" oninput="allowLettersOnly(this)">
+        <input type="text" name="last_name" value="{{ old('last_name') }}" placeholder="Last" title="Last name" required maxlength="30" oninput="allowLettersOnly(this)">
         <input type="text" name="suffix" value="{{ old('suffix') }}" placeholder="Suffix" title="Suffix, e.g. Jr. (optional)" maxlength="10" list="suffix-options" class="suffix-input">
         <datalist id="suffix-options">
             <option value="Jr."></option>

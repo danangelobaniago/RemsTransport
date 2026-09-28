@@ -138,15 +138,15 @@
                 <div class="passenger-row" data-index="0">
                     <div>
                         <label>First Name</label>
-                        <input type="text" name="first_name[]" placeholder="First name" required>
+                        <input type="text" name="first_name[]" placeholder="First name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div>
                         <label>Middle Name</label>
-                        <input type="text" name="middle_name[]" placeholder="Optional">
+                        <input type="text" name="middle_name[]" placeholder="Optional" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)">
                     </div>
                     <div>
                         <label>Last Name</label>
-                        <input type="text" name="last_name[]" placeholder="Last name" required>
+                        <input type="text" name="last_name[]" placeholder="Last name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div>
                         <label>Suffix</label>
@@ -310,6 +310,12 @@
     const passengerList = document.getElementById('passenger-list');
     const addBtn = document.getElementById('add-passenger-btn');
     const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-1 month')) }}"; // birthday must be on/before this date
+
+    function letterOnlyInput(input) {
+        // Only letters, spaces, and common name punctuation ( ' - ); no numbers/periods/symbols. Max 30 chars.
+        const cleaned = input.value.replace(/[^A-Za-zÀ-ÿ '\-]/g, '').replace(/^\s+/, '').slice(0, 30);
+        if (cleaned !== input.value) input.value = cleaned;
+    }
 
     // Whole years old as of today, or null if the date is invalid/empty.
     function getAgeYears(dateStr) {

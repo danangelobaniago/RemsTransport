@@ -225,6 +225,14 @@ class BookingController extends Controller
     $formData['driverFee'] = $request->input('driverFee');
     $formData['passengers_data'] = $request->passengers_data;
 
+    // 1a. Name fields: letters/spaces/apostrophe/hyphen only (no periods,
+    // digits, or other symbols), can't start with a space, max 30 chars.
+    $request->validate([
+        'passengers_data.*.first_name'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+        'passengers_data.*.middle_name' => ['nullable', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+        'passengers_data.*.last_name'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+    ]);
+
     // 1b. Passenger rules: minimum age 1 month, and any passenger under 18
     // must be traveling with at least one passenger who is 18 or older.
     if ($error = $this->validatePassengerAgesAndSuffixes($formData['passengers_data'] ?? [])) {

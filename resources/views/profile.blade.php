@@ -53,7 +53,7 @@
 
             <script>
                 function allowLettersOnly(input) {
-                    input.value = input.value.replace(/[^A-Za-z\s]/g, '');
+                    input.value = input.value.replace(/[^A-Za-z\s]/g, '').replace(/^\s+/, '').slice(0, 30);
                 }
                 function allowNumbersOnly(input) {
                     input.value = input.value.replace(/[^0-9]/g, '');
@@ -61,13 +61,13 @@
             </script>
 
             <label>First Name</label>
-            <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" oninput="allowLettersOnly(this)">
+            <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" maxlength="30" oninput="allowLettersOnly(this)">
 
             <label>Middle Name</label>
-            <input type="text" name="middle_name" value="{{ auth()->user()->middle_name }}" oninput="allowLettersOnly(this)">
+            <input type="text" name="middle_name" value="{{ auth()->user()->middle_name }}" maxlength="30" oninput="allowLettersOnly(this)">
 
             <label>Last Name</label>
-            <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" oninput="allowLettersOnly(this)">
+            <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" maxlength="30" oninput="allowLettersOnly(this)">
 
             <label>Email</label>
             <input type="email" name="email" value="{{ auth()->user()->email }}" required>
