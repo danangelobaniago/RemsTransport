@@ -159,11 +159,6 @@
                         <tr>
                             <td>
                                 #{{ $booking->id }}
-                                @if(!empty($booking->notes))
-                                    <span title="{{ $booking->notes }}" style="display:inline-block;margin-left:4px;color:#d97706;cursor:help;">
-                                        <i class="fas fa-triangle-exclamation"></i>
-                                    </span>
-                                @endif
                             </td>
                             <td>
                                 <div>{{ $booking->first_name ?? 'Guest' }} {{ $booking->last_name ?? '' }}</div>
