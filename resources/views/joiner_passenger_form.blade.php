@@ -23,10 +23,6 @@
         .payment-selection { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 20px 12px; margin-bottom: 14px; }
         .payment-selection .option-label { display: flex; align-items: center; cursor: pointer; color: #1e293b; font-size: 13.5px; font-weight: 600; margin-bottom: 10px; }
         .payment-selection .option-label input { width: 16px; height: 16px; margin-right: 8px; flex-shrink: 0; }
-        .installment-note {
-            margin-top: 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
-            padding: 12px 14px; font-size: 12px; color: #1e40af; line-height: 1.55;
-        }
         .joiner-amount-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; background: #111827; color: white; padding: 18px; border-radius: 12px; margin-bottom: 16px; }
         .joiner-amount-row .amount-item label { font-size: 11px; color: #9ca3af; display: block; }
         .joiner-amount-row .amount-item p { margin: 4px 0 0; font-size: 1.05rem; font-weight: 700; color: white; }
@@ -178,10 +174,6 @@
                                         Pay Downpayment (min. 20%)
                                     </label>
                                     <label class="option-label">
-                                        <input type="radio" name="payment_option" id="payInstallment" value="installment" onchange="updateJoinerPaymentDisplay()">
-                                        Pay in Installments (min. 20% now)
-                                    </label>
-                                    <label class="option-label">
                                         <input type="radio" name="payment_option" id="payFull" value="full" onchange="updateJoinerPaymentDisplay()">
                                         Pay Full Amount
                                     </label>
@@ -199,12 +191,6 @@
                                     </div>
                                 </div>
 
-                                <div id="installmentNote" class="installment-note" style="display:none;">
-                                    <i class="fas fa-circle-info"></i>
-                                    Pay at least 20% now to reserve your seat(s). You can then pay the rest in parts
-                                    from <strong>My Bookings &rsaquo; Receipt</strong> any time until <strong>7 days before</strong> the trip.
-                                    Whatever is left after that is collected by your driver on the trip.
-                                </div>
                             </div>
 
                             <input type="hidden" name="amount_to_pay" id="amount_to_pay" value="{{ $downpaymentAmount }}">
@@ -337,9 +323,6 @@
         const customWrap = document.getElementById('customDownpaymentWrap');
         const downInput = document.getElementById('downpaymentInput');
         const downError = document.getElementById('downpaymentError');
-        const installmentNote = document.getElementById('installmentNote');
-
-        installmentNote.style.display = (paymentType === 'installment') ? 'block' : 'none';
 
         if (paymentType === 'full') {
             customWrap.style.display = 'none';
@@ -364,7 +347,7 @@
 
             const safeAmount = Math.max(amount, JOINER_MIN_DOWNPAYMENT);
 
-            label.innerText = (paymentType === 'installment') ? "Paying Now" : "Downpayment Amount";
+            label.innerText = "Downpayment Amount";
             displayAmount.innerText = "₱" + safeAmount.toLocaleString(undefined, {minimumFractionDigits: 2});
             displayBalance.innerText = "₱" + (total - safeAmount).toLocaleString(undefined, {minimumFractionDigits: 2});
             hiddenAmount.value = amount;
@@ -439,7 +422,7 @@
         }
 
         const paymentType = document.querySelector('input[name="payment_option"]:checked').value;
-        if (paymentType === 'downpayment' || paymentType === 'installment') {
+        if (paymentType === 'downpayment') {
             updateJoinerPaymentDisplay();
             const downInput = document.getElementById('downpaymentInput');
             const downError = document.getElementById('downpaymentError');
