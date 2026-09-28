@@ -244,7 +244,7 @@
         </div>
 
         <div class="terms-body" style="padding:22px 28px; overflow-y:auto; font-size:14px; color:#475569; line-height:1.7;">
-            <p><strong>1. Reservation Policy</strong> A non-refundable downpayment of at least 20% of the total fare is required to confirm your booking. The remaining balance must be settled in cash upon boarding, before the vehicle departs from the pickup point.</p>
+            <p><strong>1. Reservation Policy</strong> A non-refundable downpayment of at least 20% of the total fare is required to confirm your booking. The remaining balance must be settled in cash upon boarding, before the vehicle departs from the pickup point. Toll fees and parking fees are not included in the total fare and must be paid separately by the passenger during the trip.</p>
             <p><strong>2. Passenger Responsibility</strong> All passengers must be present at the designated pickup point at the agreed date and time. Rem's Transport is not liable for missed trips, delays, or additional charges arising from passenger tardiness or incomplete/incorrect booking information.</p>
             <p><strong>3. Passenger Information Accuracy</strong> Passengers are responsible for providing true, accurate, and complete details (name, birthday, age, and gender) during booking. Rem's Transport may refuse boarding if a passenger's identity cannot be reasonably verified against the submitted booking details.</p>
             <p><strong>4. Cancellation Policy</strong> Cancellations made at least 3 days before the scheduled trip may be rebooked to another available date, subject to vehicle availability. Cancellations made within 72 hours of the trip, or no-shows on the day of the trip, will forfeit the downpayment.</p>
