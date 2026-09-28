@@ -191,8 +191,10 @@ public function processBooking(Request $request, $id)
         // 1. IMPROVED VALIDATION
         // We use '.*' to validate every item inside the passenger arrays
         $request->validate([
-            'passenger_name'     => 'required|array|min:1',
-            'passenger_name.*'   => 'required|string|max:255', // Removed strict regex to allow dots/dashes
+            'passenger_first_name'    => 'required|array|min:1',
+            'passenger_first_name.*'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+            'passenger_middle_name.*' => ['nullable', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+            'passenger_last_name.*'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
             'passenger_suffix.*' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
             'passenger_contact'  => 'required|array',
             'passenger_contact.*'=> ['required', 'regex:/^09\d{9}$/'],
@@ -205,7 +207,7 @@ public function processBooking(Request $request, $id)
 
         // Minor-without-guardian + suffix whitelist (server-side backstop for the
         // same checks enforced client-side in joiner_passenger_form.blade.php)
-        $joinerPassengers = collect($request->passenger_name)->keys()->map(fn ($i) => [
+        $joinerPassengers = collect($request->passenger_first_name)->keys()->map(fn ($i) => [
             'suffix'   => $request->passenger_suffix[$i]   ?? null,
             'birthday' => $request->passenger_birthday[$i] ?? null,
         ])->all();
@@ -223,7 +225,7 @@ public function processBooking(Request $request, $id)
         }
 
         // 2. CALCULATE TOTALS BASED ON SEATS
-        $seatsBooked = count($request->passenger_name);
+        $seatsBooked = count($request->passenger_first_name);
         $totalPackagePrice = $trip->price_per_seat * $seatsBooked;
 
         // 3. DETERMINE CHARGE AMOUNT
@@ -284,6 +286,16 @@ public function processBooking(Request $request, $id)
         $checkoutUrl = $response->json()['data']['attributes']['checkout_url'];
         $checkoutSessionId = $response->json()['data']['id'];
 
+        // Full name built from the split fields, for the display-only columns
+        // (joiner_bookings.passenger_name and joiner_passengers.name) that
+        // other views still read directly.
+        $buildFullName = fn ($key) => preg_replace('/\s+/', ' ', trim(
+            $request->passenger_first_name[$key] . ' ' .
+            ($request->passenger_middle_name[$key] ?? '') . ' ' .
+            $request->passenger_last_name[$key] . ' ' .
+            ($request->passenger_suffix[$key] ?? '')
+        ));
+
         // 5. DATABASE OPERATIONS
         DB::beginTransaction();
         try {
@@ -291,7 +303,7 @@ public function processBooking(Request $request, $id)
             $bookingId = DB::table('joiner_bookings')->insertGetId([
                 'user_id'              => $bookingUserId,
                 'joiner_trip_id'       => $id,
-                'passenger_name'       => $request->passenger_name[0],
+                'passenger_name'       => $buildFullName(0),
                 'passenger_contact'    => $request->passenger_contact[0],
                 'payment_id'           => $reference,
                 'checkout_session_id'  => $checkoutSessionId,
@@ -303,10 +315,13 @@ public function processBooking(Request $request, $id)
             ]);
 
             // Insert All Passengers into Manifesto/Passengers table
-            foreach($request->passenger_name as $key => $name) {
+            foreach($request->passenger_first_name as $key => $firstName) {
                 DB::table('joiner_passengers')->insert([
                     'joiner_booking_id' => $bookingId,
-                    'name'              => $name,
+                    'name'              => $buildFullName($key),
+                    'first_name'        => $firstName,
+                    'middle_name'       => $request->passenger_middle_name[$key] ?? null,
+                    'last_name'         => $request->passenger_last_name[$key],
                     'suffix'            => $request->passenger_suffix[$key] ?? null,
                     'contact'           => $request->passenger_contact[$key],
                     'birthday'          => $request->passenger_birthday[$key],

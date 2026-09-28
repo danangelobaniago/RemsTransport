@@ -88,8 +88,16 @@
                                 <div class="passenger-entry p-4 shadow-sm border h-100">
                                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-circle me-2"></i>Passenger #{{ $i + 1 }}</h6>
                                     <div class="mb-3">
-                                        <label class="small fw-bold text-muted">Full Name</label>
-                                        <input type="text" name="passenger_name[]" class="form-control bg-light" placeholder="Enter name" required>
+                                        <label class="small fw-bold text-muted">First Name</label>
+                                        <input type="text" name="passenger_first_name[]" class="form-control bg-light" placeholder="First name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="small fw-bold text-muted">Middle Name</label>
+                                        <input type="text" name="passenger_middle_name[]" class="form-control bg-light" placeholder="Optional" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="small fw-bold text-muted">Last Name</label>
+                                        <input type="text" name="passenger_last_name[]" class="form-control bg-light" placeholder="Last name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Suffix</label>
@@ -129,7 +137,7 @@
 
                     <div id="duplicateWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
                         <i class="fas fa-triangle-exclamation"></i>
-                        <span>Two passengers cannot have the same Full Name and Suffix. Please fix the highlighted boxes.</span>
+                        <span>Two passengers cannot have the same First Name, Middle Name, Last Name, and Suffix. Please fix the highlighted boxes.</span>
                     </div>
 
                     <div id="ageWarning" style="display:none; background:#fef2f2; border:1px solid #fecaca; color:#b91c1c; padding:12px 15px; border-radius:8px; margin-bottom:20px; font-size:14px; font-weight:600; align-items:center; gap:8px;">
@@ -264,6 +272,12 @@
 <script>
     const MIN_BIRTHDAY = "{{ date('Y-m-d', strtotime('-1 month')) }}"; // birthday must be on/before this date
 
+    function letterOnlyInput(input) {
+        // Only letters, spaces, and common name punctuation ( ' - ); no numbers/periods/symbols. Max 30 chars.
+        const cleaned = input.value.replace(/[^A-Za-zÀ-ÿ '\-]/g, '').replace(/^\s+/, '').slice(0, 30);
+        if (cleaned !== input.value) input.value = cleaned;
+    }
+
     function calcAge(dateInput) {
         const dob = new Date(dateInput.value);
         const box = dateInput.closest('.passenger-entry');
@@ -371,9 +385,11 @@
         let firstBadEntry = null;
         const seenNames = new Map();
         entries.forEach((entry, i) => {
-            const name = (entry.querySelector('input[name="passenger_name[]"]')?.value || '').trim().toLowerCase();
+            const first = (entry.querySelector('input[name="passenger_first_name[]"]')?.value || '').trim().toLowerCase();
+            const middle = (entry.querySelector('input[name="passenger_middle_name[]"]')?.value || '').trim().toLowerCase();
+            const last = (entry.querySelector('input[name="passenger_last_name[]"]')?.value || '').trim().toLowerCase();
             const suffix = (entry.querySelector('select[name="passenger_suffix[]"]')?.value || '').trim().toLowerCase();
-            const key = `${name}|${suffix}`;
+            const key = `${first}|${middle}|${last}|${suffix}`;
 
             if (seenNames.has(key)) {
                 duplicateFound = true;
