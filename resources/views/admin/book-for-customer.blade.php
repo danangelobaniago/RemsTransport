@@ -98,11 +98,11 @@
                 <div class="form-grid">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" name="first_name" required value="{{ old('first_name') }}">
+                        <input type="text" name="first_name" required value="{{ old('first_name') }}" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)">
                     </div>
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" name="last_name" required value="{{ old('last_name') }}">
+                        <input type="text" name="last_name" required value="{{ old('last_name') }}" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)">
                     </div>
                     <div class="form-group">
                         <label>Email</label>
@@ -167,6 +167,12 @@
 function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function letterOnlyInput(input) {
+    // Only letters, spaces, and common name punctuation ( ' - ); no numbers/periods/symbols. Max 30 chars.
+    const cleaned = input.value.replace(/[^A-Za-zÀ-ÿ '\-]/g, '').replace(/^\s+/, '').slice(0, 30);
+    if (cleaned !== input.value) input.value = cleaned;
 }
 </script>
 <script src="/js/pwa.js"></script>

@@ -176,15 +176,15 @@
                 <div class="form-row form-row-4">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" name="passengers_data[{{ $i }}][first_name]" placeholder="Enter First Name" maxlength="20" pattern="[A-Za-zÀ-ÿ .'\-]+" title="Letters only, no numbers" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="passengers_data[{{ $i }}][first_name]" placeholder="Enter First Name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div class="form-group">
                         <label>Middle Name</label>
-                        <input type="text" name="passengers_data[{{ $i }}][middle_name]" placeholder="Optional" maxlength="20" pattern="[A-Za-zÀ-ÿ .'\-]+" title="Letters only, no numbers" oninput="letterOnlyInput(this)">
+                        <input type="text" name="passengers_data[{{ $i }}][middle_name]" placeholder="Optional" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)">
                     </div>
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" name="passengers_data[{{ $i }}][last_name]" placeholder="Enter Last Name" maxlength="20" pattern="[A-Za-zÀ-ÿ .'\-]+" title="Letters only, no numbers" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="passengers_data[{{ $i }}][last_name]" placeholder="Enter Last Name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div class="form-group">
                         <label>Suffix</label>
@@ -344,8 +344,8 @@
 
 <script>
 function letterOnlyInput(input) {
-    // Only letters, spaces, and common name punctuation ( . ' - ); no numbers/symbols. Max 20 chars.
-    const cleaned = input.value.replace(/[^A-Za-zÀ-ÿ .'\-]/g, '').slice(0, 20);
+    // Only letters, spaces, and common name punctuation ( ' - ); no numbers/periods/symbols. Max 30 chars.
+    const cleaned = input.value.replace(/[^A-Za-zÀ-ÿ '\-]/g, '').replace(/^\s+/, '').slice(0, 30);
     if (cleaned !== input.value) input.value = cleaned;
 }
 function calcAge(dateInput) {

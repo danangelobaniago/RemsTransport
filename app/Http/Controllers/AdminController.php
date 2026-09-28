@@ -346,8 +346,8 @@ class AdminController extends Controller
     public function createBookingCustomer(Request $request)
     {
         $request->validate([
-            'first_name'   => ['required', 'string', 'max:255'],
-            'last_name'    => ['required', 'string', 'max:255'],
+            'first_name'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+            'last_name'    => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
             'email'        => ['required', 'email', 'unique:users,email'],
             'phone_number' => ['required', 'regex:/^09\d{9}$/', 'unique:users,phone_number'],
         ]);

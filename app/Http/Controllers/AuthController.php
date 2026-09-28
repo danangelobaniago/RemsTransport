@@ -227,9 +227,9 @@ public function updateProfile(Request $request)
 
     // 1. Validate the input
     $request->validate([
-        'first_name' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z\s]+$/'],
-        'middle_name' => ['nullable', 'string', 'max:255', 'regex:/^[A-Za-z\s]+$/'],
-        'last_name' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z\s]+$/'],
+        'first_name' => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
+        'middle_name' => ['nullable', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
+        'last_name' => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
         'email' => 'required|email|unique:users,email,' . $user->id,
 
         // New validation rules for birthday and contact number
@@ -368,9 +368,9 @@ public function verifyResetOtp(Request $request)
 public function register(Request $request)
 {
     $request->validate([
-        'first_name'   => ['required', 'max:20', 'regex:/^[A-Za-z\s]+$/'],
-        'middle_name'  => ['nullable', 'max:20', 'regex:/^[A-Za-z\s]+$/'],
-        'last_name'    => ['required', 'max:20', 'regex:/^[A-Za-z\s]+$/'],
+        'first_name'   => ['required', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
+        'middle_name'  => ['nullable', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
+        'last_name'    => ['required', 'max:30', 'regex:/^(?!\s)[A-Za-z\s]+$/'],
         'suffix'       => ['nullable', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
         'email'        => 'required|email|unique:users,email',
         'birthday'     => ['required', 'date', 'before_or_equal:' . now()->subYears(18)->format('Y-m-d')],
