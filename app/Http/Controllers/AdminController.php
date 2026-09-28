@@ -246,6 +246,7 @@ class AdminController extends Controller
     // Payment history per booking, for the "Paid" popup — grouped in one
     // query instead of one per row.
     $paymentHistories = DB::table('booking_payments')
+        ->where('source', 'bookings')
         ->orderBy('paid_at')
         ->get()
         ->groupBy('booking_id');

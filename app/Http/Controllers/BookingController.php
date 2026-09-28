@@ -385,6 +385,7 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
 
         DB::table('booking_payments')->insert([
             'booking_id'   => $bookingId,
+            'source'       => 'bookings',
             'amount'       => $paid,
             'method'       => 'paymongo',
             'reference'    => $paymentId,
@@ -822,6 +823,7 @@ public function payBalanceSuccess(Request $request, $id)
 
     DB::table('booking_payments')->insert([
         'booking_id'   => $id,
+        'source'       => 'bookings',
         'amount'       => (float) $pending['amount'],
         'method'       => $pending['method'] ?? 'paymongo',
         'reference'    => $paymentId,
@@ -878,6 +880,7 @@ public function showReceipt($id)
 
     $payments = DB::table('booking_payments')
         ->where('booking_id', $id)
+        ->where('source', 'bookings')
         ->orderBy('paid_at')
         ->get();
 

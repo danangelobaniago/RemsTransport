@@ -346,6 +346,18 @@ class DriverController extends Controller
             'updated_at'     => now(),
         ]);
 
+        DB::table('booking_payments')->insert([
+            'booking_id'   => $bookingId,
+            'source'       => 'joiner_bookings',
+            'amount'       => $balance,
+            'method'       => 'cash',
+            'reference'    => null,
+            'collected_by' => 'driver',
+            'paid_at'      => now(),
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ]);
+
         $notifyUser = User::find($booking->user_id);
         if ($notifyUser) {
             $notifyUser->notify(new PaymentReceived($bookingId, 'Joiner Trip', $balance, 0));
@@ -500,6 +512,7 @@ class DriverController extends Controller
 
         DB::table('booking_payments')->insert([
             'booking_id'   => $request->booking_id,
+            'source'       => 'bookings',
             'amount'       => $balance,
             'method'       => 'cash',
             'reference'    => null,
