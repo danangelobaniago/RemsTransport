@@ -143,7 +143,7 @@
                                 @endphp
 
                                 @if(!$alreadyReviewed)
-                                    <button onclick="openFeedbackModal('{{ $booking->id }}', '{{ $booking->driver ?? 'Driver' }}', '{{ $type }}')"
+                                    <button onclick="openFeedbackModal('{{ $booking->id }}', '{{ $booking->driver ?: 'Driver' }}', '{{ $type }}')"
                                             style="background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 600;">
                                         <i class="fa fa-star"></i> Feedback
                                     </button>
