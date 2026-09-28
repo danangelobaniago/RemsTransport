@@ -289,7 +289,13 @@ class BookingController extends Controller
     public function paymentSuccess(Request $request)
     {
         $formData = session('formData');
-        if (!$formData) { return redirect('/book')->with('error', 'Session expired'); }
+        if (!$formData) {
+            \Log::warning('Van booking payment-success hit with no session formData.', [
+                'query' => $request->query(),
+                'user_id' => auth()->id(),
+            ]);
+            return redirect('/my-bookings')->with('error', 'We couldn\'t confirm your booking details after payment. If GCash/your card was charged, please contact us with your payment reference so we can complete your booking manually.');
+        }
 
         $checkoutSessionId = session('pending_checkout_session_id');
         $paymentId = $checkoutSessionId;

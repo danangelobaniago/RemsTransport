@@ -69,6 +69,12 @@
         </div>
     @endif
 
+    @if(session('error'))
+        <div class="error-alert" style="background:#fee2e2; padding:15px; border-radius:10px; margin-bottom:20px; border: 1px solid #fecaca; color: #991b1b;">
+            <i class="fa fa-exclamation-circle"></i> {{ session('error') }}
+        </div>
+    @endif
+
     @if($bookings->isEmpty())
         <div class="empty-bookings-container">
             <i class="fa fa-calendar-times"></i>
