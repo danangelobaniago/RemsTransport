@@ -307,6 +307,17 @@
                                         </button>
                                     </form>
 
+                                    @if(($trip->trip_status ?? 'not_started') !== 'completed')
+                                        <button type="button" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                            style="background:none;border:none;color:#0369a1;cursor:pointer;padding:0;font-size:inherit;"
+                                            data-trip="{{ json_encode([
+                                                'type' => 'joiner', 'id' => $trip->id, 'label' => 'Joiner Trip to ' . $trip->destination,
+                                                'van_plate' => $trip->plate_number, 'van_label' => trim(($trip->van ?? '') . ($trip->plate_number ? ' (' . $trip->plate_number . ')' : '')),
+                                                'driver_name' => $trip->driver_name, 'pickup' => $trip->meetup_point,
+                                                'destination' => $trip->destination, 'seats' => max(0, (int) $trip->total_seats - (int) $trip->available_seats),
+                                            ]) }}"><i class="fas fa-shuffle"></i></button>
+                                    @endif
+
                                     <a href="/admin/joiner-trips/edit/{{ $trip->id }}" style="color: #2563eb;" title="Edit">
                                         <i class="fas fa-edit"></i>
                                     </a>
@@ -410,5 +421,6 @@ flatpickr('#meetup_time', {
 });
 </script>
 <script src="/js/pwa.js"></script>
+@include('admin.partials.trip-change-modal')
 </body>
 </html>

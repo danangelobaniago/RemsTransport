@@ -68,6 +68,15 @@
     </div>
 
     <div class="main">
+        @if(session('success'))
+            <div style="background:#dcfce7;color:#166534;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
+        @endif
+        @if(session('error'))
+            <div style="background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;"><i class="fas fa-times-circle"></i> {{ session('error') }}</div>
+        @endif
+        @if($errors->any())
+            <div style="background:#fee2e2;color:#991b1b;padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:14px;"><i class="fas fa-times-circle"></i> {{ $errors->first() }}</div>
+        @endif
        <div class="card table-card">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 0 10px;">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -276,6 +285,19 @@
                                             <i class="fas fa-calendar-days"></i>
                                         </button>
                                     @endif
+
+                                    {{-- T&C §6: swap van / driver / route (tour bookings change from the Tours page) --}}
+                                    @if(!$isTour && !in_array($statusClean, ['cancelled', 'rejected', 'completed']) && $tripStatus !== 'completed')
+                                        <button type="button" class="icon-btn icon-btn-change" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                            data-trip="{{ json_encode([
+                                                'type' => 'rental', 'id' => $booking->id, 'label' => 'Van Rental #' . $booking->id,
+                                                'van_plate' => $booking->plate_number, 'van_label' => trim(($booking->display_van ?? '') . ($booking->plate_number ? ' (' . $booking->plate_number . ')' : '')),
+                                                'driver_name' => $booking->display_driver, 'pickup' => $booking->pickup,
+                                                'destination' => $booking->destination, 'seats' => (int) $booking->passengers,
+                                            ]) }}">
+                                            <i class="fas fa-shuffle"></i>
+                                        </button>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -461,5 +483,6 @@ function closePaymentHistoryModal() {
 }
 </script>
 <script src="/js/pwa.js"></script>
+@include('admin.partials.trip-change-modal')
 </body>
 </html>

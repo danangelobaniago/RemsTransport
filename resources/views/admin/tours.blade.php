@@ -300,6 +300,15 @@
                         <td style="text-align: center;">
                             <div style="display: flex; gap: 5px; justify-content: center;">
                                 <button class="btn-action btn-manifest" onclick="openManifest({{ $tour->id }}, '{{ addslashes($tour->name) }}')" title="View Bookings & Manifest"><i class="fas fa-users"></i></button>
+                                @if($ts !== 'completed')
+                                    <button type="button" class="btn-action icon-btn-change" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                        data-trip="{{ json_encode([
+                                            'type' => 'tour', 'id' => $tour->id, 'label' => 'Tour Package "' . $tour->name . '" — applies to all of its bookings',
+                                            'van_plate' => $tour->plate_number, 'van_label' => trim(($tour->van ?? '') . ($tour->plate_number ? ' (' . $tour->plate_number . ')' : '')),
+                                            'driver_name' => $tour->driver_name, 'pickup' => $tour->pickup_point,
+                                            'destination' => $tour->destination, 'seats' => 0,
+                                        ]) }}"><i class="fas fa-shuffle"></i></button>
+                                @endif
                                 @if($tour->approved_count > 0)
                                     <button class="btn-action btn-edit" disabled style="opacity:.4; cursor:not-allowed;" title="Cannot edit — this package already has an approved booking"><i class="fas fa-edit"></i></button>
                                     <button class="btn-action btn-delete" disabled style="opacity:.4; cursor:not-allowed;" title="Cannot delete — this package already has an approved booking"><i class="fas fa-trash"></i></button>
@@ -521,5 +530,6 @@ function toggleSidebar() {
 
 </script>
 <script src="/js/pwa.js"></script>
+@include('admin.partials.trip-change-modal')
 </body>
 </html>

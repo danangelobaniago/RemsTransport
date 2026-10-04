@@ -303,3 +303,11 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/messages/{userId}', [MessageController::class, 'adminThread'])->whereNumber('userId')->name('admin.messages.thread');
     Route::post('/admin/messages/{userId}', [MessageController::class, 'adminSend'])->whereNumber('userId')->middleware('throttle:60,1')->name('admin.messages.send');
 });
+
+/* ================= TRIP CHANGES (T&C §6: vehicle, route, driver) ================= */
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::post('/admin/trip-change/{type}/{id}', [\App\Http\Controllers\TripChangeController::class, 'update'])
+        ->whereIn('type', ['rental', 'tour', 'joiner'])->whereNumber('id')->name('admin.trip_change');
+    Route::get('/admin/trip-change/{type}/{id}/history', [\App\Http\Controllers\TripChangeController::class, 'history'])
+        ->whereIn('type', ['rental', 'tour', 'joiner'])->whereNumber('id')->name('admin.trip_change.history');
+});
