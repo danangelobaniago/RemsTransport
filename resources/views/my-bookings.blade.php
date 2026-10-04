@@ -256,5 +256,6 @@ window.onclick = function(event) {
 }
 </script>
 <script src="/js/pwa.js"></script>
+@include('partials.chat-widget')
 </body>
 </html>

@@ -415,5 +415,6 @@ document.getElementById('new_start_date').addEventListener('change', function ()
 });
 </script>
 
+@include('partials.chat-widget')
 </body>
 </html>

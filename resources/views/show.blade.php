@@ -237,5 +237,6 @@ flatpickr('#preferred_date', {
     }
 });
 </script>
+@include('partials.chat-widget')
 </body>
 </html>

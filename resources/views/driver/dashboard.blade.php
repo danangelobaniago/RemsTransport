@@ -1199,5 +1199,6 @@ function toggleSection(key) {
 }
 </script>
 <script src="/js/pwa.js"></script>
+@include('partials.chat-widget')
 </body>
 </html>

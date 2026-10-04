@@ -13,6 +13,7 @@ use App\Http\Controllers\TourController;
 use App\Http\Controllers\JoinerTripController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\DriverController;
+use App\Http\Controllers\MessageController;
 
 
 
@@ -288,3 +289,16 @@ Route::post('/admin/tour-bookings/{id}/reject', [TourController::class, 'rejectT
 Route::get('/receipt/{id}', [BookingController::class, 'showReceipt']);
 Route::post('/booking/{id}/pay-balance', [BookingController::class, 'payBalanceCheckout']);
 Route::get('/booking/{id}/pay-balance/success', [BookingController::class, 'payBalanceSuccess']);
+
+/* ================= MESSAGES (customer/driver <-> admin) ================= */
+Route::middleware(['auth'])->group(function () {
+    Route::get('/messages/fetch', [MessageController::class, 'fetch'])->name('messages.fetch');
+    Route::post('/messages/send', [MessageController::class, 'send'])->middleware('throttle:30,1')->name('messages.send');
+});
+
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/messages', [MessageController::class, 'adminIndex'])->name('admin.messages');
+    Route::get('/admin/messages/threads', [MessageController::class, 'adminThreads'])->name('admin.messages.threads');
+    Route::get('/admin/messages/{userId}', [MessageController::class, 'adminThread'])->whereNumber('userId')->name('admin.messages.thread');
+    Route::post('/admin/messages/{userId}', [MessageController::class, 'adminSend'])->whereNumber('userId')->middleware('throttle:60,1')->name('admin.messages.send');
+});

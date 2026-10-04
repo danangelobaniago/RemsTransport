@@ -245,5 +245,6 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 </script>
 <script src="/js/pwa.js"></script>
+@include('partials.chat-widget')
 </body>
 </html>
