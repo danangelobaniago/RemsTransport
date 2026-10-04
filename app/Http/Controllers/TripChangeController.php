@@ -50,7 +50,7 @@ class TripChangeController extends Controller
 
         $trip = $this->loadTrip($type, $id);
         if (is_string($trip)) {
-            return back()->with('error', '❌ ' . $trip);
+            return back()->with('error', $trip);
         }
 
         // ---- Work out what actually changes ----
@@ -71,30 +71,30 @@ class TripChangeController extends Controller
         $newDestination = ($newDestination !== '' && $newDestination !== (string) $trip['destination']) ? $newDestination : null;
 
         if (!$newVan && !$newDriver && !$newPickup && !$newDestination) {
-            return back()->with('error', '❌ Nothing to change — pick a different van, driver, pickup point or destination.');
+            return back()->with('error', 'Nothing to change — pick a different van, driver, pickup point or destination.');
         }
 
         // ---- "Comparable" replacement + availability checks ----
         if ($newVan) {
             if ($newVan->status !== 'available') {
-                return back()->with('error', "❌ {$newVan->name} ({$newVan->plate_number}) is marked unavailable.");
+                return back()->with('error', "{$newVan->name} ({$newVan->plate_number}) is marked unavailable.");
             }
             if ((int) $newVan->seats < $trip['seats_needed']) {
-                return back()->with('error', "❌ {$newVan->name} only has {$newVan->seats} seats, but this trip needs {$trip['seats_needed']}. Choose a comparable van.");
+                return back()->with('error', "{$newVan->name} only has {$newVan->seats} seats, but this trip needs {$trip['seats_needed']}. Choose a comparable van.");
             }
         }
 
         if ($newDriver && $newDriver->status !== 'available') {
-            return back()->with('error', "❌ {$newDriver->name} is marked unavailable.");
+            return back()->with('error', "{$newDriver->name} is marked unavailable.");
         }
 
         if ($newVan || $newDriver) {
             foreach ($trip['dates'] as $date) {
                 if ($newDriver && $this->driverRestsOn($newDriver->id, $date)) {
-                    return back()->with('error', "❌ {$newDriver->name} has a weekly day off on {$date}.");
+                    return back()->with('error', "{$newDriver->name} has a weekly day off on {$date}.");
                 }
                 if (!$this->checkAvailability($newVan->plate_number ?? null, $newDriver->id ?? null, $date, $trip['exclude_booking_id'])) {
-                    return back()->with('error', "❌ The new van or driver already has another trip on {$date}.");
+                    return back()->with('error', "The new van or driver already has another trip on {$date}.");
                 }
             }
         }
@@ -166,7 +166,7 @@ class TripChangeController extends Controller
 
         $who = count($trip['customer_ids']) === 1 ? '1 customer was' : count($trip['customer_ids']) . ' customers were';
 
-        return back()->with('success', "✅ {$trip['label']} updated. {$who} notified by notification, chat and email.");
+        return back()->with('success', "{$trip['label']} updated. {$who} notified by notification, chat and email.");
     }
 
     // Change history for the modal.

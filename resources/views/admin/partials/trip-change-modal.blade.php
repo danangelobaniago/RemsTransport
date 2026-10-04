@@ -32,7 +32,6 @@
     .tc-field select:focus, .tc-field input:focus, .tc-field textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
     .tc-field small { display: block; font-size: 11px; color: #6b7280; margin-top: 4px; }
     .tc-current { font-size: 12px; background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 12px; color: #374151; line-height: 1.6; }
-    .tc-note { font-size: 11.5px; color: #92400e; background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 9px 12px; line-height: 1.5; }
     .tc-foot { padding: 12px 22px 18px; display: flex; justify-content: flex-end; gap: 8px; }
     .tc-btn { padding: 9px 16px; border: none; border-radius: 8px; font-weight: 600; font-size: 13px; cursor: pointer; }
     .tc-btn.cancel { background: #e5e7eb; color: #374151; }
@@ -108,12 +107,6 @@
             <div class="tc-field">
                 <label for="tcDetails">Details (sent to the customer)</label>
                 <textarea name="details" id="tcDetails" rows="3" maxlength="500" required placeholder="e.g. The original van failed its pre-trip inspection (brake issue). A same-size van has been assigned."></textarea>
-            </div>
-
-            <div class="tc-note">
-                <i class="fas fa-circle-info"></i>
-                Per Terms &amp; Conditions §6, the replacement must be comparable and the agreed service inclusions stay the same.
-                Affected customers are notified by bell notification, chat message and email; the old and new drivers are notified too.
             </div>
         </div>
 
