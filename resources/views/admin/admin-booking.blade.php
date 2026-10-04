@@ -27,6 +27,12 @@
         .actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         /* Long addresses: max 2 lines, full text on hover */
         .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 180px; word-break: break-word; cursor: help; }
+        .cell-tip {
+            position: fixed; z-index: 2500; max-width: 320px; padding: 8px 12px; border-radius: 8px;
+            background: #0f172a; color: #fff; font-size: 12.5px; line-height: 1.45;
+            box-shadow: 0 8px 24px rgba(0,0,0,.25); pointer-events: none;
+        }
+        .cell-tip[hidden] { display: none; }
         .icon-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; flex-shrink: 0;
@@ -182,8 +188,8 @@
                             {{-- Uses the display_van alias from Controller --}}
                             <td>{{ $booking->display_van ?? 'None' }}</td>
 
-                            <td><span class="cell-clamp" title="{{ $booking->pickup }}">{{ $booking->pickup }}</span></td>
-                            <td><span class="cell-clamp" title="{{ $booking->destination }}">{{ $booking->destination }}</span></td>
+                            <td><span class="cell-clamp" data-full="{{ $booking->pickup }}">{{ $booking->pickup }}</span></td>
+                            <td><span class="cell-clamp" data-full="{{ $booking->destination }}">{{ $booking->destination }}</span></td>
                             <td>
                                 <small>{{ date('M d', strtotime($booking->start_date)) }}</small><br>
                                 <small>to</small><br>
@@ -486,5 +492,35 @@ function closePaymentHistoryModal() {
 </script>
 <script src="/js/pwa.js"></script>
 @include('admin.partials.trip-change-modal')
+{{-- Full-address tooltip for the clamped Pickup/Destination cells: hover on desktop, tap on phones --}}
+<div class="cell-tip" id="cellTip" hidden></div>
+<script>
+(function () {
+    const tip = document.getElementById('cellTip');
+    let current = null;
+
+    function show(el) {
+        current = el;
+        tip.textContent = el.dataset.full;
+        tip.hidden = false;
+        const r = el.getBoundingClientRect();
+        const t = tip.getBoundingClientRect();
+        let left = Math.min(r.left, window.innerWidth - t.width - 8);
+        let top = r.bottom + 6;
+        if (top + t.height > window.innerHeight - 8) top = r.top - t.height - 6;
+        tip.style.left = Math.max(8, left) + 'px';
+        tip.style.top = top + 'px';
+    }
+    function hide() { tip.hidden = true; current = null; }
+
+    document.querySelectorAll('.cell-clamp').forEach(el => {
+        el.addEventListener('mouseenter', () => show(el));
+        el.addEventListener('mouseleave', hide);
+        el.addEventListener('click', e => { e.stopPropagation(); current === el ? hide() : show(el); });
+    });
+    document.addEventListener('click', hide);
+    window.addEventListener('scroll', hide, true);
+})();
+</script>
 </body>
 </html>
