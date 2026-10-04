@@ -25,6 +25,8 @@
         .ts-remitted   { background: #d1fae5; color: #065f46; }
         /* Compact icon-only action buttons */
         .actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+        /* Long addresses: max 2 lines, full text on hover */
+        .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 180px; word-break: break-word; cursor: help; }
         .icon-btn {
             display: inline-flex; align-items: center; justify-content: center;
             width: 28px; height: 28px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; flex-shrink: 0;
@@ -180,8 +182,8 @@
                             {{-- Uses the display_van alias from Controller --}}
                             <td>{{ $booking->display_van ?? 'None' }}</td>
 
-                            <td title="{{ $booking->pickup }}">{{ Str::limit($booking->pickup, 20) }}</td>
-                            <td>{{ $booking->destination }}</td>
+                            <td><span class="cell-clamp" title="{{ $booking->pickup }}">{{ $booking->pickup }}</span></td>
+                            <td><span class="cell-clamp" title="{{ $booking->destination }}">{{ $booking->destination }}</span></td>
                             <td>
                                 <small>{{ date('M d', strtotime($booking->start_date)) }}</small><br>
                                 <small>to</small><br>
