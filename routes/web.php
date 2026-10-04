@@ -299,6 +299,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/messages', [MessageController::class, 'adminIndex'])->name('admin.messages');
     Route::get('/admin/messages/threads', [MessageController::class, 'adminThreads'])->name('admin.messages.threads');
+    Route::get('/admin/messages/heartbeat', [MessageController::class, 'adminHeartbeat'])->name('admin.messages.heartbeat');
     Route::get('/admin/messages/{userId}', [MessageController::class, 'adminThread'])->whereNumber('userId')->name('admin.messages.thread');
     Route::post('/admin/messages/{userId}', [MessageController::class, 'adminSend'])->whereNumber('userId')->middleware('throttle:60,1')->name('admin.messages.send');
 });

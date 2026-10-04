@@ -63,6 +63,7 @@
     .msg.theirs { align-self: flex-start; align-items: flex-start; }
     .bubble { padding: 9px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
     .msg.mine .bubble { background: #2563eb; color: #fff; border-bottom-right-radius: 4px; }
+    .msg.mine.auto .bubble { background: #fefce8; color: #713f12; border: 1px solid #fde68a; }
     .msg.theirs .bubble { background: #fff; border: 1px solid #e5e7eb; border-bottom-left-radius: 4px; }
     .msg-time { font-size: 10.5px; color: #94a3b8; margin-top: 3px; padding: 0 4px; }
     .chat-form { display: flex; gap: 8px; padding: 12px; border-top: 1px solid #e5e7eb; }
@@ -272,13 +273,13 @@ function toggleSidebar() {
         if (placeholder) placeholder.remove();
 
         const wrap = document.createElement('div');
-        wrap.className = 'msg ' + (m.from_admin ? 'mine' : 'theirs');
+        wrap.className = 'msg ' + (m.from_admin ? 'mine' : 'theirs') + (m.is_auto ? ' auto' : '');
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
         bubble.textContent = m.body;
         const time = document.createElement('div');
         time.className = 'msg-time';
-        time.textContent = m.time;
+        time.textContent = (m.is_auto ? 'Auto-reply · ' : '') + m.time;
         wrap.append(bubble, time);
         chatBody.appendChild(wrap);
     }

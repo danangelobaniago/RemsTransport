@@ -42,6 +42,10 @@
     }
     .rt-chat-head h4 { margin: 0; font-size: 15px; font-weight: 600; color: #fff; }
     .rt-chat-head p { margin: 2px 0 0; font-size: 11.5px; color: #94a3b8; }
+    .rt-chat-status { display: inline-flex; align-items: center; gap: 5px; }
+    .rt-chat-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: #94a3b8; }
+    .rt-chat-status.online::before { background: #4ade80; }
+    .rt-chat-msg.auto .rt-chat-bubble { background: #fefce8; border: 1px solid #fde68a; box-shadow: none; }
     .rt-chat-close {
         margin-left: auto; background: none; border: none; color: #cbd5e1;
         font-size: 22px; line-height: 1; cursor: pointer; padding: 4px;
@@ -100,7 +104,7 @@
             <div class="rt-chat-avatar">RT</div>
             <div>
                 <h4>Rem's Transport Admin</h4>
-                <p>{{ auth()->user()->role === 'driver' ? 'Questions about your trips? Message the office.' : 'Ask us anything about bookings, vans, or tours.' }}</p>
+                <p><span class="rt-chat-status" id="rtChatStatus">Checking...</span></p>
             </div>
             <button type="button" class="rt-chat-close" id="rtChatClose" aria-label="Close chat">&times;</button>
         </div>
@@ -131,6 +135,7 @@
         const input = document.getElementById('rtChatInput');
         const sendBtn = document.getElementById('rtChatSend');
         const errorBox = document.getElementById('rtChatError');
+        const status = document.getElementById('rtChatStatus');
 
         let lastId = 0;
         let timer = null;
@@ -150,15 +155,20 @@
             empty.style.display = 'none';
 
             const wrap = document.createElement('div');
-            wrap.className = 'rt-chat-msg ' + (msg.from_admin ? 'theirs' : 'mine');
+            wrap.className = 'rt-chat-msg ' + (msg.from_admin ? 'theirs' : 'mine') + (msg.is_auto ? ' auto' : '');
             const bubble = document.createElement('div');
             bubble.className = 'rt-chat-bubble';
             bubble.textContent = msg.body;
             const time = document.createElement('div');
             time.className = 'rt-chat-time';
-            time.textContent = (msg.from_admin ? 'Admin · ' : '') + msg.time;
+            time.textContent = (msg.is_auto ? 'Auto-reply · ' : (msg.from_admin ? 'Admin · ' : '')) + msg.time;
             wrap.append(bubble, time);
             body.appendChild(wrap);
+        }
+
+        function setStatus(online) {
+            status.classList.toggle('online', !!online);
+            status.textContent = online ? 'Admin is online' : 'Admin is offline · we\'ll reply soon';
         }
 
         function scrollDown() { body.scrollTop = body.scrollHeight; }
@@ -175,6 +185,7 @@
                 data.messages.forEach(append);
                 if (data.messages.length && (nearBottom || !isOpen())) scrollDown();
                 setBadge(data.unread);
+                setStatus(data.admin_online);
             } catch (e) { /* offline — try again next tick */ }
         }
 
@@ -230,6 +241,7 @@
                 }
                 const data = await res.json();
                 append(data.message);
+                if (data.auto_reply) append(data.auto_reply);
                 input.value = '';
                 input.style.height = 'auto';
                 scrollDown();

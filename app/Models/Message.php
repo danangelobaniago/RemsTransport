@@ -10,12 +10,14 @@ class Message extends Model
         'user_id',
         'sender_id',
         'from_admin',
+        'is_auto',
         'body',
         'read_at',
     ];
 
     protected $casts = [
         'from_admin' => 'boolean',
+        'is_auto' => 'boolean',
         'read_at' => 'datetime',
     ];
 
@@ -30,6 +32,7 @@ class Message extends Model
             'id' => $this->id,
             'body' => $this->body,
             'from_admin' => $this->from_admin,
+            'is_auto' => $this->is_auto,
             'time' => $this->created_at->timezone('Asia/Manila')->format('M j, g:i A'),
         ];
     }
