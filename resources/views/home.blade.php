@@ -54,13 +54,26 @@
             @endif
         </button>
         <div class="notif-dropdown" id="notifDropdown">
-            @forelse(auth()->user()->notifications as $notif)
-                <a href="/notifications/read" class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
-                    {{ $notif->data['message'] ?? 'Notification' }}
-                </a>
-            @empty
-                <p class="no-notif">No notifications</p>
-            @endforelse
+            @php
+                $unreadNotifCount = auth()->user()->unreadNotifications->count();
+            @endphp
+            <div class="notif-header">
+                <span>Notifications</span>
+                @if($unreadNotifCount)
+                    <span class="notif-header-count">{{ $unreadNotifCount }} new</span>
+                @endif
+            </div>
+            <div class="notif-list">
+                @forelse(auth()->user()->notifications()->take(10)->get() as $notif)
+                    <a href="/notifications/read" class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
+                        <span class="notif-text">{{ $notif->data['message'] ?? 'Notification' }}</span>
+                        <span class="notif-time">{{ $notif->created_at->diffForHumans() }}</span>
+                    </a>
+                @empty
+                    <p class="no-notif">No notifications</p>
+                @endforelse
+            </div>
+            <a href="{{ route('notifications.index') }}" class="notif-footer">See all notifications</a>
         </div>
     </div>
 
