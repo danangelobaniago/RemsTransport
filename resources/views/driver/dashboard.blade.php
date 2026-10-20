@@ -782,7 +782,8 @@ function init() {
     const now = new Date();
     currentYear  = now.getFullYear();
     currentMonth = now.getMonth();
-    renderCalendar();
+    // Open on today's bookings; the driver can still pick any other date.
+    selectDate(now.toLocaleDateString('en-CA')); // YYYY-MM-DD in local time
 }
 
 function changeMonth(dir) {
