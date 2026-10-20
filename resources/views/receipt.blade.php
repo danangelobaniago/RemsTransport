@@ -176,7 +176,7 @@
 
 <div class="receipt-container">
     @php
-        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(date('Y-m-d'))) / 86400);
+        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(\App\Support\LocalDate::today())) / 86400);
         $canReschedule = !in_array(strtolower($booking->status), ['cancelled', 'rejected', 'completed']) && $daysUntilTrip > 3;
     @endphp
     <div class="action-bar">

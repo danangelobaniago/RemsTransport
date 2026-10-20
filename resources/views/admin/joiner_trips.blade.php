@@ -138,11 +138,11 @@
                 <div class="form-grid">
                     <div class="form-group">
                          <label>Start Date</label>
-                         <input type="date" name="trip_date" id="trip_date" min="{{ date('Y-m-d') }}" required>
+                         <input type="date" name="trip_date" id="trip_date" min="{{ \App\Support\LocalDate::today() }}" required>
                     </div>
                     <div class="form-group">
                          <label>End Date</label>
-                         <input type="date" name="end_date" id="end_date" min="{{ date('Y-m-d') }}" required>
+                         <input type="date" name="end_date" id="end_date" min="{{ \App\Support\LocalDate::today() }}" required>
                     </div>
                     <div class="form-group">
                         <label>Total Seats</label>
@@ -354,7 +354,7 @@
 
     // When start date changes, end date min must be >= start date (and never in the past)
     tripDateInput.addEventListener('change', function () {
-        const today = '{{ date('Y-m-d') }}';
+        const today = '{{ \App\Support\LocalDate::today() }}';
         const minEnd = this.value > today ? this.value : today;
         endDateInput.min = minEnd;
         if (endDateInput.value && endDateInput.value < minEnd) {

@@ -89,7 +89,7 @@
                     <div class="field">
                         <label>Birthday</label>
                         <input type="date" name="birthday" value="{{ auth()->user()->birthday }}"
-                               max="{{ date('Y-m-d') }}" required>
+                               max="{{ \App\Support\LocalDate::today() }}" required>
                     </div>
                 </div>
 

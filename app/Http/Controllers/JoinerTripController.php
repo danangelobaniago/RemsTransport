@@ -34,7 +34,7 @@ public function store(Request $request)
         'image'          => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
         'meetup_point'   => 'required|string',
         'meetup_time'    => 'required|string',
-        'trip_date'      => 'required|date|after_or_equal:today',
+        'trip_date'      => 'required|date|after_or_equal:' . \App\Support\LocalDate::today(),
         'end_date'       => 'required|date|after_or_equal:trip_date',
         'price_per_seat' => 'required|numeric',
         'total_seats'    => 'required|integer',
@@ -134,7 +134,7 @@ public function store(Request $request)
         if (!$trip) {
             return redirect('/')->with('error', 'Trip not found.');
         }
-        if ($trip->trip_date < date('Y-m-d')) {
+        if ($trip->trip_date < \App\Support\LocalDate::today()) {
             return redirect('/')->with('error', 'This trip has already passed and can no longer be booked.');
         }
 
@@ -220,7 +220,7 @@ public function processBooking(Request $request, $id)
         if (!$trip) {
             return redirect()->back()->with('error', 'Trip not found.');
         }
-        if ($trip->trip_date < date('Y-m-d')) {
+        if ($trip->trip_date < \App\Support\LocalDate::today()) {
             return redirect('/')->with('error', 'This trip has already passed and can no longer be booked.');
         }
 
@@ -498,7 +498,7 @@ public function payBalanceCheckout(Request $request, $id)
 
     // Installments only while the trip is more than a week away — otherwise the
     // full balance must be settled in one go (matches BookingController's rule).
-    $daysUntilTrip       = now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
+    $daysUntilTrip       = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
     $installmentAllowed  = $daysUntilTrip > 7;
 
     $amount = ($installmentAllowed && $request->filled('amount'))
@@ -628,7 +628,7 @@ public function showReceipt($id)
     $balance = round(max(0, $booking->total_price - $totalPaid), 2);
 
     // Installments only while the trip is more than a week away
-    $daysUntilTrip      = now()->startOfDay()->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
+    $daysUntilTrip      = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
     $installmentAllowed = $daysUntilTrip > 7;
 
     $payments = DB::table('booking_payments')

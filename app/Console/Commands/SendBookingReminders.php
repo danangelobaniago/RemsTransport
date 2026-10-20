@@ -22,7 +22,7 @@ class SendBookingReminders extends Command
 
     private function sendReminders(int $daysAway): void
     {
-        $targetDate = Carbon::today()->addDays($daysAway)->toDateString();
+        $targetDate = Carbon::parse(\App\Support\LocalDate::today())->addDays($daysAway)->toDateString();
 
         $bookings = DB::table('bookings')
             ->whereDate('start_date', $targetDate)

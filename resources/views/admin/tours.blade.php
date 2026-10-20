@@ -208,7 +208,7 @@
                             <div style="flex:1;padding:10px 14px;">
                                 <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">From</div>
                                 <input type="date" name="tour_date" id="tour_date" required
-                                       min="{{ date('Y-m-d') }}"
+                                       min="{{ \App\Support\LocalDate::today() }}"
                                        style="border:none;background:transparent;padding:4px 0;font-size:14px;font-weight:700;color:#1e293b;width:100%;"
                                        onchange="onTourStartDateChange(this)">
                             </div>
@@ -216,7 +216,7 @@
                             <div style="flex:1;padding:10px 14px;">
                                 <div style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">To</div>
                                 <input type="date" name="end_date" id="end_date" required
-                                       min="{{ date('Y-m-d') }}"
+                                       min="{{ \App\Support\LocalDate::today() }}"
                                        style="border:none;background:transparent;padding:4px 0;font-size:14px;font-weight:700;color:#1e293b;width:100%;"
                                        onchange="validateTourDate(this)">
                             </div>

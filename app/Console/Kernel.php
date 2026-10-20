@@ -13,10 +13,10 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // Send booking reminders every day at 9:00 AM
-        $schedule->command('booking:send-reminders')->dailyAt('09:00');
+        $schedule->command('booking:send-reminders')->dailyAt('09:00')->timezone('Asia/Manila');
 
         // Remind customers with an outstanding balance as their trip approaches
-        $schedule->command('booking:send-balance-reminders')->dailyAt('09:15');
+        $schedule->command('booking:send-balance-reminders')->dailyAt('09:15')->timezone('Asia/Manila');
     }
 
     /**

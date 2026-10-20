@@ -234,7 +234,7 @@ public function updateProfile(Request $request)
         'email' => 'required|email|unique:users,email,' . $user->id,
 
         // New validation rules for birthday and contact number
-        'birthday' => 'required|date|before_or_equal:today',
+        'birthday' => 'required|date|before_or_equal:' . \App\Support\LocalDate::today(),
         'phone_number' => ['required', 'regex:/^09\d{9}$/'],
     ]);
 

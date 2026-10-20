@@ -201,7 +201,7 @@ class BookingController extends Controller
     {
         $van = Van::findOrFail($request->van_id);
         $request->validate([
-            'start_date' => 'required|date|after:today',
+            'start_date' => 'required|date|after:' . \App\Support\LocalDate::today(),
             'end_date' => 'required|date|after_or_equal:start_date',
             'pickup_time' => 'required',
             'driver' => 'required', // Ensure driver is selected
@@ -711,7 +711,7 @@ public function store(Request $request) {
 public function rescheduleBooking(Request $request, $id)
 {
     $request->validate([
-        'new_start_date' => 'required|date|after:today',
+        'new_start_date' => 'required|date|after:' . \App\Support\LocalDate::today(),
         'reason'         => 'required|string|max:500',
     ]);
 
@@ -734,7 +734,7 @@ public function rescheduleBooking(Request $request, $id)
     // the current trip date (e.g. on Sep 2, a Sep 3-5 trip is too close — Sep 6
     // onward is the earliest that still qualifies). Admins can reschedule anytime.
     if (!$isAdmin) {
-        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(date('Y-m-d'))) / 86400);
+        $daysUntilTrip = (int) floor((strtotime($booking->start_date) - strtotime(\App\Support\LocalDate::today())) / 86400);
         if ($daysUntilTrip <= 3) {
             return back()->with('error', 'Bookings can only be rescheduled more than 3 days before the trip date. Please contact us directly for urgent changes.');
         }
@@ -798,7 +798,7 @@ public function payBalanceCheckout(Request $request, $id)
         return redirect("/receipt/{$id}")->with('error', 'This booking has no remaining balance.');
     }
 
-    $daysUntilTrip     = now()->startOfDay()->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
+    $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
     $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
 
     // Decide how much to charge now
@@ -955,7 +955,7 @@ public function showReceipt($id)
         ->get();
 
     // Installments can be paid online only while the trip is more than a week away
-    $daysUntilTrip     = now()->startOfDay()->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
+    $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
     $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
 
     return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));

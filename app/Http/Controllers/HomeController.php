@@ -20,7 +20,7 @@ public function index()
     // 2. Fetch Joiner Trips with Dynamic Availability Calculation
     $joinerTrips = DB::table('joiner_trips')
     ->where('status', 'active')
-    ->where('trip_date', '>=', date('Y-m-d'))
+    ->where('trip_date', '>=', \App\Support\LocalDate::today())
     ->get()
     ->map(function ($trip) {
         // Count occupied seats by passenger rows (accurate for multi-seat bookings)
@@ -63,7 +63,7 @@ public function index()
 
     // 4. Fetch Tour Packages and compute per-tour availability
     // Only packages whose bookable window hasn't fully passed yet.
-    $today = date('Y-m-d');
+    $today = \App\Support\LocalDate::today();
     $tours = \App\Models\TourPackage::where(function ($q) use ($today) {
             $q->where('end_date', '>=', $today)
               ->orWhere(function ($q2) use ($today) {

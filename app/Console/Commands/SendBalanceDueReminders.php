@@ -22,7 +22,7 @@ class SendBalanceDueReminders extends Command
 
     private function sendPrivateAndTourReminders(int $daysAway): void
     {
-        $targetDate = Carbon::today()->addDays($daysAway)->toDateString();
+        $targetDate = Carbon::parse(\App\Support\LocalDate::today())->addDays($daysAway)->toDateString();
 
         $bookings = DB::table('bookings')
             ->whereDate('start_date', $targetDate)
@@ -64,7 +64,7 @@ class SendBalanceDueReminders extends Command
 
     private function sendJoinerReminders(int $daysAway): void
     {
-        $targetDate = Carbon::today()->addDays($daysAway)->toDateString();
+        $targetDate = Carbon::parse(\App\Support\LocalDate::today())->addDays($daysAway)->toDateString();
 
         $bookings = DB::table('joiner_bookings')
             ->join('joiner_trips', 'joiner_bookings.joiner_trip_id', '=', 'joiner_trips.id')

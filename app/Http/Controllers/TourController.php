@@ -116,7 +116,7 @@ class TourController extends Controller
             'name'           => 'required|string',
             'destination'    => 'required|string',
             'pickup_point'   => 'required|string',
-            'tour_date'      => 'required|date|after_or_equal:today',
+            'tour_date'      => 'required|date|after_or_equal:' . \App\Support\LocalDate::today(),
             'end_date'       => 'required|date|after_or_equal:tour_date',
             'pickup_time'    => 'required',
             'price'          => 'required|numeric',
@@ -177,7 +177,7 @@ class TourController extends Controller
     if (!$tour) { abort(404); }
 
     $tourEnd = $tour->end_date ?: $tour->tour_date;
-    if ($tourEnd < date('Y-m-d')) {
+    if ($tourEnd < \App\Support\LocalDate::today()) {
         return redirect('/')->with('error', 'This tour package is no longer available for booking.');
     }
 
@@ -214,7 +214,7 @@ class TourController extends Controller
     }
 
     $tourEnd = $tour->end_date ?: $tour->tour_date;
-    if ($tourEnd < date('Y-m-d')) {
+    if ($tourEnd < \App\Support\LocalDate::today()) {
         return redirect('/')->with('error', 'This tour package is no longer available for booking.');
     }
 
