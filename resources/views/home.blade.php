@@ -131,7 +131,6 @@
         <div class="carousel-slide active" style="background-image: url('{{ asset('image/hero-1.jpg') }}')"></div>
         <div class="carousel-slide" style="background-image: url('{{ asset('image/hero-2.jpg') }}')"></div>
         <div class="carousel-slide" style="background-image: url('{{ asset('image/hero-3.jpg') }}')"></div>
-        <div class="carousel-slide" style="background-image: url('{{ asset('image/hero-4.jpg') }}')"></div>
     </div>
 
     <div class="hero-overlay"></div>
@@ -160,7 +159,6 @@
         <span class="carousel-dot active" onclick="heroGoTo(0)"></span>
         <span class="carousel-dot" onclick="heroGoTo(1)"></span>
         <span class="carousel-dot" onclick="heroGoTo(2)"></span>
-        <span class="carousel-dot" onclick="heroGoTo(3)"></span>
     </div>
 
 </section>
