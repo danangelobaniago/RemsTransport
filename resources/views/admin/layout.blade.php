@@ -15,31 +15,6 @@
 <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-<style>
-    /* Notification bell — this layout doesn't load style.css (that's the
-       customer-facing stylesheet the .notif-* classes normally come from),
-       so it needs its own copy, themed to match admin.css's light UI. */
-    .notification-wrapper { position: relative; }
-    .notif-dropdown {
-        display: none; position: absolute; right: 0; top: 36px; width: 280px;
-        max-height: 340px; overflow-y: auto; background: #fff; border: 1px solid #e2e8f0;
-        border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 1200;
-    }
-    .notif-dropdown.show { display: block; }
-    .notif-item {
-        display: block; padding: 10px 14px; color: #374151; text-decoration: none;
-        font-size: 12.5px; border-bottom: 1px solid #f1f5f9; line-height: 1.4;
-    }
-    .notif-item:hover { background: #f8fafc; }
-    .notif-item.unread { background: #eff6ff; color: #1e293b; font-weight: 600; }
-    .no-notif { padding: 14px; color: #94a3b8; font-size: 12.5px; text-align: center; }
-    .notif-count {
-        position: absolute; top: 0; right: 0; background: #ef4444; color: white;
-        font-size: 10px; font-weight: 700; border-radius: 50%; width: 16px; height: 16px;
-        display: flex; align-items: center; justify-content: center;
-    }
-</style>
-
 </head>
 
 <body>
@@ -87,23 +62,6 @@
     </button>
     <h2>@yield('title')</h2>
 
-    <div class="notification-wrapper" style="margin-left:auto;">
-        <button class="notif-btn" onclick="toggleNotif(event)" style="position:relative;background:none;border:none;cursor:pointer;font-size:18px;color:#334155;">
-            <i class="fa fa-bell"></i>
-            @if(auth()->user()->unreadNotifications->count())
-                <span class="notif-count">{{ auth()->user()->unreadNotifications->count() }}</span>
-            @endif
-        </button>
-        <div class="notif-dropdown" id="notifDropdown">
-            @forelse(auth()->user()->notifications as $notif)
-                <a href="/notifications/read" class="notif-item {{ $notif->read_at ? '' : 'unread' }}">
-                    {{ $notif->data['message'] ?? 'Notification' }}
-                </a>
-            @empty
-                <p class="no-notif">No notifications</p>
-            @endforelse
-        </div>
-    </div>
 </div>
 
 <!-- CONTENT -->
@@ -120,21 +78,6 @@ function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');
 }
-
-function toggleNotif(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById('notifDropdown');
-    if (dropdown) dropdown.classList.toggle('show');
-}
-
-document.addEventListener('click', function () {
-    const dropdown = document.getElementById('notifDropdown');
-    if (dropdown) dropdown.classList.remove('show');
-});
-
-document.querySelectorAll('.notif-dropdown').forEach(function (dd) {
-    dd.addEventListener('click', function (e) { e.stopPropagation(); });
-});
 </script>
 <script src="/js/pwa.js"></script>
 </body>

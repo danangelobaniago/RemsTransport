@@ -10,6 +10,7 @@
 <link rel="apple-touch-icon" href="/icons/icon-192.svg">
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
 <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
@@ -50,6 +51,7 @@
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
         <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu"><span></span><span></span><span></span></button>
         <h1 style="margin:0;">Dashboard</h1>
+        @include('admin.partials.notification-bell')
     </div>
 
     <!-- STATS -->
