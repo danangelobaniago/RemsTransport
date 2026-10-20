@@ -241,12 +241,19 @@ class AdminController extends Controller
         ->when($filter === 'completed', fn($q) => $q->where('bookings.status', 'completed'))
         ->when($filter === 'rejected', fn($q) => $q->where('bookings.status', 'rejected'))
         ->orderBy('bookings.id', 'desc')
-        ->get();
+        ->paginate(15)
+        ->withQueryString(); // keep ?search= and ?filter= on the page links
+
+    // A page past the end (e.g. after bookings were removed) → go to the last real page.
+    if ($bookings->isEmpty() && $bookings->currentPage() > 1) {
+        return redirect($bookings->url(max(1, $bookings->lastPage())));
+    }
 
     // Payment history per booking, for the "Paid" popup — grouped in one
-    // query instead of one per row.
+    // query instead of one per row, for this page's bookings only.
     $paymentHistories = DB::table('booking_payments')
         ->where('source', 'bookings')
+        ->whereIn('booking_id', $bookings->pluck('id'))
         ->orderBy('paid_at')
         ->get()
         ->groupBy('booking_id');
@@ -276,7 +283,7 @@ class AdminController extends Controller
         }
     }
 
-    $bookings = $bookings->map(function ($booking) use ($paymentHistories, $conflicts) {
+    $bookings->through(function ($booking) use ($paymentHistories, $conflicts) {
         $booking->payments = $paymentHistories->get($booking->id, collect())->values();
         $booking->conflicts_with = $conflicts[$booking->id] ?? [];
         return $booking;

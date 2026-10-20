@@ -28,6 +28,14 @@
         /* Long addresses: max 2 lines, full text on hover */
         .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 180px; word-break: break-word; cursor: help; }
         .conflict-badge { display: inline-block; margin-top: 4px; background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 50px; white-space: nowrap; cursor: help; }
+        .pager { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 16px 10px 4px; }
+        .pager-info { font-size: 13px; color: #64748b; }
+        .pager-links { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .pager-btn { min-width: 36px; padding: 7px 11px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; color: #1e293b; font-size: 13px; font-weight: 600; text-align: center; text-decoration: none; }
+        a.pager-btn:hover { background: #eff6ff; border-color: #bfdbfe; }
+        .pager-btn.active { background: #2563eb; border-color: #2563eb; color: #fff; }
+        .pager-btn.disabled { color: #cbd5e1; }
+        .pager-gap { color: #94a3b8; padding: 0 2px; }
         .cell-tip {
             position: fixed; z-index: 2500; max-width: 320px; padding: 8px 12px; border-radius: 8px;
             background: #0f172a; color: #fff; font-size: 12.5px; line-height: 1.45;
@@ -321,6 +329,48 @@
                 </tbody>
             </table>
         </div>
+
+        {{-- Pagination: 15 bookings per page; search + filter stay in the links --}}
+        @if($bookings->total() > 0)
+            <div class="pager">
+                <span class="pager-info">
+                    Showing {{ $bookings->firstItem() }}–{{ $bookings->lastItem() }} of {{ $bookings->total() }} bookings
+                </span>
+                @if($bookings->hasPages())
+                    @php
+                        $cur  = $bookings->currentPage();
+                        $last = $bookings->lastPage();
+                        $pages = collect([1, $last])
+                            ->merge(range(max(1, $cur - 2), min($last, $cur + 2)))
+                            ->unique()->sort()->values();
+                    @endphp
+                    <div class="pager-links">
+                        @if($bookings->onFirstPage())
+                            <span class="pager-btn disabled">&lsaquo; Prev</span>
+                        @else
+                            <a class="pager-btn" href="{{ $bookings->previousPageUrl() }}">&lsaquo; Prev</a>
+                        @endif
+
+                        @foreach($pages as $i => $p)
+                            @if($i > 0 && $p - $pages[$i - 1] > 1)
+                                <span class="pager-gap">…</span>
+                            @endif
+                            @if($p == $cur)
+                                <span class="pager-btn active">{{ $p }}</span>
+                            @else
+                                <a class="pager-btn" href="{{ $bookings->url($p) }}">{{ $p }}</a>
+                            @endif
+                        @endforeach
+
+                        @if($bookings->hasMorePages())
+                            <a class="pager-btn" href="{{ $bookings->nextPageUrl() }}">Next &rsaquo;</a>
+                        @else
+                            <span class="pager-btn disabled">Next &rsaquo;</span>
+                        @endif
+                    </div>
+                @endif
+            </div>
+        @endif
     </div>
 </div>
 
