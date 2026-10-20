@@ -13,6 +13,24 @@
     </div>
 @endif
 
+@if(session('error'))
+    <div style="background:#fee2e2; color:#991b1b; padding:12px 16px; border-radius:8px; margin-bottom:16px; font-size:14px; line-height:1.5;">
+        <i class="fa fa-times-circle"></i> {{ session('error') }}
+    </div>
+@endif
+
+@if($outOfRangeVans->isNotEmpty())
+    <div style="background:#fffbeb; border:1px solid #fde68a; color:#92400e; padding:14px 16px; border-radius:10px; margin-bottom:16px; font-size:13.5px; line-height:1.55;">
+        <strong><i class="fa fa-triangle-exclamation"></i> The current base fare (₱{{ number_format($pricing->base_fare) }}) is outside the price range of {{ $outOfRangeVans->count() === 1 ? 'this van' : 'these vans' }}:</strong>
+        <ul style="margin:6px 0 6px 20px;">
+            @foreach($outOfRangeVans as $v)
+                <li>{{ $v->name }} ({{ $v->plate_number }}): ₱{{ number_format($v->price_min) }} – ₱{{ number_format($v->price_max) }}</li>
+            @endforeach
+        </ul>
+        Fix their price ranges on the <a href="/admin/vans" style="color:#92400e; font-weight:700;">Vans page</a>, or set a base fare inside every van's range.
+    </div>
+@endif
+
 <div class="card">
 
     <form action="/admin/pricing/update" method="POST" id="pricing-form">
@@ -27,8 +45,20 @@
                 <div class="input-group">
                     <span>₱</span>
                     <input type="number" name="base_fare"
-                        value="{{ $pricing->base_fare }}" step="0.01" required>
+                        value="{{ old('base_fare', $pricing->base_fare) }}" step="0.01" required
+                        @if(!is_null($allowedMin) && $allowedMin <= $allowedMax) min="{{ $allowedMin }}" max="{{ $allowedMax }}" @endif>
                 </div>
+                @if(!is_null($allowedMin))
+                    @if($allowedMin <= $allowedMax)
+                        <small style="display:block; margin-top:6px; color:#6b7280; font-size:12px;">
+                            Allowed: ₱{{ number_format($allowedMin) }} – ₱{{ number_format($allowedMax) }} (must be inside every van's price range)
+                        </small>
+                    @else
+                        <small style="display:block; margin-top:6px; color:#b91c1c; font-size:12px;">
+                            No base fare fits every van right now — the van price ranges don't overlap. Adjust them on the Vans page first.
+                        </small>
+                    @endif
+                @endif
             </div>
 
             <!-- PRICE PER KM -->
@@ -87,6 +117,8 @@
 
 <script>
 function openReasonModal() {
+    // Show the browser's message (e.g. base fare outside the allowed range) before asking for a reason.
+    if (!document.getElementById('pricing-form').reportValidity()) return;
     document.getElementById('reasonModalInput').value = '';
     document.getElementById('reasonModalError').style.display = 'none';
     document.getElementById('reasonModal').style.display = 'flex';

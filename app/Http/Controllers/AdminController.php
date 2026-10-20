@@ -310,7 +310,24 @@ class AdminController extends Controller
             $pricing = DB::table('pricing')->where('id', 1)->first();
         }
 
-        return view('admin.pricing', compact('pricing'));
+        // The base fare must sit inside every van's price range, so the only
+        // allowed values are from the highest van minimum to the lowest van maximum.
+        $allowedMin = DB::table('vans')->max('price_min');
+        $allowedMax = DB::table('vans')->min('price_max');
+        $outOfRangeVans = $this->vansOutsideBaseFare($pricing->base_fare);
+
+        return view('admin.pricing', compact('pricing', 'allowedMin', 'allowedMax', 'outOfRangeVans'));
+    }
+
+    // Vans whose price range doesn't include the given base fare.
+    private function vansOutsideBaseFare($baseFare)
+    {
+        return DB::table('vans')
+            ->where(function ($q) use ($baseFare) {
+                $q->where('price_min', '>', $baseFare)->orWhere('price_max', '<', $baseFare);
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'plate_number', 'price_min', 'price_max']);
     }
 
     public function updatePricing(Request $request)
@@ -321,6 +338,17 @@ class AdminController extends Controller
             'driver_fee' => 'required|numeric|min:0',
             'reason' => 'required|string|max:255',
         ]);
+
+        // The base fare has to fall inside every van's price range. If it
+        // wouldn't, the admin must adjust those vans' ranges first.
+        $conflicts = $this->vansOutsideBaseFare($request->base_fare);
+        if ($conflicts->isNotEmpty()) {
+            $list = $conflicts->map(fn ($v) => "{$v->name} ({$v->plate_number}): ₱" . number_format($v->price_min) . ' – ₱' . number_format($v->price_max))->implode('; ');
+
+            return back()->withInput()->with('error',
+                'Base fare ₱' . number_format($request->base_fare) . " is outside the price range of: {$list}. "
+                . 'Update these vans\' price ranges on the Vans page first, or choose a base fare within every van\'s range.');
+        }
 
         DB::table('pricing')->where('id', 1)->update([
             'base_fare' => $request->base_fare,
@@ -690,18 +718,11 @@ public function addVan(Request $request)
         'name' => 'required|string|max:255',
         'plate_number' => 'required|string|max:100|unique:vans,plate_number',
         'seats' => 'required|integer|min:1',
-        'price_min' => "required|numeric|min:1|max:{$baseFare}",
-        'price_max' => "required|numeric|min:1|max:{$baseFare}|gte:price_min",
         'transmission' => 'required|string',
         'image' => 'nullable|image|mimes:jpg,jpeg,png|max:2048'
-    ], [
+    ] + $this->vanPriceRules($baseFare), [
         'plate_number.unique' => 'That plate number is already registered. Please use a different plate.',
-        'price_min.min' => 'Min price must be at least ₱1.',
-        'price_min.max' => "Min price must not exceed the base fare (₱" . number_format($baseFare) . ").",
-        'price_max.min' => 'Max price must be at least ₱1.',
-        'price_max.max' => "Max price must not exceed the base fare (₱" . number_format($baseFare) . ").",
-        'price_max.gte' => 'Max price must be greater than or equal to min price.',
-    ]);
+    ] + $this->vanPriceMessages($baseFare));
 
     $imagePath = null;
     if ($request->hasFile('image')) {
@@ -726,6 +747,51 @@ public function addVan(Request $request)
 }
 
 // ✅ DELETE VAN
+// A van's price range must include the current base fare:
+// price_min <= base fare <= price_max.
+private function vanPriceRules($baseFare): array
+{
+    return [
+        'price_min' => "required|numeric|min:1|max:{$baseFare}",
+        'price_max' => "required|numeric|min:{$baseFare}|gte:price_min",
+    ];
+}
+
+private function vanPriceMessages($baseFare): array
+{
+    $fare = '₱' . number_format($baseFare);
+    return [
+        'price_min.min' => 'Min price must be at least ₱1.',
+        'price_min.max' => "Min price must not be higher than the base fare ({$fare}).",
+        'price_max.min' => "Max price must not be lower than the base fare ({$fare}).",
+        'price_max.gte' => 'Max price must be greater than or equal to min price.',
+    ];
+}
+
+public function updateVanPrice(Request $request, $id)
+{
+    $van = DB::table('vans')->where('id', $id)->first();
+    if (!$van) {
+        return back()->with('error', 'Van not found.');
+    }
+
+    $baseFare = DB::table('pricing')->where('id', 1)->value('base_fare') ?? 0;
+    // Report as a page-level error rather than under the Add Van form's fields.
+    $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $this->vanPriceRules($baseFare), $this->vanPriceMessages($baseFare));
+    if ($validator->fails()) {
+        return back()->with('error', "{$van->name} ({$van->plate_number}): " . $validator->errors()->first());
+    }
+
+    DB::table('vans')->where('id', $id)->update([
+        'price_min'  => $request->price_min,
+        'price_max'  => $request->price_max,
+        'updated_at' => now(),
+    ]);
+
+    return back()->with('success', "Price range of {$van->name} ({$van->plate_number}) updated to ₱"
+        . number_format($request->price_min) . ' – ₱' . number_format($request->price_max) . '.');
+}
+
 public function deleteVan($id)
 {
     $van = DB::table('vans')->where('id', $id)->first();

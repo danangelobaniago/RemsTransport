@@ -110,8 +110,8 @@
                         @error('price_min')<small style="color:#ef4444;">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
-                        <label>Max Price (₱) <span style="font-weight:400;color:#6b7280;font-size:12px;">— 1 to ₱{{ number_format($baseFare) }}</span></label>
-                        <input type="number" name="price_max" id="priceMax" placeholder="e.g. 3000" min="1" max="{{ $baseFare }}" required value="{{ old('price_max') }}" oninput="validatePrices()">
+                        <label>Max Price (₱) <span style="font-weight:400;color:#6b7280;font-size:12px;">— at least ₱{{ number_format($baseFare) }}</span></label>
+                        <input type="number" name="price_max" id="priceMax" placeholder="e.g. 5000" min="{{ $baseFare }}" required value="{{ old('price_max') }}" oninput="validatePrices()">
                         <small id="priceMaxError" style="color:#ef4444;display:none;"></small>
                         @error('price_max')<small style="color:#ef4444;">{{ $message }}</small>@enderror
                     </div>
@@ -163,7 +163,12 @@
                         <td>{{ $van->plate_number }}</td>
                         <td>{{ $van->seats }} pax</td>
                         <td>{{ $van->transmission }}</td>
-                        <td>₱{{ number_format($van->price_min) }} – ₱{{ number_format($van->price_max) }}</td>
+                        <td>
+                            ₱{{ number_format($van->price_min) }} – ₱{{ number_format($van->price_max) }}
+                            @if($van->price_min > $baseFare || $van->price_max < $baseFare)
+                                <br><span style="display:inline-block;margin-top:3px;background:#fee2e2;color:#b91c1c;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:50px;" title="The base fare (₱{{ number_format($baseFare) }}) must be inside this range">Excludes base fare ₱{{ number_format($baseFare) }}</span>
+                            @endif
+                        </td>
                         <td>
                             <span class="van-status status-{{ strtolower(str_replace(' ', '-', $van->status)) }}">
                                 {{ $van->status }}
@@ -199,6 +204,13 @@
                                     <i class="fas fa-wrench"></i>
                                 </button>
 
+                                {{-- Price range --}}
+                                <button class="btn small" style="background:#16a34a;color:white;"
+                                        onclick="openPriceModal({{ $van->id }}, '{{ addslashes($van->name) }} ({{ $van->plate_number }})', {{ (float) $van->price_min }}, {{ (float) $van->price_max }})"
+                                        title="Edit Price Range">
+                                    <i class="fas fa-peso-sign"></i>
+                                </button>
+
                                 {{-- Delete --}}
                                 <a href="{{ route('admin.vans.delete', $van->id) }}"
                                    class="btn small red"
@@ -216,6 +228,34 @@
             </table>
         </div>
 
+    </div>
+</div>
+
+{{-- PRICE RANGE MODAL --}}
+<div class="modal-overlay" id="priceModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('priceModal')">&times;</button>
+        <h3 style="margin-bottom:4px;"><i class="fas fa-peso-sign" style="color:#16a34a;"></i> Edit Price Range</h3>
+        <p id="priceModalVan" style="color:#6b7280;font-size:14px;margin-bottom:6px;"></p>
+        <p style="color:#6b7280;font-size:12.5px;margin-bottom:14px;">The range must include the base fare (₱{{ number_format($baseFare) }}): min ≤ ₱{{ number_format($baseFare) }} ≤ max.</p>
+        <form method="POST" id="priceForm" onsubmit="return validatePriceModal()">
+            @csrf
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                    <label>Min Price (₱)</label>
+                    <input type="number" name="price_min" id="editPriceMin" min="1" max="{{ $baseFare }}" step="0.01" required oninput="validatePriceModal()">
+                </div>
+                <div class="form-group">
+                    <label>Max Price (₱)</label>
+                    <input type="number" name="price_max" id="editPriceMax" min="{{ $baseFare }}" step="0.01" required oninput="validatePriceModal()">
+                </div>
+            </div>
+            <small id="editPriceError" style="color:#ef4444;display:none;margin-top:6px;"></small>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                <button type="button" class="btn gray" onclick="closeModal('priceModal')">Cancel</button>
+                <button type="submit" class="btn" style="background:#16a34a;color:white;">Save Price Range</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -340,7 +380,7 @@ function validatePrices() {
             minInput.style.borderColor = '#ef4444';
             valid = false;
         } else if (minVal > BASE_FARE) {
-            minErr.textContent = `Min price must not exceed the base fare (₱${BASE_FARE.toLocaleString()}).`;
+            minErr.textContent = `Min price must not be higher than the base fare (₱${BASE_FARE.toLocaleString()}).`;
             minErr.style.display = 'block';
             minInput.style.borderColor = '#ef4444';
             valid = false;
@@ -357,8 +397,8 @@ function validatePrices() {
             maxErr.style.display = 'block';
             maxInput.style.borderColor = '#ef4444';
             valid = false;
-        } else if (maxVal > BASE_FARE) {
-            maxErr.textContent = `Max price must not exceed the base fare (₱${BASE_FARE.toLocaleString()}).`;
+        } else if (maxVal < BASE_FARE) {
+            maxErr.textContent = `Max price must not be lower than the base fare (₱${BASE_FARE.toLocaleString()}).`;
             maxErr.style.display = 'block';
             maxInput.style.borderColor = '#ef4444';
             valid = false;
@@ -392,6 +432,30 @@ function validateVanForm(form) {
 function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');
+}
+
+function openPriceModal(id, label, min, max) {
+    document.getElementById('priceModalVan').textContent = 'Van: ' + label;
+    document.getElementById('priceForm').action = '/admin/vans/' + id + '/price';
+    document.getElementById('editPriceMin').value = min;
+    document.getElementById('editPriceMax').value = max;
+    validatePriceModal();
+    document.getElementById('priceModal').classList.add('open');
+}
+
+function validatePriceModal() {
+    const min = parseFloat(document.getElementById('editPriceMin').value);
+    const max = parseFloat(document.getElementById('editPriceMax').value);
+    const err = document.getElementById('editPriceError');
+    let msg = '';
+    if (isNaN(min) || isNaN(max)) msg = '';
+    else if (min < 1) msg = 'Min price must be at least ₱1.';
+    else if (min > BASE_FARE) msg = `Min price must not be higher than the base fare (₱${BASE_FARE.toLocaleString()}).`;
+    else if (max < BASE_FARE) msg = `Max price must not be lower than the base fare (₱${BASE_FARE.toLocaleString()}).`;
+    else if (max < min) msg = 'Max price must be greater than or equal to min price.';
+    err.textContent = msg;
+    err.style.display = msg ? 'block' : 'none';
+    return !msg;
 }
 
 function openMaintenance(id, name, oilChange, maintenance, problemDate, problemNotes) {
