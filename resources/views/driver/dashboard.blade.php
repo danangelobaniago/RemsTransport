@@ -710,7 +710,7 @@
                                 @if($sc === 'completed' || $ts === 'completed')
                                     <button class="trip-btn btn-done-grey" disabled><i class="fas fa-check-double"></i> Trip Completed</button>
                                 @elseif($ts === 'not_started')
-                                    @if(date('Y-m-d') === date('Y-m-d', strtotime($b->start_date)))
+                                    @if(\App\Support\LocalDate::today() === date('Y-m-d', strtotime($b->start_date)))
                                         <button class="trip-btn btn-arrived"
                                             onclick="submitTripStatus({{ $b->id }}, 'arrived', 'Confirm: You have arrived at the pickup point?')">
                                             <i class="fas fa-map-marker-alt"></i> Arrived at Pickup Point

@@ -190,7 +190,7 @@ class DriverController extends Controller
 
         // Whichever trip needs the driver's attention right now: one already under way
         // (arrived/in progress) takes priority, otherwise the soonest upcoming one.
-        $today = date('Y-m-d');
+        $today = \App\Support\LocalDate::today();
         $doneStatuses = ['cancelled', 'rejected', 'completed'];
         $nextTrip = $bookingsForJs
             ->filter(function ($b) use ($doneStatuses, $today) {
@@ -290,7 +290,7 @@ class DriverController extends Controller
             return back()->with('error', 'Invalid status transition.');
         }
 
-        if ($request->trip_status === 'arrived' && now()->toDateString() < $trip->trip_date) {
+        if ($request->trip_status === 'arrived' && \App\Support\LocalDate::today() < $trip->trip_date) {
             return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($trip->trip_date)->format('M d, Y') . '.');
         }
 
@@ -441,7 +441,7 @@ class DriverController extends Controller
         }
 
         if ($request->trip_status === 'arrived') {
-            if (now()->toDateString() < $tour->tour_date) {
+            if (\App\Support\LocalDate::today() < $tour->tour_date) {
                 return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($tour->tour_date)->format('M d, Y') . '.');
             }
 
@@ -594,7 +594,7 @@ class DriverController extends Controller
             return back()->with('error', 'Invalid trip status transition.');
         }
 
-        if ($request->trip_status === 'arrived' && now()->toDateString() < $booking->start_date) {
+        if ($request->trip_status === 'arrived' && \App\Support\LocalDate::today() < $booking->start_date) {
             return back()->with('error', 'Cannot mark as Arrived yet — this trip is scheduled for ' . \Carbon\Carbon::parse($booking->start_date)->format('M d, Y') . '.');
         }
 
