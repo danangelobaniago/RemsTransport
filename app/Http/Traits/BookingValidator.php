@@ -17,7 +17,7 @@ trait BookingValidator
      * every source. A caller with only a van_id should resolve the plate
      * first (vans.plate_number is unique, so there's no ambiguity).
      */
-    private function checkAvailability($vanPlate, $driver, $date, $excludeBookingId = null)
+    private function checkAvailability($vanPlate, $driver, $date, $excludeBookingId = null, $excludeHoldId = null)
     {
         // Driver's weekly rest day — a hard block, no assignment on that weekday.
         if ($this->driverRestsOn($driver, $date)) {
@@ -78,7 +78,84 @@ trait BookingValidator
 
         if ($conflictTours) return false;
 
+        // Check holds — another customer is paying for this van/driver right now.
+        $conflictHolds = DB::table('booking_holds')
+            ->where('expires_at', '>', now())
+            ->where('start_date', '<=', $date)
+            ->where('end_date', '>=', $date)
+            ->when($excludeHoldId, fn($q) => $q->where('id', '!=', $excludeHoldId))
+            ->where(function ($q) use ($vanPlate, $driverId) {
+                $q->whereRaw('1 = 0');
+                if ($vanPlate) $q->orWhere('plate_number', $vanPlate);
+                if ($driverId) $q->orWhere('driver_id', $driverId);
+            })
+            ->exists();
+
+        if ($conflictHolds) return false;
+
         return true;
+    }
+
+    /**
+     * How long a van/driver stays reserved while the customer is on PayMongo.
+     */
+    private int $holdMinutes = 20;
+
+    /**
+     * Locks the van and driver rows for the rest of the current transaction,
+     * so concurrent checkouts/bookings for the same van or driver run one at
+     * a time instead of both passing the availability check. Always van
+     * first, then driver, so two transactions can't deadlock.
+     */
+    private function lockVanAndDriver($vanId, $driverId): void
+    {
+        if ($vanId) {
+            DB::table('vans')->where('id', $vanId)->lockForUpdate()->first();
+        }
+        if ($driverId) {
+            DB::table('drivers')->where('id', $driverId)->lockForUpdate()->first();
+        }
+    }
+
+    /**
+     * Reserves the van + driver for every date in the range before the
+     * customer is sent to PayMongo. Returns the hold id, or an error message
+     * if anything is already taken (by a booking or someone else's hold).
+     */
+    private function placeBookingHold($userId, $vanId, $driverId, $startDate, $endDate)
+    {
+        return DB::transaction(function () use ($userId, $vanId, $driverId, $startDate, $endDate) {
+            $this->lockVanAndDriver($vanId, $driverId);
+
+            // Housekeeping + a customer restarting checkout replaces their old hold.
+            DB::table('booking_holds')->where('expires_at', '<=', now())->delete();
+            if ($userId) {
+                DB::table('booking_holds')->where('user_id', $userId)->delete();
+            }
+
+            $plate = $vanId ? DB::table('vans')->where('id', $vanId)->value('plate_number') : null;
+
+            for ($d = strtotime($startDate); $d <= strtotime($endDate); $d = strtotime('+1 day', $d)) {
+                $date = date('Y-m-d', $d);
+                if (!$this->checkAvailability($plate, $driverId, $date)) {
+                    return 'Sorry, the selected van or driver was just booked by another customer for '
+                        . Carbon::parse($date)->format('M d, Y')
+                        . '. Please choose a different van, driver, or date. You have not been charged.';
+                }
+            }
+
+            return DB::table('booking_holds')->insertGetId([
+                'user_id'      => $userId,
+                'van_id'       => $vanId,
+                'plate_number' => $plate,
+                'driver_id'    => $driverId,
+                'start_date'   => date('Y-m-d', strtotime($startDate)),
+                'end_date'     => date('Y-m-d', strtotime($endDate)),
+                'expires_at'   => now()->addMinutes($this->holdMinutes),
+                'created_at'   => now(),
+                'updated_at'   => now(),
+            ]);
+        });
     }
 
     /**

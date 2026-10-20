@@ -54,6 +54,18 @@ class BookingController extends Controller
             ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
             ->pluck('tour_packages.driver_name');
 
+        // 3b. Drivers held by another customer who is paying right now
+        $busyIds = $busyIds->merge(
+            DB::table('booking_holds')
+                ->where('expires_at', '>', now())
+                ->where('start_date', '<=', $end)
+                ->where('end_date', '>=', $start)
+                ->where('user_id', '!=', (int) auth()->id())
+                ->whereNotNull('driver_id')
+                ->pluck('driver_id')
+                ->map(fn($id) => (int) $id)
+        )->unique();
+
         // Map names → IDs and merge all busy drivers
         $allBusyNames  = $busyJoinerNames->merge($busyTourNames)->filter()->unique();
         $busyNameIds   = DB::table('drivers')
@@ -118,6 +130,14 @@ class BookingController extends Controller
                 ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
                 ->get(['bookings.start_date', 'bookings.end_date'])
                 ->each(fn($b) => $expand($b->start_date, $b->end_date));
+
+            // 4. Dates another customer is paying for right now
+            DB::table('booking_holds')
+                ->where('plate_number', $van->plate_number)
+                ->where('expires_at', '>', now())
+                ->where('user_id', '!=', (int) auth()->id())
+                ->get(['start_date', 'end_date'])
+                ->each(fn($h) => $expand($h->start_date, $h->end_date));
         }
 
         return response()->json(array_values(array_unique($dates)));
@@ -262,6 +282,24 @@ class BookingController extends Controller
         $amountInCents = 10000;
     }
 
+    // 4a. Reserve the van + driver BEFORE sending the customer to PayMongo.
+    // Done under a row lock, so when two customers check out the same van or
+    // driver at the same moment only the first gets through; the second is
+    // stopped here, before paying, instead of both ending up booked.
+    $holdId = $this->placeBookingHold(
+        auth()->id(),
+        $formData['van_id'] ?? null,
+        !empty($formData['driver']) ? (int) $formData['driver'] : null,
+        $formData['start_date'],
+        $formData['end_date'] ?? $formData['start_date']
+    );
+
+    if (is_string($holdId)) {
+        return redirect('/booking/' . ($formData['van_id'] ?? ''))->with('error', $holdId);
+    }
+
+    session(['booking_hold_id' => $holdId]);
+
     // 5. Create the Checkout Session
     $response = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
         ->post('https://api.paymongo.com/v1/checkout_sessions', [
@@ -286,9 +324,12 @@ class BookingController extends Controller
         ]);
 
     if (!$response->successful()) {
+        DB::table('booking_holds')->where('id', $holdId)->delete();
+        session()->forget('booking_hold_id');
         return back()->with('error', 'Payment gateway error.');
     }
 
+    DB::table('booking_holds')->where('id', $holdId)->update(['checkout_session_id' => $response['data']['id']]);
     session(['pending_checkout_session_id' => $response['data']['id']]);
 
     return redirect($response['data']['attributes']['checkout_url']);
@@ -351,45 +392,66 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
         // in the meantime. Payment already succeeded by this point, so we still
         // create the booking (can't just drop the money) but flag it clearly
         // for admin review instead of silently double-booking.
-        $conflictDate = null;
-        for ($d = strtotime($start); $d <= strtotime($end); $d = strtotime('+1 day', $d)) {
-            $checkDate = date('Y-m-d', $d);
-            if (!$this->checkAvailability($van->plate_number ?? null, $formData['driver'] ?? null, $checkDate)) {
-                $conflictDate = $checkDate;
-                break;
+        // The customer's own hold (placed at checkout) reserved the van/driver
+        // while they paid; it must not count as a conflict against itself.
+        // Check + insert run under the same van/driver row locks as checkout,
+        // so two payments finishing at the same instant are serialized.
+        $holdId = session('booking_hold_id');
+
+        $bookingId = DB::transaction(function () use ($formData, $van, $start, $end, $holdId, $bookingUserId, $total, $status, $paid, $remaining, $paymentId) {
+            $this->lockVanAndDriver($formData['van_id'] ?? null, !empty($formData['driver']) ? (int) $formData['driver'] : null);
+
+            $conflictDate = null;
+            for ($d = strtotime($start); $d <= strtotime($end); $d = strtotime('+1 day', $d)) {
+                $checkDate = date('Y-m-d', $d);
+                if (!$this->checkAvailability($van->plate_number ?? null, $formData['driver'] ?? null, $checkDate, null, $holdId)) {
+                    $conflictDate = $checkDate;
+                    break;
+                }
             }
-        }
 
-        $notes = null;
-        if ($conflictDate) {
-            $notes = "⚠️ POSSIBLE DOUBLE-BOOKING: van/driver already had another booking on {$checkDate} at the time payment completed. Please verify and reassign if needed.";
-            \Log::warning("Booking conflict detected at payment time for van_id={$formData['van_id']}, driver={$formData['driver']}, date={$conflictDate}");
-        }
+            // Only reachable if the customer's hold expired before they paid and
+            // someone else booked in between. Payment already succeeded, so the
+            // booking is still created but clearly flagged for the admin.
+            $notes = null;
+            if ($conflictDate) {
+                $notes = "POSSIBLE DOUBLE-BOOKING: van/driver already had another booking on {$conflictDate} at the time payment completed. Please reassign the van/driver.";
+                \Log::warning("Booking conflict detected at payment time for van_id={$formData['van_id']}, driver={$formData['driver']}, date={$conflictDate}");
+            }
 
-        $bookingId = DB::table('bookings')->insertGetId([
-            'user_id' => $bookingUserId,
-            'van_id' => $formData['van_id'],
-            'plate_number' => $van->plate_number ?? null,
-            'pickup' => $formData['pickup'],
-            'destination' => $formData['destination'],
-            'start_date' => $start,
-            'end_date' => $end,
-            'days' => $formData['days'],
-            'driver' => $formData['driver'] ?? null,
-            'passengers' => $formData['passengers'],
-            'base_fare' => $formData['baseFare'],
-            'driver_fee' => $formData['driver_fee'] ?? 0,
-            'total' => $total,
-            'status' => 'pending',
-            'payment_method' => 'paymongo',
-            'payment_status' => $status,
-            'amount_paid' => $paid,
-            'remaining_balance' => $remaining,
-            'payment_id' => $paymentId,
-            'notes' => $notes,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+            $newId = DB::table('bookings')->insertGetId([
+                'user_id' => $bookingUserId,
+                'van_id' => $formData['van_id'],
+                'plate_number' => $van->plate_number ?? null,
+                'pickup' => $formData['pickup'],
+                'destination' => $formData['destination'],
+                'start_date' => $start,
+                'end_date' => $end,
+                'days' => $formData['days'],
+                'driver' => $formData['driver'] ?? null,
+                'passengers' => $formData['passengers'],
+                'base_fare' => $formData['baseFare'],
+                'driver_fee' => $formData['driver_fee'] ?? 0,
+                'total' => $total,
+                'status' => 'pending',
+                'payment_method' => 'paymongo',
+                'payment_status' => $status,
+                'amount_paid' => $paid,
+                'remaining_balance' => $remaining,
+                'payment_id' => $paymentId,
+                'notes' => $notes,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if ($holdId) {
+                DB::table('booking_holds')->where('id', $holdId)->delete();
+            }
+
+            return $newId;
+        });
+
+        session()->forget('booking_hold_id');
 
         DB::table('booking_payments')->insert([
             'booking_id'   => $bookingId,

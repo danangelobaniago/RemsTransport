@@ -27,6 +27,7 @@
         .actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
         /* Long addresses: max 2 lines, full text on hover */
         .cell-clamp { display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 180px; word-break: break-word; cursor: help; }
+        .conflict-badge { display: inline-block; margin-top: 4px; background: #fee2e2; color: #b91c1c; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 50px; white-space: nowrap; cursor: help; }
         .cell-tip {
             position: fixed; z-index: 2500; max-width: 320px; padding: 8px 12px; border-radius: 8px;
             background: #0f172a; color: #fff; font-size: 12.5px; line-height: 1.45;
@@ -218,6 +219,11 @@
                             <td>
                                 {{-- Booking status badge --}}
                                 <span class="status status-{{ $statusClean }}">{{ $statusLabel }}</span>
+
+                                {{-- Same van or driver on overlapping dates as another active booking --}}
+                                @if(!empty($booking->conflicts_with))
+                                    <br><span class="conflict-badge" title="Same van or driver on overlapping dates. Use the shuffle button to reassign."><i class="fas fa-triangle-exclamation"></i> Conflict with #{{ implode(", #", $booking->conflicts_with) }}</span>
+                                @endif
 
                                 {{-- Trip-status sub-badge --}}
                                 @if($statusClean === 'approved')

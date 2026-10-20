@@ -251,8 +251,34 @@ class AdminController extends Controller
         ->get()
         ->groupBy('booking_id');
 
-    $bookings = $bookings->map(function ($booking) use ($paymentHistories) {
+    // Active bookings that share a van (plate) or driver on overlapping dates —
+    // flagged in the table so the admin can reassign one of them. Bookings of
+    // the same tour package legitimately share its van/driver, so skip those pairs.
+    $active = DB::table('bookings')
+        ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+        ->whereNotIn('bookings.status', ['rejected', 'cancelled', 'completed'])
+        ->get([
+            'bookings.id', 'bookings.start_date', 'bookings.end_date', 'bookings.tour_id', 'bookings.driver',
+            DB::raw('COALESCE(tour_packages.plate_number, bookings.plate_number) as plate'),
+        ]);
+
+    $conflicts = [];
+    foreach ($active as $i => $a) {
+        foreach ($active->slice($i + 1) as $b) {
+            if ($a->tour_id && $a->tour_id === $b->tour_id) continue;
+            if ($a->start_date > $b->end_date || $b->start_date > $a->end_date) continue;
+            $sameVan    = $a->plate && $a->plate === $b->plate;
+            $sameDriver = $a->driver && (string) $a->driver === (string) $b->driver;
+            if ($sameVan || $sameDriver) {
+                $conflicts[$a->id][] = $b->id;
+                $conflicts[$b->id][] = $a->id;
+            }
+        }
+    }
+
+    $bookings = $bookings->map(function ($booking) use ($paymentHistories, $conflicts) {
         $booking->payments = $paymentHistories->get($booking->id, collect())->values();
+        $booking->conflicts_with = $conflicts[$booking->id] ?? [];
         return $booking;
     });
 
