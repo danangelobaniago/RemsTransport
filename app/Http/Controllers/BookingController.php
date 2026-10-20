@@ -248,9 +248,9 @@ class BookingController extends Controller
     // 1a. Name fields: letters/spaces/apostrophe/hyphen only (no periods,
     // digits, or other symbols), can't start with a space, max 30 chars.
     $request->validate([
-        'passengers_data.*.first_name'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+        'passengers_data.*.first_name'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u', new \App\Rules\PersonName],
         'passengers_data.*.middle_name' => ['nullable', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
-        'passengers_data.*.last_name'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+        'passengers_data.*.last_name'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u', new \App\Rules\PersonName],
     ]);
 
     // 1b. Passenger rules: minimum age 1 month, and any passenger under 18

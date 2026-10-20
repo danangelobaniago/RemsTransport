@@ -151,7 +151,7 @@
                 <div class="passenger-row" data-index="0">
                     <div>
                         <label>First Name</label>
-                        <input type="text" name="first_name[]" placeholder="First name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="first_name[]" placeholder="First name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div>
                         <label>Middle Name</label>
@@ -159,7 +159,7 @@
                     </div>
                     <div>
                         <label>Last Name</label>
-                        <input type="text" name="last_name[]" placeholder="Last name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="last_name[]" placeholder="Last name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div>
                         <label>Suffix</label>

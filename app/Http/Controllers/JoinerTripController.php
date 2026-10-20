@@ -192,9 +192,9 @@ public function processBooking(Request $request, $id)
         // We use '.*' to validate every item inside the passenger arrays
         $request->validate([
             'passenger_first_name'    => 'required|array|min:1',
-            'passenger_first_name.*'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+            'passenger_first_name.*'  => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u', new \App\Rules\PersonName],
             'passenger_middle_name.*' => ['nullable', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
-            'passenger_last_name.*'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'],
+            'passenger_last_name.*'   => ['required', 'string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u', new \App\Rules\PersonName],
             'passenger_suffix.*' => ['nullable', 'string', 'max:10', 'regex:/^[A-Za-z. ]+$/'],
             'passenger_contact'  => 'required|array',
             'passenger_contact.*'=> ['required', 'regex:/^09\d{9}$/'],

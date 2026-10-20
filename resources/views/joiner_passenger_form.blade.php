@@ -89,7 +89,7 @@
                                     <h6 class="fw-bold text-primary mb-3"><i class="fas fa-user-circle me-2"></i>Passenger #{{ $i + 1 }}</h6>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">First Name</label>
-                                        <input type="text" name="passenger_first_name[]" class="form-control bg-light" placeholder="First name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                                        <input type="text" name="passenger_first_name[]" class="form-control bg-light" placeholder="First name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Middle Name</label>
@@ -97,7 +97,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Last Name</label>
-                                        <input type="text" name="passenger_last_name[]" class="form-control bg-light" placeholder="Last name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                                        <input type="text" name="passenger_last_name[]" class="form-control bg-light" placeholder="Last name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                                     </div>
                                     <div class="mb-3">
                                         <label class="small fw-bold text-muted">Suffix</label>

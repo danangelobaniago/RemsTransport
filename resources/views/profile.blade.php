@@ -65,7 +65,7 @@
                 <div class="field-row">
                     <div class="field">
                         <label>First Name</label>
-                        <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                        <input type="text" name="first_name" value="{{ auth()->user()->first_name }}" maxlength="30" pattern="(?=.*[A-Za-z]{2})[A-Za-z\s]+" data-name-rule title="At least 2 letters (e.g. Jo, not J)" oninput="allowLettersOnly(this)">
                     </div>
                     <div class="field">
                         <label>Middle Name</label>
@@ -74,7 +74,7 @@
                 </div>
 
                 <label>Last Name</label>
-                <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" maxlength="30" oninput="allowLettersOnly(this)">
+                <input type="text" name="last_name" value="{{ auth()->user()->last_name }}" maxlength="30" pattern="(?=.*[A-Za-z]{2})[A-Za-z\s]+" data-name-rule title="At least 2 letters (e.g. Jo, not J)" oninput="allowLettersOnly(this)">
 
                 <label>Email</label>
                 <input type="email" name="email" value="{{ auth()->user()->email }}" required>

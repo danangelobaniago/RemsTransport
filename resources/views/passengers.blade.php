@@ -176,7 +176,7 @@
                 <div class="form-row form-row-4">
                     <div class="form-group">
                         <label>First Name</label>
-                        <input type="text" name="passengers_data[{{ $i }}][first_name]" placeholder="Enter First Name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="passengers_data[{{ $i }}][first_name]" placeholder="Enter First Name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div class="form-group">
                         <label>Middle Name</label>
@@ -184,7 +184,7 @@
                     </div>
                     <div class="form-group">
                         <label>Last Name</label>
-                        <input type="text" name="passengers_data[{{ $i }}][last_name]" placeholder="Enter Last Name" maxlength="30" pattern="[A-Za-zÀ-ÿ '\-]+" title="Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
+                        <input type="text" name="passengers_data[{{ $i }}][last_name]" placeholder="Enter Last Name" maxlength="30" pattern="(?=.*[A-Za-zÀ-ÿ]{2})[A-Za-zÀ-ÿ '\-]+" title="At least 2 letters. Letters only, no numbers or periods" oninput="letterOnlyInput(this)" required>
                     </div>
                     <div class="form-group">
                         <label>Suffix</label>
