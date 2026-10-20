@@ -556,7 +556,7 @@
                 </button>
                 <div class="faq-body">
                     <div class="faq-text">
-                        Yes, we recommend booking at least 2-3 days in advance for city transfers and 1 week in advance for out-of-town trips to ensure vehicle availability.
+                        Yes, bookings must be made at least 1 day in advance. Booking earlier gives you a better chance of getting your preferred van and driver.
                     </div>
                 </div>
             </div>
