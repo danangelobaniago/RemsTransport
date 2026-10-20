@@ -93,6 +93,84 @@
 
 </div>
 
+{{-- Price Change History --}}
+@php
+    $fieldLabels = [
+        'base_fare'    => 'Base Fare',
+        'price_per_km' => 'Price per KM',
+        'driver_fee'   => 'Driver Fee',
+        'price_min'    => 'Min Price',
+        'price_max'    => 'Max Price',
+    ];
+@endphp
+<div class="card" style="margin-top:20px;">
+    <h3 style="margin:0 0 4px; font-size:17px; color:#111827;"><i class="fa fa-clock-rotate-left"></i> Price Change History</h3>
+    <p style="margin:0 0 14px; color:#6b7280; font-size:13px;">Every change to the base fare, price per KM, driver fee, and van price ranges.</p>
+
+    @if($history->isEmpty())
+        <p style="padding:24px; text-align:center; color:#9ca3af; font-size:14px; margin:0;">No price changes recorded yet.</p>
+    @else
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+                <thead>
+                    <tr style="background:#f9fafb; text-align:left; color:#6b7280; font-size:12px; text-transform:uppercase; letter-spacing:.03em;">
+                        <th style="padding:10px 12px;">Date</th>
+                        <th style="padding:10px 12px;">Changed by</th>
+                        <th style="padding:10px 12px;">Item</th>
+                        <th style="padding:10px 12px;">Old → New</th>
+                        <th style="padding:10px 12px;">Reason</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($history as $h)
+                        @php
+                            $up = $h->old_value !== null && (float) $h->new_value > (float) $h->old_value;
+                            $down = $h->old_value !== null && (float) $h->new_value < (float) $h->old_value;
+                        @endphp
+                        <tr style="border-top:1px solid #f1f5f9;">
+                            <td style="padding:10px 12px; white-space:nowrap; color:#374151;">
+                                {{ \Carbon\Carbon::parse($h->created_at)->timezone('Asia/Manila')->format('M j, Y') }}<br>
+                                <small style="color:#9ca3af;">{{ \Carbon\Carbon::parse($h->created_at)->timezone('Asia/Manila')->format('g:i A') }}</small>
+                            </td>
+                            <td style="padding:10px 12px;">{{ trim(($h->first_name ?? '') . ' ' . ($h->last_name ?? '')) ?: 'Admin' }}</td>
+                            <td style="padding:10px 12px;">
+                                <strong>{{ $fieldLabels[$h->field] ?? $h->field }}</strong>
+                                @if($h->van_label)
+                                    <br><small style="color:#6b7280;">{{ $h->van_label }}</small>
+                                @endif
+                            </td>
+                            <td style="padding:10px 12px; white-space:nowrap;">
+                                <span style="color:#6b7280;">{{ $h->old_value !== null ? '₱' . number_format($h->old_value, 2) : '—' }}</span>
+                                →
+                                <strong style="color:{{ $up ? '#b91c1c' : ($down ? '#15803d' : '#111827') }};">₱{{ number_format($h->new_value, 2) }}</strong>
+                                @if($up) <i class="fa fa-arrow-up" style="color:#b91c1c; font-size:11px;"></i> @endif
+                                @if($down) <i class="fa fa-arrow-down" style="color:#15803d; font-size:11px;"></i> @endif
+                            </td>
+                            <td style="padding:10px 12px; color:#374151; max-width:320px;">{{ $h->reason ?: '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        @if($history->hasPages())
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; font-size:13px; color:#6b7280;">
+                @if($history->onFirstPage())
+                    <span style="color:#cbd5e1;">&larr; Newer</span>
+                @else
+                    <a href="{{ $history->previousPageUrl() }}" style="color:#2563eb; font-weight:600; text-decoration:none;">&larr; Newer</a>
+                @endif
+                <span>Page {{ $history->currentPage() }} of {{ $history->lastPage() }}</span>
+                @if($history->hasMorePages())
+                    <a href="{{ $history->nextPageUrl() }}" style="color:#2563eb; font-weight:600; text-decoration:none;">Older &rarr;</a>
+                @else
+                    <span style="color:#cbd5e1;">Older &rarr;</span>
+                @endif
+            </div>
+        @endif
+    @endif
+</div>
+
 {{-- Price Change Reason Modal --}}
 <div id="reasonModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
     <div style="background:white; border-radius:14px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">

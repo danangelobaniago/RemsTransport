@@ -316,7 +316,13 @@ class AdminController extends Controller
         $allowedMax = DB::table('vans')->min('price_max');
         $outOfRangeVans = $this->vansOutsideBaseFare($pricing->base_fare);
 
-        return view('admin.pricing', compact('pricing', 'allowedMin', 'allowedMax', 'outOfRangeVans'));
+        $history = DB::table('price_changes')
+            ->leftJoin('users', 'price_changes.changed_by', '=', 'users.id')
+            ->select('price_changes.*', 'users.first_name', 'users.last_name')
+            ->orderByDesc('price_changes.id')
+            ->paginate(15);
+
+        return view('admin.pricing', compact('pricing', 'allowedMin', 'allowedMax', 'outOfRangeVans', 'history'));
     }
 
     // Vans whose price range doesn't include the given base fare.
@@ -350,15 +356,43 @@ class AdminController extends Controller
                 . 'Update these vans\' price ranges on the Vans page first, or choose a base fare within every van\'s range.');
         }
 
-        DB::table('pricing')->where('id', 1)->update([
-            'base_fare' => $request->base_fare,
-            'price_per_km' => $request->price_per_km,
-            'driver_fee' => $request->driver_fee,
-            'last_update_reason' => $request->reason,
-            'updated_at' => now()
-        ]);
+        $old = DB::table('pricing')->where('id', 1)->first();
+
+        DB::transaction(function () use ($request, $old) {
+            DB::table('pricing')->where('id', 1)->update([
+                'base_fare' => $request->base_fare,
+                'price_per_km' => $request->price_per_km,
+                'driver_fee' => $request->driver_fee,
+                'last_update_reason' => $request->reason,
+                'updated_at' => now()
+            ]);
+
+            foreach (['base_fare', 'price_per_km', 'driver_fee'] as $field) {
+                $this->logPriceChange($field, $old->$field ?? null, $request->$field, $request->reason);
+            }
+        });
 
         return back()->with('success', 'Pricing updated successfully!');
+    }
+
+    // One history row per value that actually changed.
+    private function logPriceChange(string $field, $oldValue, $newValue, ?string $reason, $van = null): void
+    {
+        if ($oldValue !== null && round((float) $oldValue, 2) === round((float) $newValue, 2)) {
+            return;
+        }
+
+        DB::table('price_changes')->insert([
+            'field'      => $field,
+            'van_id'     => $van->id ?? null,
+            'van_label'  => $van ? "{$van->name} ({$van->plate_number})" : null,
+            'old_value'  => $oldValue,
+            'new_value'  => $newValue,
+            'reason'     => $reason,
+            'changed_by' => auth()->id(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
     }
 
     // ✅ WALK-IN BOOKING (admin books on behalf of a customer)
@@ -782,11 +816,17 @@ public function updateVanPrice(Request $request, $id)
         return back()->with('error', "{$van->name} ({$van->plate_number}): " . $validator->errors()->first());
     }
 
-    DB::table('vans')->where('id', $id)->update([
-        'price_min'  => $request->price_min,
-        'price_max'  => $request->price_max,
-        'updated_at' => now(),
-    ]);
+    DB::transaction(function () use ($request, $van, $id) {
+        DB::table('vans')->where('id', $id)->update([
+            'price_min'  => $request->price_min,
+            'price_max'  => $request->price_max,
+            'updated_at' => now(),
+        ]);
+
+        $reason = trim((string) $request->reason) ?: null;
+        $this->logPriceChange('price_min', $van->price_min, $request->price_min, $reason, $van);
+        $this->logPriceChange('price_max', $van->price_max, $request->price_max, $reason, $van);
+    });
 
     return back()->with('success', "Price range of {$van->name} ({$van->plate_number}) updated to ₱"
         . number_format($request->price_min) . ' – ₱' . number_format($request->price_max) . '.');

@@ -251,6 +251,10 @@
                 </div>
             </div>
             <small id="editPriceError" style="color:#ef4444;display:none;margin-top:6px;"></small>
+            <div class="form-group" style="margin-top:8px;">
+                <label>Reason <span style="font-weight:400;color:#6b7280;">(optional, shown in Price Change History)</span></label>
+                <textarea name="reason" id="editPriceReason" rows="2" maxlength="1000" placeholder="e.g. Adjusted to match the new base fare"></textarea>
+            </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
                 <button type="button" class="btn gray" onclick="closeModal('priceModal')">Cancel</button>
                 <button type="submit" class="btn" style="background:#16a34a;color:white;">Save Price Range</button>
@@ -439,6 +443,7 @@ function openPriceModal(id, label, min, max) {
     document.getElementById('priceForm').action = '/admin/vans/' + id + '/price';
     document.getElementById('editPriceMin').value = min;
     document.getElementById('editPriceMax').value = max;
+    document.getElementById('editPriceReason').value = '';
     validatePriceModal();
     document.getElementById('priceModal').classList.add('open');
 }
