@@ -35,6 +35,8 @@
         .src-badge.app { background: #ede9fe; color: #6d28d9; }
         .follow-btn { margin-left: auto; font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; border: none; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
         .follow-btn.on { background: #2563eb; color: #fff; }
+        @keyframes refreshPulse { 0% { transform: scale(1.8); opacity: .4; } 100% { transform: scale(1); opacity: 1; } }
+        .dot.pulse { animation: refreshPulse .6s ease-out; }
         .follow-banner { display: none; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 14px; background: #2563eb; color: #fff; border-radius: 10px; font-size: 13px; font-weight: 600; }
         .follow-banner button { margin-left: auto; background: rgba(255,255,255,.2); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 700; }
 
@@ -80,7 +82,13 @@
 
         <div class="map-layout">
             <div class="driver-list">
-                <div class="driver-list-header"><i class="fas fa-van-shuttle"></i> Drivers</div>
+                <div class="driver-list-header" style="display:flex;align-items:center;gap:8px;">
+                    <i class="fas fa-van-shuttle"></i> Drivers
+                    <span id="refreshStatus" title="The map asks for new positions every 5 seconds"
+                          style="margin-left:auto;font-size:11px;font-weight:600;color:#94a3b8;display:flex;align-items:center;gap:5px;">
+                        <span id="refreshDot" class="dot dot-offline"></span> <span id="refreshText">Connecting…</span>
+                    </span>
+                </div>
                 <div id="driverListBody">
                     <div class="empty-list">Loading...</div>
                 </div>
@@ -167,11 +175,27 @@ function tripSummary(trip) {
 }
 
 function fetchLocations() {
-    fetch("{{ route('admin.drivers.locations') }}")
-        .then(r => r.json())
-        .then(data => renderDrivers(data.drivers || []))
-        .catch(() => {});
+    fetch("{{ route('admin.drivers.locations') }}", { cache: 'no-store' })
+        .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+        .then(data => { renderDrivers(data.drivers || []); markRefreshed(true); })
+        .catch(() => markRefreshed(false));
 }
+
+// Visible proof the map is polling: time of the last refresh + a pulse
+function markRefreshed(ok) {
+    const dot = document.getElementById('refreshDot');
+    dot.className = 'dot ' + (ok ? 'dot-live' : 'dot-offline');
+    void dot.offsetWidth; // restart the pulse animation
+    if (ok) dot.classList.add('pulse');
+    document.getElementById('refreshText').textContent = ok
+        ? 'Refreshed ' + new Date().toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', second: '2-digit' })
+        : 'Connection problem — retrying';
+}
+
+// Keep the "Updated Xs ago" labels counting between refreshes
+setInterval(() => {
+    document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = timeAgo(el.dataset.ago); });
+}, 1000);
 
 function listItem(d) {
     const following = followId === d.id;
@@ -180,7 +204,7 @@ function listItem(d) {
             <span class="dot ${d.is_live ? 'dot-live' : 'dot-offline'}"></span>${escapeHtml(d.name)} ${sourceBadge(d)}
             ${d.is_live ? `<button type="button" class="follow-btn ${following ? 'on' : ''}" onclick="event.stopPropagation(); toggleFollow(${d.id})">${following ? 'Following' : 'Follow'}</button>` : ''}
         </div>
-        <div class="driver-list-meta">${d.is_live ? 'Updated' : 'Last seen'} ${timeAgo(d.location_updated_at)}${d.is_live ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
+        <div class="driver-list-meta">${d.is_live ? 'Updated' : 'Last seen'} <span data-ago="${escapeHtml(d.location_updated_at)}">${timeAgo(d.location_updated_at)}</span>${d.is_live ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
         <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
     </div>`;
 }
