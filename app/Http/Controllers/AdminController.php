@@ -486,6 +486,7 @@ class AdminController extends Controller
     {
         // Same 'Y-m-d H:i:s' (UTC) format as location_updated_at, so plain string comparison works
         $liveSince = now()->subSeconds(\App\Support\DriverLocation::LIVE_SECONDS)->toDateTimeString();
+        $idleSince = now()->subSeconds(\App\Support\DriverLocation::IDLE_SECONDS)->toDateTimeString();
 
         $drivers = DB::table('drivers')
             ->whereNotNull('current_lat')
@@ -495,24 +496,30 @@ class AdminController extends Controller
             ->orderByDesc('location_updated_at')
             ->get();
 
-        // Last hour of positions for the drivers who are live, drawn as a trail
+        // Last hour of positions for drivers who are live or idle, drawn as a trail
         $trails = DB::table('driver_location_points')
-            ->whereIn('driver_id', $drivers->filter(fn ($d) => $d->location_updated_at >= $liveSince)->pluck('id'))
+            ->whereIn('driver_id', $drivers->filter(fn ($d) => $d->location_updated_at >= $idleSince)->pluck('id'))
             ->where('recorded_at', '>=', now()->subHour())
             ->orderBy('recorded_at')
             ->get(['driver_id', 'lat', 'lng'])
             ->groupBy('driver_id');
 
-        $drivers = $drivers->map(function ($driver) use ($liveSince, $trails) {
-            $driver->is_live = $driver->location_updated_at >= $liveSince;
+        $drivers = $drivers->map(function ($driver) use ($liveSince, $idleSince, $trails) {
+            // live: reporting now · idle: stopped / weak signal, last spot still shown · offline: gone quiet
+            $driver->state = match (true) {
+                $driver->location_updated_at >= $liveSince => 'live',
+                $driver->location_updated_at >= $idleSince => 'idle',
+                default                                    => 'offline',
+            };
+            $driver->is_live = $driver->state === 'live';
             $driver->current_trip = $this->currentTripForDriver($driver);
-            $driver->trail = $driver->is_live
+            $driver->trail = $driver->state !== 'offline'
                 ? $trails->get($driver->id, collect())->map(fn ($p) => [(float) $p->lat, (float) $p->lng])->values()
                 : [];
             return $driver;
         });
 
-        return response()->json(['drivers' => $drivers, 'live_seconds' => \App\Support\DriverLocation::LIVE_SECONDS]);
+        return response()->json(['drivers' => $drivers]);
     }
 
     // Finds the trip a driver is actively out on right now (arrived/in transit),

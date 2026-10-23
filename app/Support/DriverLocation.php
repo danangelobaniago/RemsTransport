@@ -16,6 +16,13 @@ class DriverLocation
     /** A driver counts as live if they reported within this window. */
     public const LIVE_SECONDS = 120;
 
+    /**
+     * After that, "idle" (stopped, in a tunnel, weak signal — the app also slows
+     * down while the phone isn't moving) until this long without any report,
+     * and only then offline.
+     */
+    public const IDLE_SECONDS = 900;
+
     /** Trail points older than this are deleted. */
     private const KEEP_HOURS = 48;
 

@@ -488,8 +488,11 @@
                     <code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; font-weight:700;">{{ $trackingToken }}</code></li>
                 <li>Set <strong>Server URL</strong> to:
                     <code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; word-break:break-all;">{{ route('driver.tracking') }}</code></li>
-                <li>Set <strong>Frequency</strong> to <strong>10</strong> seconds and turn <strong>High accuracy</strong> on.</li>
-                <li>Allow location access <strong>"All the time"</strong>, then switch <strong>Service status</strong> on before each trip.</li>
+                <li>Set <strong>Location accuracy</strong> to <strong>High</strong>, <strong>Distance</strong> to <strong>10</strong> meters, and
+                    <strong>Stationary heartbeat</strong> to <strong>60</strong> seconds (so you stay on the map while stopped or in traffic).
+                    If there is a <strong>Frequency / Interval</strong> setting (under Advanced), set it to <strong>10</strong>.</li>
+                <li>Allow location access <strong>"Always" / "All the time"</strong>. On Android, also set Battery to <strong>Unrestricted</strong>
+                    for Traccar Client. Then switch tracking <strong>on</strong> before each trip — and don't swipe the app closed.</li>
             </ol>
             <p style="margin:6px 18px 16px; font-size:12px; color:#64748b;">
                 Keep the device identifier private — it is how the system knows the location is yours. Turn the service off after your trip to save battery.
@@ -1160,6 +1163,22 @@ if ('geolocation' in navigator) {
         (err) => setLocationStatus('Denied', '#ef4444'),
         { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
     );
+
+    // Heartbeat: watchPosition only fires when the phone gets a new fix, and a
+    // phone that isn't moving (stuck in traffic, at a stopover) often stops
+    // producing them — the driver would drop off the admin's live map. So ask
+    // for the position ourselves whenever nothing has been sent for a while.
+    let heartbeatPending = false;
+    setInterval(() => {
+        if (document.visibilityState !== 'visible' || heartbeatPending) return;
+        if (Date.now() - lastLocationSendAt < LOCATION_SEND_INTERVAL_MS) return;
+        heartbeatPending = true;
+        navigator.geolocation.getCurrentPosition(
+            (pos) => { heartbeatPending = false; sendLocation(pos); },
+            () => { heartbeatPending = false; },
+            { enableHighAccuracy: true, maximumAge: 10000, timeout: 10000 }
+        );
+    }, LOCATION_SEND_INTERVAL_MS);
 } else {
     setLocationStatus('Unsupported', '#ef4444');
 }

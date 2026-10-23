@@ -27,6 +27,7 @@
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         .dot-live { background: #22c55e; box-shadow: 0 0 0 3px #dcfce7; }
         .dot-offline { background: #cbd5e1; }
+        .dot-idle { background: #f59e0b; box-shadow: 0 0 0 3px #fef3c7; }
         .empty-list { padding: 18px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
         .list-group-title { padding: 8px 16px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #64748b; background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
         .driver-list-item.offline .driver-list-name { color: #64748b; }
@@ -76,8 +77,10 @@
         </div>
 
         <p style="color:#64748b;font-size:13px;margin:-12px 0 20px;">
-            <strong>Live</strong> = sent a location in the last 2 minutes, from the Driver Portal (while it's open)
-            or the Traccar Client app (works in the background). Refreshes every 5 seconds; live drivers show their trail for the last hour.
+            <strong>🟢 Live</strong> = location in the last 2 minutes &bull;
+            <strong>🟡 Idle</strong> = 2–15 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
+            <strong>⚪ Offline</strong> = over 15 minutes. Locations come from the Driver Portal (while it's open) or the
+            Traccar Client app (works in the background). Refreshes every 5 seconds; trails show the last hour.
         </p>
 
         <div class="map-layout">
@@ -197,30 +200,41 @@ setInterval(() => {
     document.querySelectorAll('[data-ago]').forEach(el => { el.textContent = timeAgo(el.dataset.ago); });
 }, 1000);
 
+const DOT_CLASS = { live: 'dot-live', idle: 'dot-idle', offline: 'dot-offline' };
+const MARKER_COLOR = { live: '#2563eb', idle: '#f59e0b', offline: '#94a3b8' };
+const AGO_PREFIX = { live: 'Updated', idle: 'Idle — last update', offline: 'Last seen' };
+const trackable = d => d.state !== 'offline'; // live or idle: still on the road, worth following
+
 function listItem(d) {
     const following = followId === d.id;
-    return `<div class="driver-list-item ${d.is_live ? '' : 'offline'} ${following ? 'following' : ''}" onclick="showDriver(${d.id})">
+    const ago = `<span data-ago="${escapeHtml(d.location_updated_at)}">${timeAgo(d.location_updated_at)}</span>`;
+    const meta = d.state === 'live'
+        ? `Updated ${ago}${speedLabel(d)}${accuracyLabel(d.location_accuracy)}`
+        : d.state === 'idle'
+            ? `Stopped or weak signal &bull; last update ${ago}`
+            : `Last seen ${ago}`;
+    return `<div class="driver-list-item ${d.state === 'offline' ? 'offline' : ''} ${following ? 'following' : ''}" onclick="showDriver(${d.id})">
         <div class="driver-list-name">
-            <span class="dot ${d.is_live ? 'dot-live' : 'dot-offline'}"></span>${escapeHtml(d.name)} ${sourceBadge(d)}
-            ${d.is_live ? `<button type="button" class="follow-btn ${following ? 'on' : ''}" onclick="event.stopPropagation(); toggleFollow(${d.id})">${following ? 'Following' : 'Follow'}</button>` : ''}
+            <span class="dot ${DOT_CLASS[d.state]}"></span>${escapeHtml(d.name)} ${sourceBadge(d)}
+            ${trackable(d) ? `<button type="button" class="follow-btn ${following ? 'on' : ''}" onclick="event.stopPropagation(); toggleFollow(${d.id})">${following ? 'Following' : 'Follow'}</button>` : ''}
         </div>
-        <div class="driver-list-meta">${d.is_live ? 'Updated' : 'Last seen'} <span data-ago="${escapeHtml(d.location_updated_at)}">${timeAgo(d.location_updated_at)}</span>${d.is_live ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
+        <div class="driver-list-meta">${meta}</div>
         <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
     </div>`;
 }
 
 function renderList(drivers) {
-    const live = drivers.filter(d => d.is_live);
-    const offline = drivers.filter(d => !d.is_live);
+    const group = (title, list, empty) =>
+        `<div class="list-group-title">${title} (${list.length})</div>` +
+        (list.length ? list.map(listItem).join('') : `<div class="empty-list">${empty}</div>`);
     document.getElementById('driverListBody').innerHTML =
-        `<div class="list-group-title">🟢 Live (${live.length})</div>` +
-        (live.length ? live.map(listItem).join('') : '<div class="empty-list">No driver is sharing their location right now.</div>') +
-        `<div class="list-group-title">⚪ Offline (${offline.length})</div>` +
-        (offline.length ? offline.map(listItem).join('') : '<div class="empty-list">—</div>');
+        group('🟢 Live', drivers.filter(d => d.state === 'live'), 'No driver is sharing their location right now.') +
+        group('🟡 Idle', drivers.filter(d => d.state === 'idle'), '—') +
+        group('⚪ Offline', drivers.filter(d => d.state === 'offline'), '—');
 }
 
 function markerIcon(d) {
-    const color = d.is_live ? '#2563eb' : '#94a3b8';
+    const color = MARKER_COLOR[d.state];
     const moving = d.is_live && d.location_heading !== null && parseFloat(d.location_speed || 0) * 3.6 >= 3;
     // An arrow pointing where the van is heading while it moves; a dot when stopped or offline
     return moving
@@ -250,7 +264,7 @@ function renderDrivers(drivers) {
     drivers.forEach(d => { d.id = Number(d.id); driverById[d.id] = d; });
 
     // Following someone who went offline — stop
-    if (followId && !(driverById[followId] && driverById[followId].is_live)) stopFollowing(false);
+    if (followId && !(driverById[followId] && trackable(driverById[followId]))) stopFollowing(false);
 
     renderList(drivers);
 
@@ -262,9 +276,9 @@ function renderDrivers(drivers) {
         if (markers[d.id]) {
             animateMarker(markers[d.id], pos);
             markers[d.id].setIcon(markerIcon(d));
-            markers[d.id].setZIndex(d.is_live ? 10 : 1);
+            markers[d.id].setZIndex(trackable(d) ? 10 : 1);
         } else {
-            markers[d.id] = new google.maps.Marker({ position: pos, map, title: d.name, icon: markerIcon(d), zIndex: d.is_live ? 10 : 1 });
+            markers[d.id] = new google.maps.Marker({ position: pos, map, title: d.name, icon: markerIcon(d), zIndex: trackable(d) ? 10 : 1 });
             markers[d.id].addListener('click', () => showDriver(d.id));
         }
 
@@ -286,7 +300,7 @@ function renderDrivers(drivers) {
 
         // Trail of the last hour while live
         const path = (d.trail || []).map(([lat, lng]) => ({ lat, lng }));
-        if (d.is_live && path.length > 1) {
+        if (trackable(d) && path.length > 1) {
             if (trails[d.id]) {
                 trails[d.id].setPath(path);
             } else {
@@ -324,7 +338,7 @@ function showDriver(id) {
         <div style="font-size:13px;min-width:190px;">
             <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.name)} ${sourceBadge(d)}</div>
             <div style="color:#64748b;margin-bottom:2px;">${tripSummary(d.current_trip)}</div>
-            <div style="color:#94a3b8;font-size:11px;">${d.is_live ? 'Updated' : 'Last seen'} ${timeAgo(d.location_updated_at)}${speedLabel(d)}${accuracyLabel(d.location_accuracy)}</div>
+            <div style="color:#94a3b8;font-size:11px;">${AGO_PREFIX[d.state]} ${timeAgo(d.location_updated_at)}${d.state === 'live' ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
             ${d.phone ? `<div style="margin-top:6px;"><a href="tel:${escapeHtml(d.phone)}" style="color:#2563eb;font-weight:600;"><i class="fas fa-phone"></i> ${escapeHtml(d.phone)}</a></div>` : ''}
         </div>
     `);
