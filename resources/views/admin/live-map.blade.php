@@ -78,8 +78,8 @@
 
         <p style="color:#64748b;font-size:13px;margin:-12px 0 20px;">
             <strong>🟢 Live</strong> = location in the last 2 minutes &bull;
-            <strong>🟡 Idle</strong> = 2–15 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
-            <strong>⚪ Offline</strong> = over 15 minutes. Locations come from the Driver Portal (while it's open) or the
+            <strong>🟡 Idle</strong> = 2–30 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
+            <strong>⚪ Offline</strong> = over 30 minutes. Locations come from the Driver Portal (while it's open) or the
             Traccar Client app (works in the background). Refreshes every 5 seconds; trails show the last hour.
         </p>
 

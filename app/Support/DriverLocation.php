@@ -18,10 +18,11 @@ class DriverLocation
 
     /**
      * After that, "idle" (stopped, in a tunnel, weak signal — the app also slows
-     * down while the phone isn't moving) until this long without any report,
-     * and only then offline.
+     * down while the phone isn't moving; iPhones pause it entirely) until this
+     * long without any report, and only then offline. 30 minutes covers a
+     * normal meal / rest stop.
      */
-    public const IDLE_SECONDS = 900;
+    public const IDLE_SECONDS = 1800;
 
     /** Trail points older than this are deleted. */
     private const KEEP_HOURS = 48;
