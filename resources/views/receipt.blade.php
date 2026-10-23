@@ -180,7 +180,7 @@
             @if($canReschedule)
                 <button onclick="openRescheduleModal()" class="btn btn-reschedule"><i class="fas fa-calendar-days"></i> Reschedule Trip</button>
             @endif
-            <button onclick="window.print()" class="btn btn-print"><i class="fas fa-print"></i> Print Receipt</button>
+            <a href="{{ route('receipt.pdf', $booking->id) }}" class="btn btn-print"><i class="fas fa-file-arrow-down"></i> Download Receipt (PDF)</a>
         </div>
     </div>
 

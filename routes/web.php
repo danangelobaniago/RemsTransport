@@ -252,65 +252,58 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/profile/password', [AuthController::class, 'changePassword'])->name('profile.password');
 });
 
-Route::prefix('admin')->group(function () {
-    // This loads the page
-    Route::get('/joiner-trips', [JoinerTripController::class, 'index'])->name('admin.joiner-trips');
+/* ================= ADMIN-ONLY ACTIONS =================
+   These used to sit outside any middleware, so anyone (even logged out) could
+   open reports, approve/reject trips, delete tours or toggle drivers. */
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/joiner-trips', [JoinerTripController::class, 'index'])->name('admin.joiner-trips');
+    Route::post('/admin/joiner-trips', [JoinerTripController::class, 'store'])->name('admin.joiner-trips.store');
+    Route::post('/admin/joiner-trips/{id}/complete', [JoinerTripController::class, 'completeTrip'])->name('admin.joiner.complete');
+    Route::post('/admin/joiner-trips/{id}/approve', [AdminController::class, 'approveJoinerTrip'])->name('admin.joiner.approve');
+    Route::post('/admin/joiner-trips/{id}/reject', [AdminController::class, 'rejectJoinerTrip'])->name('admin.joiner.reject');
 
-    // This FIXES the 404 by handling the form submission
-    Route::post('/joiner-trips', [JoinerTripController::class, 'store'])->name('admin.joiner-trips.store');
+    Route::get('/admin/drivers/toggle/{id}', [AdminController::class, 'toggleDriverStatus'])->name('admin.drivers.toggle');
+    Route::get('/admin/reports', [AdminController::class, 'reports'])->name('admin.reports');
+
+    Route::delete('/admin/tours/delete/{id}', [TourController::class, 'delete'])->name('admin.tours.delete');
+    Route::post('/admin/tours/update/{id}', [HomeController::class, 'updateTour']);
+    Route::post('/admin/tours/complete/{id}', [HomeController::class, 'completeTour']);
+    Route::get('/admin/tours/manifest/{id}', [TourController::class, 'getManifest']);
+    Route::get('/admin/tours/{id}/bookings', [TourController::class, 'getBookingsJson'])->name('admin.tour.bookings.json');
+    Route::post('/admin/tour-bookings/{id}/approve', [TourController::class, 'approveTourBooking'])->name('admin.tour.booking.approve');
+    Route::post('/admin/tour-bookings/{id}/reject', [TourController::class, 'rejectTourBooking'])->name('admin.tour.booking.reject');
 });
 
-Route::post('/join-trip/{id}', [JoinerTripController::class, 'join'])->name('join-trip');
+// Joiner trip details stay public, like the van and tour detail pages
 Route::get('/join-trip/{id}', [JoinerTripController::class, 'show'])->name('joiner.show');
 
+/* ================= CUSTOMER BOOKINGS, RECEIPTS & PAYMENTS (logged in) =================
+   Receipts and balance payments also check the booking belongs to the user. */
 Route::middleware(['auth'])->group(function () {
-    // This matches the link in your navbar
     Route::get('/notifications/read', [NotificationController::class, 'markAsRead'])->name('notifications.read');
-
-    // Optional: for a "See All" page
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+
+    Route::post('/join-trip/{id}', [JoinerTripController::class, 'join'])->name('join-trip');
+    Route::post('/joiner/book/{id}', [JoinerTripController::class, 'processBooking'])->name('joiner.book');
+    Route::get('/joiner/passenger-details/{id}', [JoinerTripController::class, 'passengerForm'])->name('joiner.passengerForm');
+    Route::get('/joiner/payment-success/{payment_id}', [JoinerTripController::class, 'paymentSuccess']);
+    Route::get('/joiner-receipt/{id}', [JoinerTripController::class, 'showReceipt'])->name('joiner.receipt');
+    Route::post('/joiner-booking/{id}/pay-balance', [JoinerTripController::class, 'payBalanceCheckout']);
+    Route::get('/joiner-booking/{id}/pay-balance/success', [JoinerTripController::class, 'payBalanceSuccess']);
+    Route::post('/submit-feedback', [JoinerTripController::class, 'submitFeedback']);
+
+    Route::get('/my-bookings', [TourController::class, 'showMyBookings'])->name('my.bookings');
+    Route::post('/bookings/cancel/{id}/{type}', [BookingController::class, 'cancelBooking'])->name('booking.cancel');
+    Route::get('/receipt/{id}', [BookingController::class, 'showReceipt']);
+    Route::post('/booking/{id}/pay-balance', [BookingController::class, 'payBalanceCheckout']);
+    Route::get('/booking/{id}/pay-balance/success', [BookingController::class, 'payBalanceSuccess']);
 });
 
-
-
-// Finalize the booking (Move your previous 'join' logic here)
-Route::post('/joiner/book/{id}', [JoinerTripController::class, 'processBooking'])->name('joiner.book');
-Route::get('/joiner/passenger-details/{id}', [JoinerTripController::class, 'passengerForm'])->name('joiner.passengerForm');
-
-
-// Route for toggling driver status
-Route::get('/admin/drivers/toggle/{id}', [AdminController::class, 'toggleDriverStatus'])->name('admin.drivers.toggle');
-
-Route::get('/my-bookings', [BookingController::class, 'showMyBookings'])->middleware('auth');
-Route::get('/joiner/payment-success/{payment_id}', [JoinerTripController::class, 'paymentSuccess']);
-Route::get('/joiner-receipt/{id}', [JoinerTripController::class, 'showReceipt'])->name('joiner.receipt');
-Route::post('/joiner-booking/{id}/pay-balance', [JoinerTripController::class, 'payBalanceCheckout']);
-Route::get('/joiner-booking/{id}/pay-balance/success', [JoinerTripController::class, 'payBalanceSuccess']);
-Route::post('/admin/joiner-trips/{id}/complete', [JoinerTripController::class, 'completeTrip'])->name('admin.joiner.complete');
-Route::post('/admin/joiner-trips/{id}/approve', [AdminController::class, 'approveJoinerTrip'])->name('admin.joiner.approve');
-Route::post('/admin/joiner-trips/{id}/reject', [AdminController::class, 'rejectJoinerTrip'])->name('admin.joiner.reject');
-Route::get('/my-bookings', [JoinerTripController::class, 'myBookings']);
-Route::post('/submit-feedback', [App\Http\Controllers\JoinerTripController::class, 'submitFeedback']);
-
-// Find this line and change it:
-Route::get('/my-bookings', [TourController::class, 'showMyBookings'])->name('my.bookings');
-Route::delete('/admin/tours/delete/{id}', [TourController::class, 'delete'])->name('admin.tours.delete');
-// In routes/web.php
-Route::get('/admin/tours/manifest/{id}', [HomeController::class, 'getManifest']);
-Route::post('/admin/tours/update/{id}', [HomeController::class, 'updateTour']);
-// Add this inside your admin middleware group
-Route::post('/admin/tours/complete/{id}', [HomeController::class, 'completeTour']);
-
-// Ensure this is Route::post
-Route::post('/bookings/cancel/{id}/{type}', [BookingController::class, 'cancelBooking'])->name('booking.cancel');
-Route::get('/admin/reports', [AdminController::class, 'reports'])->name('admin.reports');
-Route::get('/admin/tours/manifest/{id}', [TourController::class, 'getManifest']);
-Route::get('/admin/tours/{id}/bookings', [TourController::class, 'getBookingsJson'])->name('admin.tour.bookings.json');
-Route::post('/admin/tour-bookings/{id}/approve', [TourController::class, 'approveTourBooking'])->name('admin.tour.booking.approve');
-Route::post('/admin/tour-bookings/{id}/reject', [TourController::class, 'rejectTourBooking'])->name('admin.tour.booking.reject');
-Route::get('/receipt/{id}', [BookingController::class, 'showReceipt']);
-Route::post('/booking/{id}/pay-balance', [BookingController::class, 'payBalanceCheckout']);
-Route::get('/booking/{id}/pay-balance/success', [BookingController::class, 'payBalanceSuccess']);
+/* ================= RECEIPT PDF DOWNLOADS (owner or admin only) ================= */
+Route::middleware(['auth'])->group(function () {
+    Route::get('/receipt/{id}/pdf', [BookingController::class, 'downloadReceiptPdf'])->whereNumber('id')->name('receipt.pdf');
+    Route::get('/joiner-receipt/{id}/pdf', [JoinerTripController::class, 'downloadReceiptPdf'])->whereNumber('id')->name('joiner.receipt.pdf');
+});
 
 /* ================= MESSAGES (customer/driver <-> admin) ================= */
 Route::middleware(['auth'])->group(function () {

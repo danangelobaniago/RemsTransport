@@ -789,6 +789,7 @@ public function payBalanceCheckout(Request $request, $id)
     if (!$booking) {
         abort(404);
     }
+    $this->authorizeBookingOwner($booking);
 
     $totalPaid = (float) ($booking->amount_paid ?? 0);
     $balance   = round(max(0, (float) $booking->total - $totalPaid), 2);
@@ -931,6 +932,64 @@ public function payBalanceSuccess(Request $request, $id)
 
 public function showReceipt($id)
 {
+    [$booking, $totalPaid, $balance, $payments] = $this->receiptData($id);
+
+    $passengers = DB::table('passengers')->where('booking_id', $id)->get();
+
+    // Installments can be paid online only while the trip is more than a week away
+    $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
+    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
+
+    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
+}
+
+/** The official receipt as a one-page PDF download — only for the booking's owner or an admin. */
+public function downloadReceiptPdf($id)
+{
+    [$booking, $totalPaid, $balance, $payments] = $this->receiptData($id);
+
+    $isTour = !empty($booking->tour_id);
+
+    $travelDate = Carbon::parse($booking->start_date)->format('F d, Y');
+    if ($booking->end_date && $booking->end_date !== $booking->start_date) {
+        $travelDate .= ' – ' . Carbon::parse($booking->end_date)->format('F d, Y');
+    }
+
+    $details = $isTour
+        ? ['Package' => $booking->package_name ?? $booking->destination, 'Pickup' => $booking->pickup]
+        : ['Pickup' => $booking->pickup, 'Destination' => $booking->destination];
+    $details += [
+        'Travel Date' => $travelDate,
+        'Vehicle'     => trim(($booking->vehicle_type ?? '') . ($booking->plate_number ? " · {$booking->plate_number}" : '')),
+        'Driver'      => $booking->driver_name,
+    ];
+
+    $passengers = DB::table('passengers')->where('booking_id', $id)->get()
+        ->map(fn ($p) => trim(implode(' ', array_filter([$p->first_name, $p->middle_name, $p->last_name, $p->suffix]))));
+
+    return \App\Support\ReceiptPdf::download([
+        'receiptNo'   => 'REM-' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
+        'bookingType' => $isTour ? 'Tour Package' : 'Van Rental',
+        'customer'    => trim(($booking->first_name ?? '') . ' ' . ($booking->last_name ?? '')),
+        'email'       => $booking->email,
+        'details'     => $details,
+        'passengers'  => $passengers,
+        'payments'    => $payments,
+        'total'       => (float) $booking->total,
+        'totalPaid'   => $totalPaid,
+        'balance'     => $balance,
+    ]);
+}
+
+/** Only the customer who owns a booking (or an admin) may see its receipt or pay its balance. */
+private function authorizeBookingOwner($booking): void
+{
+    abort_unless((int) $booking->user_id === (int) auth()->id() || auth()->user()->role === 'admin', 403);
+}
+
+/** Booking row (with customer, vehicle and driver), amounts and payment history for a receipt. */
+private function receiptData($id): array
+{
     $booking = DB::table('bookings')
         ->join('users', 'bookings.user_id', '=', 'users.id')
         ->leftJoin('vans', 'bookings.van_id', '=', 'vans.id')
@@ -952,8 +1011,7 @@ public function showReceipt($id)
     if (!$booking) {
         abort(404);
     }
-
-    $passengers = DB::table('passengers')->where('booking_id', $id)->get();
+    $this->authorizeBookingOwner($booking);
 
     // For tour bookings: amount_paid is set when Paymongo succeeds; downpayment is the initial charge
     // remaining_balance defaults to 0 in DB so cannot be trusted — compute directly
@@ -966,11 +1024,7 @@ public function showReceipt($id)
         ->orderBy('paid_at')
         ->get();
 
-    // Installments can be paid online only while the trip is more than a week away
-    $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
-    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
-
-    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
+    return [$booking, $totalPaid, $balance, $payments];
 }
 
 }

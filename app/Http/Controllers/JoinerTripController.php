@@ -480,6 +480,7 @@ public function payBalanceCheckout(Request $request, $id)
     if (!$booking) {
         abort(404);
     }
+    $this->authorizeBookingOwner($booking);
 
     $totalPaid = (float) ($booking->downpayment ?? 0);
     $balance   = round(max(0, (float) $booking->total_price - $totalPaid), 2);
@@ -626,6 +627,7 @@ public function showReceipt($id)
     if (!$booking) {
         abort(404);
     }
+    $this->authorizeBookingOwner($booking);
 
     // 1. Define $totalPaid using the 'downpayment' column (actual amount paid)
     $totalPaid = $booking->downpayment;
@@ -645,6 +647,62 @@ public function showReceipt($id)
 
     // 3. Pass everything to the view
     return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed', 'payments'));
+}
+
+/** Only the customer who owns a joiner booking (or an admin) may see its ticket or pay its balance. */
+private function authorizeBookingOwner($booking): void
+{
+    abort_unless((int) $booking->user_id === (int) Auth::id() || Auth::user()->role === 'admin', 403);
+}
+
+/** The joiner ticket's receipt as a one-page PDF download — only for the booking's owner or an admin. */
+public function downloadReceiptPdf($id)
+{
+    $booking = DB::table('joiner_bookings')
+        ->join('joiner_trips', 'joiner_bookings.joiner_trip_id', '=', 'joiner_trips.id')
+        ->join('users', 'joiner_bookings.user_id', '=', 'users.id')
+        ->where('joiner_bookings.id', $id)
+        ->select('joiner_bookings.*', 'joiner_trips.destination', 'joiner_trips.trip_date', 'joiner_trips.meetup_point',
+                 'joiner_trips.meetup_time', 'joiner_trips.van', 'joiner_trips.plate_number', 'joiner_trips.driver_name',
+                 'users.first_name', 'users.last_name', 'users.email')
+        ->first();
+
+    if (!$booking) {
+        abort(404);
+    }
+    $this->authorizeBookingOwner($booking);
+
+    // Same figures as the ticket page: downpayment holds everything paid so far
+    $totalPaid = (float) $booking->downpayment;
+    $balance   = round(max(0, (float) $booking->total_price - $totalPaid), 2);
+
+    $meetup = $booking->meetup_point;
+    if ($booking->meetup_time) {
+        $meetup .= ' at ' . \Carbon\Carbon::parse($booking->meetup_time)->format('g:i A');
+    }
+
+    $passengers = DB::table('joiner_passengers')->where('joiner_booking_id', $id)->get()
+        ->map(fn ($p) => trim(implode(' ', array_filter([$p->first_name, $p->middle_name, $p->last_name, $p->suffix]))) ?: $p->name);
+
+    return \App\Support\ReceiptPdf::download([
+        'receiptNo'   => 'JNR-' . str_pad($booking->id, 5, '0', STR_PAD_LEFT),
+        'bookingType' => 'Joiner Trip',
+        'customer'    => trim(($booking->first_name ?? '') . ' ' . ($booking->last_name ?? '')),
+        'email'       => $booking->email,
+        'details'     => [
+            'Destination' => $booking->destination,
+            'Meetup'      => $meetup,
+            'Trip Date'   => \Carbon\Carbon::parse($booking->trip_date)->format('F d, Y'),
+            'Seats'       => $booking->seats_booked,
+            'Vehicle'     => trim(($booking->van ?? '') . ($booking->plate_number ? " · {$booking->plate_number}" : '')),
+            'Driver'      => $booking->driver_name,
+        ],
+        'passengers'  => $passengers,
+        'payments'    => DB::table('booking_payments')->where('booking_id', $id)->where('source', 'joiner_bookings')->orderBy('paid_at')->get(),
+        'total'       => (float) $booking->total_price,
+        'totalPaid'   => $totalPaid,
+        'balance'     => $balance,
+    ]);
 }
 
 public function completeTrip($id)

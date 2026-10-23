@@ -415,9 +415,9 @@
             </div>
         @endif
 
-        <button onclick="window.print()" class="btn-action no-print">
-            <i class="fas fa-file-pdf"></i> DOWNLOAD TICKET (PDF)
-        </button>
+        <a href="{{ route('joiner.receipt.pdf', $booking->id) }}" class="btn-action no-print" style="text-decoration: none; box-sizing: border-box;">
+            <i class="fas fa-file-pdf"></i> DOWNLOAD RECEIPT (PDF)
+        </a>
     </div>
 </div>
 
