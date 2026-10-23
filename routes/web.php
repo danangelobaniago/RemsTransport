@@ -37,7 +37,27 @@ Route::get('/van/details/{id}', function ($id) {
         );
     }
 
-    return view('van-details', compact('van', 'pricing', 'images'));
+    // Other colors of the same model, for the color picker. Each color is its
+    // own van row, so picking one just opens that van's page.
+    $variants = collect();
+    if ($van) {
+        $key = \App\Support\VanVariant::key($van->name);
+        $variants = DB::table('vans')
+            ->where(fn ($q) => $q->where('status', 'available')->orWhere('id', $van->id))
+            ->orderBy('id')
+            ->get()
+            ->filter(fn ($v) => \App\Support\VanVariant::key($v->name) === $key)
+            ->values();
+    }
+
+    // Coming from the home page card (?choose), no color is picked yet — the
+    // customer has to choose one first, so show a photo of every color instead.
+    $colorChosen = !(request()->has('choose') && $variants->count() > 1);
+    if (!$colorChosen) {
+        $images = $variants->pluck('image')->filter()->values();
+    }
+
+    return view('van-details', compact('van', 'pricing', 'images', 'variants', 'colorChosen'));
 });
 
 Route::get('/tour/details/{id}', [TourController::class, 'show'])->name('tour.details');
@@ -162,6 +182,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/vans/toggle/{id}', [AdminController::class, 'toggleVan'])->name('admin.vans.toggle');
     Route::post('/admin/vans/maintenance/{id}', [AdminController::class, 'updateVanMaintenance'])->name('admin.vans.maintenance');
     Route::post('/admin/vans/{id}/price', [AdminController::class, 'updateVanPrice'])->whereNumber('id')->name('admin.vans.price');
+    Route::post('/admin/vans/{id}/color', [AdminController::class, 'updateVanColor'])->whereNumber('id')->name('admin.vans.color');
     Route::post('/admin/vans/{id}/images', [AdminController::class, 'addVanImages'])->name('admin.vans.images.add');
     Route::get('/admin/vans/images/delete/{imageId}', [AdminController::class, 'deleteVanImage'])->name('admin.vans.images.delete');
 

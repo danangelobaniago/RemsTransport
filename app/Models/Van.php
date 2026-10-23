@@ -23,6 +23,7 @@ class Van extends Model
      */
     protected $fillable = [
         'name',
+        'color',
         'plate_number',
         'seats',
         'price_min',

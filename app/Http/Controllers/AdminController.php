@@ -757,6 +757,7 @@ public function addVan(Request $request)
 
     $request->validate([
         'name' => 'required|string|max:255',
+        'color' => 'required|string|max:50',
         'plate_number' => 'required|string|max:100|unique:vans,plate_number',
         'seats' => 'required|integer|min:1',
         'transmission' => 'required|string',
@@ -773,6 +774,7 @@ public function addVan(Request $request)
 
     DB::table('vans')->insert([
         'name' => $request->name,
+        'color' => ucwords(trim($request->color)),
         'plate_number' => $request->plate_number,
         'seats' => $request->seats,
         'price_min' => $request->price_min,
@@ -837,6 +839,25 @@ public function updateVanPrice(Request $request, $id)
 
     return back()->with('success', "Price range of {$van->name} ({$van->plate_number}) updated to ₱"
         . number_format($request->price_min) . ' – ₱' . number_format($request->price_max) . '.');
+}
+
+// ✅ UPDATE VAN COLOR (picked by the customer on the public van page)
+public function updateVanColor(Request $request, $id)
+{
+    $van = DB::table('vans')->where('id', $id)->first();
+    if (!$van) {
+        return back()->with('error', 'Van not found.');
+    }
+
+    $request->validate(['color' => 'required|string|max:50']);
+    $color = ucwords(trim($request->color));
+
+    DB::table('vans')->where('id', $id)->update([
+        'color'      => $color,
+        'updated_at' => now(),
+    ]);
+
+    return back()->with('success', "Color of {$van->name} ({$van->plate_number}) set to {$color}.");
 }
 
 public function deleteVan($id)

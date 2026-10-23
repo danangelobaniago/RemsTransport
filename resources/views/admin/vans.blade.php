@@ -87,6 +87,11 @@
                         @error('name')<small style="color:#ef4444;">{{ $message }}</small>@enderror
                     </div>
                     <div class="form-group">
+                        <label>Color <span style="font-weight:400;color:#6b7280;font-size:12px;">— same model, different colors are grouped on the website</span></label>
+                        <input type="text" name="color" list="vanColorOptions" placeholder="e.g. White" maxlength="50" required value="{{ old('color') }}">
+                        @error('color')<small style="color:#ef4444;">{{ $message }}</small>@enderror
+                    </div>
+                    <div class="form-group">
                         <label>Plate Number</label>
                         <input type="text" name="plate_number" id="plateInput" placeholder="e.g. ABC 1234" required value="{{ old('plate_number') }}"
                                oninput="checkDuplicatePlate(this)">
@@ -137,6 +142,7 @@
                         <th>#</th>
                         <th>Image</th>
                         <th>Van Name</th>
+                        <th>Color</th>
                         <th>Plate No.</th>
                         <th>Seats</th>
                         <th>Transmission</th>
@@ -160,6 +166,16 @@
                             @endif
                         </td>
                         <td style="font-weight:600;">{{ $van->name }}</td>
+                        <td>
+                            @if($van->color)
+                                <span style="display:inline-flex;align-items:center;gap:6px;white-space:nowrap;">
+                                    <span style="width:14px;height:14px;border-radius:50%;border:1px solid #cbd5e1;background:{{ \App\Support\VanVariant::swatch($van->color) }};"></span>
+                                    {{ $van->color }}
+                                </span>
+                            @else
+                                <span style="color:#b45309;font-size:12px;" title="Set a color so customers can pick it on the website">Not set</span>
+                            @endif
+                        </td>
                         <td>{{ $van->plate_number }}</td>
                         <td>{{ $van->seats }} pax</td>
                         <td>{{ $van->transmission }}</td>
@@ -175,7 +191,7 @@
                             </span>
                         </td>
                         <td>
-                            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;width:fit-content;margin:0 auto;">
+                            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:5px;width:fit-content;margin:0 auto;">
                                 {{-- Photos --}}
                                 <button class="btn small" style="background:#0891b2;color:white;"
                                         onclick="openGallery({{ $van->id }}, '{{ addslashes($van->name) }}', {{ $van->images->toJson() }})"
@@ -211,6 +227,13 @@
                                     <i class="fas fa-peso-sign"></i>
                                 </button>
 
+                                {{-- Color --}}
+                                <button class="btn small" style="background:#db2777;color:white;"
+                                        onclick="openColorModal({{ $van->id }}, '{{ addslashes($van->name) }} ({{ $van->plate_number }})', '{{ addslashes($van->color ?? '') }}')"
+                                        title="Edit Color">
+                                    <i class="fas fa-palette"></i>
+                                </button>
+
                                 {{-- Delete --}}
                                 <a href="{{ route('admin.vans.delete', $van->id) }}"
                                    class="btn small red"
@@ -222,7 +245,7 @@
                         </td>
                     </tr>
                     @empty
-                        <tr><td colspan="9" style="text-align:center;padding:20px;color:#9ca3af;">No vans found.</td></tr>
+                        <tr><td colspan="10"style="text-align:center;padding:20px;color:#9ca3af;">No vans found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -262,6 +285,33 @@
         </form>
     </div>
 </div>
+
+{{-- COLOR MODAL --}}
+<div class="modal-overlay" id="colorModal">
+    <div class="modal-box">
+        <button class="modal-close" onclick="closeModal('colorModal')">&times;</button>
+        <h3 style="margin-bottom:4px;"><i class="fas fa-palette" style="color:#db2777;"></i> Edit Color</h3>
+        <p id="colorModalVan" style="color:#6b7280;font-size:14px;margin-bottom:14px;"></p>
+        <form method="POST" id="colorForm">
+            @csrf
+            <div class="form-group">
+                <label>Color</label>
+                <input type="text" name="color" id="editColor" list="vanColorOptions" placeholder="e.g. White" maxlength="50" required>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                <button type="button" class="btn gray" onclick="closeModal('colorModal')">Cancel</button>
+                <button type="submit" class="btn" style="background:#db2777;color:white;">Save Color</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{{-- Suggestions for the color inputs (any other color can still be typed) --}}
+<datalist id="vanColorOptions">
+    @foreach(['White', 'Black', 'Gray', 'Silver', 'Red', 'Blue', 'Green', 'Pearl White', 'Beige', 'Brown'] as $colorOption)
+        <option value="{{ $colorOption }}">
+    @endforeach
+</datalist>
 
 {{-- MAINTENANCE MODAL --}}
 <div class="modal-overlay" id="maintenanceModal">
@@ -446,6 +496,13 @@ function openPriceModal(id, label, min, max) {
     document.getElementById('editPriceReason').value = '';
     validatePriceModal();
     document.getElementById('priceModal').classList.add('open');
+}
+
+function openColorModal(id, label, color) {
+    document.getElementById('colorModalVan').textContent = 'Van: ' + label;
+    document.getElementById('colorForm').action = '/admin/vans/' + id + '/color';
+    document.getElementById('editColor').value = color;
+    document.getElementById('colorModal').classList.add('open');
 }
 
 function validatePriceModal() {

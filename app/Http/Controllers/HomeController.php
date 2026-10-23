@@ -17,6 +17,9 @@ public function index()
     // 1. Fetch Vans available for general rental
     $vans = DB::table('vans')->where('status', 'available')->get();
 
+    // One card per model — colors of the same model are picked on the details page
+    $vanGroups = \App\Support\VanVariant::group($vans);
+
     // 2. Fetch Joiner Trips with Dynamic Availability Calculation
     $joinerTrips = DB::table('joiner_trips')
     ->where('status', 'active')
@@ -131,7 +134,7 @@ public function index()
     $bookedTourIds = []; // kept for backwards-compat with any other view references
 
     // 5. Return everything to the 'home' view
-    return view('home', compact('vans', 'joinerTrips', 'feedbacks', 'tours', 'bookedTourIds'));
+    return view('home', compact('vans', 'vanGroups', 'joinerTrips', 'feedbacks', 'tours', 'bookedTourIds'));
 }
 
     // ================= ADMIN TOUR MANAGEMENT =================

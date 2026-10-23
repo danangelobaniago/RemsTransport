@@ -64,7 +64,7 @@
 
 <div class="row">
     <span>Selected Van</span>
-    <span class="badge">{{ $van->name }}</span>
+    <span class="badge">{{ \App\Support\VanVariant::displayName($van) }}</span>
 </div>
 
 <!-- MAP -->

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <title>{{ $van->name }} | Rem's Transport</title>
+    <title>{{ $colorChosen ? $van->name : \App\Support\VanVariant::baseName($van->name) }} | Rem's Transport</title>
     <link rel="manifest" href="/manifest.json">
     <link rel="apple-touch-icon" href="/icons/icon-192.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -145,6 +145,34 @@
         .vehicle-info h1 { font-size: 48px; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 10px; }
         .sub-text { color: #64748b; font-size: 18px; margin-bottom: 30px; }
 
+        /* COLOR PICKER — same model, different colors */
+        .color-picker { margin-bottom: 10px; }
+        .color-picker-label { font-size: 14px; color: #64748b; margin-bottom: 10px; }
+        .color-picker-label strong { color: var(--dark); }
+        .color-options { display: flex; flex-wrap: wrap; gap: 10px; }
+        .color-option {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px 8px 10px;
+            border: 2px solid var(--border);
+            border-radius: 100px;
+            text-decoration: none;
+            color: var(--dark);
+            font-size: 14px;
+            font-weight: 600;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .color-option:hover { border-color: #93c5fd; }
+        .color-option.active { border-color: var(--primary); background: #eff6ff; }
+        .color-swatch {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid #cbd5e1;
+            box-shadow: inset 0 0 0 2px #ffffff;
+        }
+
         .specs-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -211,6 +239,22 @@
             box-shadow: 0 12px 24px rgba(37, 99, 235, 0.2);
         }
 
+        .btn-reserve.disabled {
+            background: #cbd5e1;
+            color: #64748b;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .choose-color-note {
+            font-size: 13px;
+            color: #b45309;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            padding: 10px 14px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+
         .desc-section { margin-top: 40px; }
         .desc-section h2 { font-size: 20px; margin-bottom: 15px; }
         .desc-section p { color: #475569; line-height: 1.8; }
@@ -269,8 +313,31 @@
 
                 <div class="vehicle-info">
                     <span class="badge-status">Available</span>
-                    <h1>{{ $van->name }}</h1>
+                    <h1>{{ \App\Support\VanVariant::baseName($van->name) }}</h1>
                     <p class="sub-text">Premium Van Rental with Professional Driver</p>
+
+                    @if($variants->count() > 1)
+                        <div class="color-picker">
+                            <p class="color-picker-label">
+                                @if($colorChosen)
+                                    Color: <strong>{{ \App\Support\VanVariant::label($van) }}</strong>
+                                @else
+                                    <strong>Choose a color</strong> to continue booking
+                                @endif
+                            </p>
+                            <div class="color-options">
+                                @foreach($variants as $variant)
+                                    @php $variantColor = \App\Support\VanVariant::color($variant); @endphp
+                                    <a href="/van/details/{{ $variant->id }}"
+                                       class="color-option {{ $colorChosen && $variant->id == $van->id ? 'active' : '' }}"
+                                       title="{{ $variant->name }} — {{ $variant->plate_number }}">
+                                        <span class="color-swatch" style="background: {{ \App\Support\VanVariant::swatch($variantColor) }};"></span>
+                                        {{ \App\Support\VanVariant::label($variant) }}
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="specs-grid">
                         <div class="spec-card">
@@ -298,7 +365,7 @@
                     <div class="desc-section">
                         <h2>Vehicle Overview</h2>
                         <p>
-                            Experience unparalleled comfort with the {{ $van->name }}. This vehicle is meticulously
+                            Experience unparalleled comfort with the {{ \App\Support\VanVariant::baseName($van->name) }}. This vehicle is meticulously
                             maintained to ensure a smooth, safe, and reliable journey for your group. Whether it's
                             for business trips, family vacations, or airport transfers, our professional drivers
                             are ready to provide a first-class transport experience.
@@ -324,12 +391,22 @@
                     </div>
                 </div>
 
-                <a href="{{ route('booking.page', $van->id) }}" class="btn-reserve">
-                    <i class="fa-solid fa-map-marker-alt" style="margin-right:8px;"></i> Single Destination
-                </a>
-                <a href="{{ route('booking.multi', $van->id) }}" class="btn-reserve" style="margin-top:10px;background:#7c3aed;">
-                    <i class="fa-solid fa-route" style="margin-right:8px;"></i> Multi-Destination Booking
-                </a>
+                @if($colorChosen)
+                    <a href="{{ route('booking.page', $van->id) }}" class="btn-reserve">
+                        <i class="fa-solid fa-map-marker-alt" style="margin-right:8px;"></i> Single Destination
+                    </a>
+                    <a href="{{ route('booking.multi', $van->id) }}" class="btn-reserve" style="margin-top:10px;background:#7c3aed;">
+                        <i class="fa-solid fa-route" style="margin-right:8px;"></i> Multi-Destination Booking
+                    </a>
+                @else
+                    <p class="choose-color-note"><i class="fa-solid fa-palette"></i> Choose a van color first before booking.</p>
+                    <span class="btn-reserve disabled">
+                        <i class="fa-solid fa-map-marker-alt" style="margin-right:8px;"></i> Single Destination
+                    </span>
+                    <span class="btn-reserve disabled" style="margin-top:10px;">
+                        <i class="fa-solid fa-route" style="margin-right:8px;"></i> Multi-Destination Booking
+                    </span>
+                @endif
             </div>
         </aside>
 

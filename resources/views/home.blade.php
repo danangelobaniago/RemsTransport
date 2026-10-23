@@ -172,27 +172,42 @@
         </div>
 
         <div class="van-grid">
-            @foreach($vans as $van)
+            @foreach($vanGroups as $group)
+            @php
+                $van = $group->first();
+                $coverVan = $group->first(fn ($v) => $v->image) ?? $van;
+                $modelName = \App\Support\VanVariant::baseName($van->name);
+                $colors = $group->map(fn ($v) => \App\Support\VanVariant::color($v))->filter()->unique()->values();
+            @endphp
             <div class="van-card">
                 <div class="van-image-box">
-                    <img src="{{ \Storage::disk('public')->url($van->image) }}" alt="{{ $van->name }}">
+                    <img src="{{ \Storage::disk('public')->url($coverVan->image) }}" alt="{{ $modelName }}">
                     <div class="van-badge">Available</div>
                 </div>
 
                 <div class="van-info">
-                    <h3>{{ $van->name }}</h3>
+                    <h3>{{ $modelName }}</h3>
 
                     <div class="van-meta">
-                        <span><i class="fas fa-cog"></i> {{ $van->transmission }}</span>
+                        <span><i class="fas fa-cog"></i> {{ $group->pluck('transmission')->unique()->implode(' / ') }}</span>
                         <span><i class="fas fa-snowflake"></i> Aircon</span>
                     </div>
 
+                    @if($group->count() > 1)
+                    <div class="van-colors">
+                        @foreach($colors as $color)
+                            <span class="van-color-dot" style="background: {{ \App\Support\VanVariant::swatch($color) }};" title="{{ $color }}"></span>
+                        @endforeach
+                        <small>{{ $group->count() }} {{ $colors->count() === $group->count() ? 'colors' : 'units' }} available</small>
+                    </div>
+                    @endif
+
                     <div class="van-price">
                         <small>Daily Rate</small>
-                        <p>₱{{ number_format($van->price_min) }} - ₱{{ number_format($van->price_max) }}</p>
+                        <p>₱{{ number_format($group->min('price_min')) }} - ₱{{ number_format($group->max('price_max')) }}</p>
                     </div>
 
-                    <a href="/van/details/{{ $van->id }}" class="btn-industry">
+                    <a href="/van/details/{{ $van->id }}{{ $group->count() > 1 ? '?choose' : '' }}" class="btn-industry">
                         View Details <i class="fas fa-chevron-right"></i>
                     </a>
                 </div>

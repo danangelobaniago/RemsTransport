@@ -48,7 +48,7 @@
 
 <div class="row">
 <span>Selected Van</span>
-<span class="badge">{{ $van->name }}</span>
+<span class="badge">{{ \App\Support\VanVariant::displayName($van) }}</span>
 <input type="hidden" name="van_id" value="{{ $van->id }}">
 </div>
 
