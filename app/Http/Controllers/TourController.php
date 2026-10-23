@@ -548,11 +548,13 @@ public function showMyBookings(Request $request)
             'bookings.pickup',
             'bookings.start_date',
             'bookings.passengers',
-            'bookings.booking_type',
+            // booking_type is 'tour' even for van rentals, so tell them apart by tour_id
+            DB::raw("CASE WHEN bookings.tour_id IS NOT NULL THEN 'tour' ELSE 'private' END as booking_type"),
             'bookings.total',
             'bookings.downpayment',
             'bookings.created_at',
-            DB::raw('COALESCE(tour_packages.driver_name, drivers.name, \'\') as driver')
+            DB::raw('COALESCE(tour_packages.driver_name, drivers.name, \'\') as driver'),
+            DB::raw('NULL as trip_status')
         )
         ->where('bookings.user_id', $userId);
 
@@ -578,7 +580,9 @@ $allBookings = DB::table('joiner_bookings')
         'joiner_bookings.downpayment',
 
         'joiner_bookings.created_at',
-        DB::raw('COALESCE(joiner_trips.driver_name, \'\') as driver')
+        DB::raw('COALESCE(joiner_trips.driver_name, \'\') as driver'),
+        // Admins reject the whole joiner trip, not each booking
+        'joiner_trips.status as trip_status'
     )
     ->where('joiner_bookings.user_id', $userId)
     ->union($tourBookings)

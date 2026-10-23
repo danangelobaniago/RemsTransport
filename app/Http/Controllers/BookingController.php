@@ -680,6 +680,17 @@ public function cancelBooking($id, $type)
         return back()->with('error', 'Booking not found.');
     }
 
+    // A rejected booking is already closed (and refunded in full); cancelling it
+    // would switch it to the cancellation refund rules. Same for finished ones.
+    $status = strtolower((string) $booking->status);
+    if ($table === 'joiner_bookings'
+        && strtolower((string) DB::table('joiner_trips')->where('id', $booking->joiner_trip_id)->value('status')) === 'rejected') {
+        $status = 'rejected'; // the admin rejected the whole joiner trip
+    }
+    if (in_array($status, ['rejected', 'cancelled', 'completed'], true)) {
+        return redirect('/my-bookings')->with('error', "Booking #{$id} is already {$status} and can no longer be cancelled.");
+    }
+
     $updated = DB::table($table)
         ->where('id', $id)
         ->where('user_id', auth()->id())

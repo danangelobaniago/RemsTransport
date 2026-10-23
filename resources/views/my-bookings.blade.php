@@ -18,6 +18,7 @@
         .status-paid, .status-downpayment_paid { background: #dbeafe; color: #1e40af; }
         .status-pending { background: #fef3c7; color: #92400e; }
         .status-cancelled { background: #fee2e2; color: #991b1b; }
+        .status-rejected { background: #fee2e2; color: #b91c1c; }
 
         .empty-bookings-container {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -91,6 +92,10 @@
                     $type = (str_contains($rawType, 'tour')) ? 'tour' : ((str_contains($rawType, 'private')) ? 'private' : 'joiner');
                     $urlType = ($type === 'joiner') ? 'joiner' : 'tour';
                     $statusClean = strtolower(str_replace([' ', '_'], '_', $booking->status));
+                    // A joiner booking on a trip the admin rejected counts as rejected
+                    if (strtolower((string) ($booking->trip_status ?? '')) === 'rejected') {
+                        $statusClean = 'rejected';
+                    }
 
                     $isFullyPaid = (isset($booking->payment_status) && $booking->payment_status === 'fully_paid');
                     $jsStatus = $isFullyPaid ? 'fully_paid' : $statusClean;
@@ -104,7 +109,7 @@
                             <h3 style="font-size: 1.1rem; color: #1e293b; font-weight: 700;">{{ $booking->destination }}</h3>
                         </div>
                         <span class="status status-{{ $statusClean }}">
-                            {{ ucwords(str_replace(['_', ' '], ' ', $booking->status)) }}
+                            {{ ucwords(str_replace('_', ' ', $statusClean)) }}
                         </span>
                     </div>
 
@@ -129,7 +134,7 @@
 
                         <div class="footer-actions" style="display: flex; align-items: center; gap: 10px;">
                             {{-- CANCEL LOGIC --}}
-                            @if($statusClean !== 'completed' && $statusClean !== 'cancelled')
+                            @if(!in_array($statusClean, ['completed', 'cancelled', 'rejected']))
                                 <a href="javascript:void(0);"
                                    style="text-decoration: none; color: #ef4444; font-size: 0.85rem; font-weight: 600;"
                                    onclick="confirmCancellation('{{ $booking->id }}', '{{ $urlType }}', '{{ $jsStatus }}')">
