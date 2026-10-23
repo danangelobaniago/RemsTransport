@@ -73,6 +73,45 @@ class VanVariant
         return self::color($van) ?? $van->plate_number;
     }
 
+    /**
+     * Picker labels keyed by van id. Units sharing a color get told apart by
+     * whatever differs between them (seats, transmission), and by plate number
+     * when they are otherwise identical — e.g. "White · 12 pax", "White · NBS4465".
+     */
+    public static function labels(Collection $variants): array
+    {
+        $labels = [];
+
+        $sameColor = $variants->groupBy(fn ($van) => strtolower((string) self::color($van)));
+
+        foreach ($sameColor as $units) {
+            $differs = fn ($field) => $units->pluck($field)->map(fn ($v) => strtolower(trim((string) $v)))->unique()->count() > 1;
+            $showSeats = $units->count() > 1 && $differs('seats');
+            $showTransmission = $units->count() > 1 && $differs('transmission');
+
+            foreach ($units as $van) {
+                $parts = [self::label($van)];
+                if ($showSeats) {
+                    $parts[] = $van->seats . ' pax';
+                }
+                if ($showTransmission) {
+                    $parts[] = $van->transmission;
+                }
+                $labels[$van->id] = implode(' · ', $parts);
+            }
+
+            // Still identical after that — fall back to the plate number.
+            $counts = array_count_values(array_map(fn ($van) => strtolower($labels[$van->id]), $units->all()));
+            foreach ($units as $van) {
+                if ($counts[strtolower($labels[$van->id])] > 1 && self::color($van) !== null) {
+                    $labels[$van->id] .= ' · ' . $van->plate_number;
+                }
+            }
+        }
+
+        return $labels;
+    }
+
     public static function swatch(?string $color): string
     {
         $words = preg_split('/[\s\/-]+/', strtolower((string) $color));

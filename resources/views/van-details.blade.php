@@ -317,10 +317,11 @@
                     <p class="sub-text">Premium Van Rental with Professional Driver</p>
 
                     @if($variants->count() > 1)
+                        @php $variantLabels = \App\Support\VanVariant::labels($variants); @endphp
                         <div class="color-picker">
                             <p class="color-picker-label">
                                 @if($colorChosen)
-                                    Color: <strong>{{ \App\Support\VanVariant::label($van) }}</strong>
+                                    Color: <strong>{{ $variantLabels[$van->id] }}</strong>
                                 @else
                                     <strong>Choose a color</strong> to continue booking
                                 @endif
@@ -332,7 +333,7 @@
                                        class="color-option {{ $colorChosen && $variant->id == $van->id ? 'active' : '' }}"
                                        title="{{ $variant->name }} — {{ $variant->plate_number }}">
                                         <span class="color-swatch" style="background: {{ \App\Support\VanVariant::swatch($variantColor) }};"></span>
-                                        {{ \App\Support\VanVariant::label($variant) }}
+                                        {{ $variantLabels[$variant->id] }}
                                     </a>
                                 @endforeach
                             </div>
