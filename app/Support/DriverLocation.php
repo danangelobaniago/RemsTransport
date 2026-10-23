@@ -14,7 +14,7 @@ use Illuminate\Support\Str;
 class DriverLocation
 {
     /** A driver counts as live if they reported within this window. */
-    public const LIVE_SECONDS = 120;
+    public const LIVE_SECONDS = 900;
 
     /**
      * After that, "idle" (stopped, in a tunnel, weak signal — the app also slows

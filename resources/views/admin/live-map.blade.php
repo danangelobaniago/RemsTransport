@@ -77,8 +77,8 @@
         </div>
 
         <p style="color:#64748b;font-size:13px;margin:-12px 0 20px;">
-            <strong>🟢 Live</strong> = location in the last 2 minutes &bull;
-            <strong>🟡 Idle</strong> = 2–30 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
+            <strong>🟢 Live</strong> = location in the last 15 minutes &bull;
+            <strong>🟡 Idle</strong> = 15–30 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
             <strong>⚪ Offline</strong> = over 30 minutes. Locations come from the Driver Portal (while it's open) or the
             Traccar Client app (works in the background). Refreshes every 5 seconds; trails show the last hour.
         </p>
@@ -155,8 +155,14 @@ function timeAgo(dateStr) {
     return Math.floor(diffSec / 86400) + 'd ago';
 }
 
+// Speed and heading only mean something for a recent fix; an older one just shows "Updated Xm ago"
+const FRESH_MS = 2 * 60 * 1000;
+function isFresh(d) {
+    return d.location_updated_at && (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) < FRESH_MS;
+}
+
 function speedLabel(d) {
-    if (d.location_speed === null || d.location_speed === undefined) return '';
+    if (d.location_speed === null || d.location_speed === undefined || !isFresh(d)) return '';
     const kmh = Math.round(parseFloat(d.location_speed) * 3.6);
     return kmh >= 3 ? ` &bull; ${kmh} km/h` : ' &bull; stopped';
 }
@@ -235,7 +241,7 @@ function renderList(drivers) {
 
 function markerIcon(d) {
     const color = MARKER_COLOR[d.state];
-    const moving = d.is_live && d.location_heading !== null && parseFloat(d.location_speed || 0) * 3.6 >= 3;
+    const moving = d.is_live && isFresh(d) && d.location_heading !== null && parseFloat(d.location_speed || 0) * 3.6 >= 3;
     // An arrow pointing where the van is heading while it moves; a dot when stopped or offline
     return moving
         ? { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, rotation: parseFloat(d.location_heading),
