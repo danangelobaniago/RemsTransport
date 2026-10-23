@@ -76,13 +76,6 @@
             <h1 style="margin:0;">Live Driver Map</h1>
         </div>
 
-        <p style="color:#64748b;font-size:13px;margin:-12px 0 20px;">
-            <strong>🟢 Live</strong> = location in the last 15 minutes &bull;
-            <strong>🟡 Idle</strong> = 15–30 minutes (stopped, in traffic, or weak signal — last known spot shown) &bull;
-            <strong>⚪ Offline</strong> = over 30 minutes. Locations come from the Driver Portal (while it's open) or the
-            Traccar Client app (works in the background). Refreshes every 5 seconds; trails show the last hour.
-        </p>
-
         <div class="map-layout">
             <div class="driver-list">
                 <div class="driver-list-header" style="display:flex;align-items:center;gap:8px;">
@@ -123,7 +116,6 @@ let driverById = {};
 let followId = null;          // driver the map keeps centered on
 const markers = {};           // driver id -> google.maps.Marker
 const accuracyCircles = {};   // driver id -> google.maps.Circle
-const trails = {};            // driver id -> google.maps.Polyline
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
@@ -210,21 +202,26 @@ const DOT_CLASS = { live: 'dot-live', idle: 'dot-idle', offline: 'dot-offline' }
 const MARKER_COLOR = { live: '#2563eb', idle: '#f59e0b', offline: '#94a3b8' };
 const AGO_PREFIX = { live: 'Updated', idle: 'Idle — last update', offline: 'Last seen' };
 const trackable = d => d.state !== 'offline'; // live or idle: still on the road, worth following
+const hidesTiming = d => d.location_source === 'app' && d.state !== 'offline'; // see listItem()
 
 function listItem(d) {
     const following = followId === d.id;
     const ago = `<span data-ago="${escapeHtml(d.location_updated_at)}">${timeAgo(d.location_updated_at)}</span>`;
-    const meta = d.state === 'live'
-        ? `Updated ${ago}${speedLabel(d)}${accuracyLabel(d.location_accuracy)}`
-        : d.state === 'idle'
-            ? `Stopped or weak signal &bull; last update ${ago}`
-            : `Last seen ${ago}`;
+    // App drivers: no update time / accuracy while live or idle — the app pauses while
+    // the phone isn't moving, so "Updated 13m ago" on a Live driver would only confuse.
+    const meta = hidesTiming(d)
+        ? (d.state === 'idle' ? 'Stopped or weak signal' : '')
+        : d.state === 'live'
+            ? `Updated ${ago}${speedLabel(d)}${accuracyLabel(d.location_accuracy)}`
+            : d.state === 'idle'
+                ? `Stopped or weak signal &bull; last update ${ago}`
+                : `Last seen ${ago}`;
     return `<div class="driver-list-item ${d.state === 'offline' ? 'offline' : ''} ${following ? 'following' : ''}" onclick="showDriver(${d.id})">
         <div class="driver-list-name">
             <span class="dot ${DOT_CLASS[d.state]}"></span>${escapeHtml(d.name)} ${sourceBadge(d)}
             ${trackable(d) ? `<button type="button" class="follow-btn ${following ? 'on' : ''}" onclick="event.stopPropagation(); toggleFollow(${d.id})">${following ? 'Following' : 'Follow'}</button>` : ''}
         </div>
-        <div class="driver-list-meta">${meta}</div>
+        ${meta ? `<div class="driver-list-meta">${meta}</div>` : ''}
         <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
     </div>`;
 }
@@ -304,18 +301,6 @@ function renderDrivers(drivers) {
             delete accuracyCircles[d.id];
         }
 
-        // Trail of the last hour while live
-        const path = (d.trail || []).map(([lat, lng]) => ({ lat, lng }));
-        if (trackable(d) && path.length > 1) {
-            if (trails[d.id]) {
-                trails[d.id].setPath(path);
-            } else {
-                trails[d.id] = new google.maps.Polyline({ path, map, clickable: false, strokeColor: '#2563eb', strokeOpacity: 0.55, strokeWeight: 4 });
-            }
-        } else if (trails[d.id]) {
-            trails[d.id].setMap(null);
-            delete trails[d.id];
-        }
     });
 
     // Drop anything for drivers no longer reporting
@@ -323,7 +308,6 @@ function renderDrivers(drivers) {
         if (seenIds.has(Number(id))) return;
         markers[id].setMap(null); delete markers[id];
         if (accuracyCircles[id]) { accuracyCircles[id].setMap(null); delete accuracyCircles[id]; }
-        if (trails[id]) { trails[id].setMap(null); delete trails[id]; }
     });
 
     if (followId && driverById[followId]) {
@@ -344,7 +328,7 @@ function showDriver(id) {
         <div style="font-size:13px;min-width:190px;">
             <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.name)} ${sourceBadge(d)}</div>
             <div style="color:#64748b;margin-bottom:2px;">${tripSummary(d.current_trip)}</div>
-            <div style="color:#94a3b8;font-size:11px;">${AGO_PREFIX[d.state]} ${timeAgo(d.location_updated_at)}${d.state === 'live' ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
+            ${hidesTiming(d) ? '' : `<div style="color:#94a3b8;font-size:11px;">${AGO_PREFIX[d.state]} ${timeAgo(d.location_updated_at)}${d.state === 'live' ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>`}
             ${d.phone ? `<div style="margin-top:6px;"><a href="tel:${escapeHtml(d.phone)}" style="color:#2563eb;font-weight:600;"><i class="fas fa-phone"></i> ${escapeHtml(d.phone)}</a></div>` : ''}
         </div>
     `);

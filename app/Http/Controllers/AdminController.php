@@ -496,15 +496,7 @@ class AdminController extends Controller
             ->orderByDesc('location_updated_at')
             ->get();
 
-        // Last hour of positions for drivers who are live or idle, drawn as a trail
-        $trails = DB::table('driver_location_points')
-            ->whereIn('driver_id', $drivers->filter(fn ($d) => $d->location_updated_at >= $idleSince)->pluck('id'))
-            ->where('recorded_at', '>=', now()->subHour())
-            ->orderBy('recorded_at')
-            ->get(['driver_id', 'lat', 'lng'])
-            ->groupBy('driver_id');
-
-        $drivers = $drivers->map(function ($driver) use ($liveSince, $idleSince, $trails) {
+        $drivers = $drivers->map(function ($driver) use ($liveSince, $idleSince) {
             // live: reporting now · idle: stopped / weak signal, last spot still shown · offline: gone quiet
             $driver->state = match (true) {
                 $driver->location_updated_at >= $liveSince => 'live',
@@ -513,9 +505,6 @@ class AdminController extends Controller
             };
             $driver->is_live = $driver->state === 'live';
             $driver->current_trip = $this->currentTripForDriver($driver);
-            $driver->trail = $driver->state !== 'offline'
-                ? $trails->get($driver->id, collect())->map(fn ($p) => [(float) $p->lat, (float) $p->lng])->values()
-                : [];
             return $driver;
         });
 
