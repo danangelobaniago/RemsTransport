@@ -192,7 +192,7 @@
 const vanId = {{ $van->id }};
 </script>
 
-<script src="{{ asset('js/booking.js') }}?v=5"></script>
+<script src="{{ asset('js/booking.js') }}?v={{ filemtime(public_path('js/booking.js')) }}"></script>
 
 <script>
 (function () {
