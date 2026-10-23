@@ -25,13 +25,28 @@ class PaymentReceipt
         return $paymentType === 'installment' ? 'Initial Installment' : 'Downpayment';
     }
 
+    /**
+     * How the customer actually paid ("gcash", "card", …) from a PayMongo
+     * checkout session response, or null if PayMongo didn't say. Each entry
+     * in attributes.payments is a payment resource ({id, type, attributes}),
+     * with no "data" wrapper.
+     */
+    public static function paymongoMethod($checkoutSession): ?string
+    {
+        $attributes = $checkoutSession['data']['attributes'] ?? [];
+        $payment    = $attributes['payments'][0] ?? [];
+
+        return $payment['attributes']['source']['type']
+            ?? $attributes['payment_method_used']
+            ?? null;
+    }
+
     /** Human label for a PayMongo method code ("gcash" → "GCash"); labels pass through. */
     public static function methodLabel(?string $method): string
     {
         return match (strtolower((string) $method)) {
             'gcash'    => 'GCash',
             'card'     => 'Credit/Debit Card',
-            'paymaya'  => 'Maya',
             'grab_pay' => 'GrabPay',
             'cash'     => 'Cash (collected by driver)',
             ''         => 'PayMongo',

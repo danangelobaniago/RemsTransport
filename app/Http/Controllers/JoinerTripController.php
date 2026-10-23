@@ -433,16 +433,11 @@ public function processBooking(Request $request, $id)
 
         if ($response->failed()) return 'Paymongo';
 
-        $payments = $response->json()['data']['attributes']['payments'] ?? [];
-
-        if (empty($payments)) return 'Paymongo';
-
-        $type = $payments[0]['data']['attributes']['source']['type'] ?? null;
+        $type = PaymentReceipt::paymongoMethod($response->json());
 
         return match($type) {
             'gcash'     => 'GCash',
             'card'      => 'Credit/Debit Card',
-            'paymaya'   => 'Maya',
             'grab_pay'  => 'GrabPay',
             'billease'  => 'BillEase',
             default     => 'Paymongo',

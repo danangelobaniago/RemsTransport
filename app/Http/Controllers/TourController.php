@@ -454,7 +454,7 @@ public function showMyBookings(Request $request)
             // Fetch real pay_... ID and payment method from PayMongo checkout session
             $sessionId          = $targetBooking->payment_id; // cs_...
             $actualPaymentId    = $sessionId; // fallback
-            $paymentMethodLabel = 'PayMongo';
+            $methodCode         = null; // gcash / card / … as reported by PayMongo
 
             if ($sessionId && str_starts_with($sessionId, 'cs_')) {
                 try {
@@ -464,13 +464,8 @@ public function showMyBookings(Request $request)
                         $pmts = $csResponse['data']['attributes']['payments'] ?? [];
                         if (!empty($pmts)) {
                             $actualPaymentId = $pmts[0]['id']; // pay_...
-                            $methodType      = $pmts[0]['data']['attributes']['source']['type'] ?? null;
-                            $paymentMethodLabel = match($methodType) {
-                                'gcash' => 'GCash',
-                                'card'  => 'Credit/Debit Card',
-                                default => 'PayMongo',
-                            };
                         }
+                        $methodCode = PaymentReceipt::paymongoMethod($csResponse->json());
                     }
                 } catch (\Exception $e) {
                     \Log::error('PayMongo session fetch failed (tour): ' . $e->getMessage());
@@ -499,7 +494,7 @@ public function showMyBookings(Request $request)
                     'booking_id'   => $targetBooking->id,
                     'source'       => 'bookings',
                     'amount'       => (float) $targetBooking->downpayment,
-                    'method'       => 'paymongo',
+                    'method'       => $methodCode ?? 'paymongo',
                     'reference'    => $actualPaymentId,
                     'collected_by' => 'customer',
                     'paid_at'      => now(),
@@ -523,7 +518,7 @@ public function showMyBookings(Request $request)
                     $actualPaymentId,
                     (float) $targetBooking->downpayment,
                     PaymentReceipt::initialLabel(null, $remainingBal),
-                    $paymentMethodLabel,
+                    $methodCode,
                     (float) $targetBooking->total,
                     $remainingBal
                 );

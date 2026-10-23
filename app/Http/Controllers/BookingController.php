@@ -355,7 +355,7 @@ class BookingController extends Controller
 
         $checkoutSessionId = session('pending_checkout_session_id');
         $paymentId = $checkoutSessionId;
-        $paymentMethodLabel = 'PayMongo';
+        $methodCode = null; // gcash / card / … as reported by PayMongo
 
         if ($checkoutSessionId) {
             $csResponse = Http::withBasicAuth(config('services.paymongo.secret_key'), '')
@@ -365,15 +365,11 @@ class BookingController extends Controller
                 $payments = $csResponse['data']['attributes']['payments'] ?? [];
                 if (!empty($payments)) {
                     $paymentId = $payments[0]['id'];
-                    $methodType = $payments[0]['data']['attributes']['source']['type'] ?? null;
-                    $paymentMethodLabel = match($methodType) {
-                        'gcash' => 'GCash',
-                        'card'  => 'Credit/Debit Card',
-                        default => 'PayMongo',
-                    };
                 }
+                $methodCode = PaymentReceipt::paymongoMethod($csResponse->json());
             }
         }
+        $paymentMethodLabel = PaymentReceipt::methodLabel($methodCode);
 
         $paymentId = $paymentId ?? $request->get('payment_intent_id') ?? 'N/A';
 
@@ -465,7 +461,7 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
             'booking_id'   => $bookingId,
             'source'       => 'bookings',
             'amount'       => $paid,
-            'method'       => 'paymongo',
+            'method'       => $methodCode ?? 'paymongo',
             'reference'    => $paymentId,
             'collected_by' => 'customer',
             'paid_at'      => now(),

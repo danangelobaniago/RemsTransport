@@ -75,7 +75,7 @@
                     <td align="right" style="padding:12px 20px; font-size:14px; color:#0f172a; font-weight:700; border-top:1px solid #e2e8f0;">{{ $peso($total) }}</td>
                 </tr>
                 <tr>
-                    <td style="padding:12px 20px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">Total Paid So Far</td>
+                    <td style="padding:12px 20px; font-size:14px; color:#64748b; border-top:1px solid #e2e8f0;">Total Paid</td>
                     <td align="right" style="padding:12px 20px; font-size:14px; color:#0f172a; font-weight:700; border-top:1px solid #e2e8f0;">{{ $peso(max(0, $total - $remainingBalance)) }}</td>
                 </tr>
                 <tr>
