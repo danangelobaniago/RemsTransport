@@ -46,7 +46,8 @@ class PaymentReceipt
     {
         return match (strtolower((string) $method)) {
             'gcash'    => 'GCash',
-            'card'     => 'Credit/Debit Card',
+            'card', 'credit/debit card' => 'Credit/Debit Card',
+            'paymongo' => 'PayMongo',
             'grab_pay' => 'GrabPay',
             'cash'     => 'Cash (collected by driver)',
             ''         => 'PayMongo',

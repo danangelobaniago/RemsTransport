@@ -64,10 +64,11 @@
             border-bottom: 1px solid var(--border-light);
         }
 
+        .info-group { min-width: 0; } /* let long emails/references wrap instead of widening the grid */
         .info-group h4 { font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin: 0 0 12px 0; }
-        .info-item { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-        .info-item span:first-child { color: var(--text-muted); }
-        .info-item span:last-child { font-weight: 600; text-align: right; }
+        .info-item { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: 14px; }
+        .info-item span:first-child { color: var(--text-muted); flex-shrink: 0; }
+        .info-item span:last-child { font-weight: 600; text-align: right; min-width: 0; overflow-wrap: anywhere; }
 
         .passenger-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .passenger-table th { text-align: left; font-size: 12px; color: var(--text-muted); padding: 12px 8px; border-bottom: 2px solid var(--border-light); text-transform: uppercase; }
@@ -110,12 +111,6 @@
         }
         .installment-field input[type="number"]:focus { border-color: var(--primary-blue); }
         .installment-hint { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-        .payment-history { margin-top: 24px; }
-        .payment-history h4 { font-size: 14px; margin: 0 0 10px; color: var(--text-main); }
-        .payment-history table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        .payment-history th, .payment-history td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border-light); }
-        .payment-history th { color: var(--text-muted); font-weight: 600; }
-        .payment-history td.amt { text-align: right; font-weight: 600; color: var(--success-green); }
 
         .reschedule-note { text-align: right; margin: -20px 0 20px; font-size: 12px; color: var(--text-muted); }
 
@@ -285,30 +280,13 @@
             @if($balance <= 0)
                 <div class="recap-row grand-total"><span>BALANCE</span> <span>₱0.00</span></div>
             @else
-                <div class="recap-row grand-total" style="color: #ef4444;"><span>DUE UPON TRIP</span> <span>₱{{ number_format($balance, 2) }}</span></div>
+                <div class="recap-row grand-total" style="color: #ef4444;"><span>BALANCE DUE</span> <span>₱{{ number_format($balance, 2) }}</span></div>
             @endif
         </div>
     </div>
 
     @if($payments->count())
-        <div class="payment-history">
-            <h4><i class="fas fa-clock-rotate-left"></i> Payment History</h4>
-            <table>
-                <thead>
-                    <tr><th>Date</th><th>Method</th><th>Received by</th><th style="text-align:right;">Amount</th></tr>
-                </thead>
-                <tbody>
-                    @foreach($payments as $p)
-                        <tr>
-                            <td>{{ \Carbon\Carbon::parse($p->paid_at ?? $p->created_at)->format('M d, Y g:i A') }}</td>
-                            <td>{{ ucfirst($p->method ?? 'online') }}</td>
-                            <td>{{ $p->collected_by === 'driver' ? 'Driver (cash)' : 'Online' }}</td>
-                            <td class="amt">₱{{ number_format($p->amount, 2) }}</td>
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        </div>
+        @include('partials.payment-history')
     @endif
 
     @if($balance > 0)
