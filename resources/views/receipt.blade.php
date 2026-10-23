@@ -197,6 +197,10 @@
         <div class="alert-banner error"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
     @endif
 
+    @if($closedStatus)
+        @include('partials.booking-closed-notice')
+    @endif
+
     <div class="receipt-header">
         <div class="brand">
             <h2>Rem's Transport</h2>
@@ -204,7 +208,15 @@
         </div>
 
         <div class="status-badge-container">
-            @if($totalPaid >= $booking->total)
+            @if($closedStatus === 'rejected')
+                <div style="background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                    <i class="fas fa-circle-xmark"></i> Rejected
+                </div>
+            @elseif($closedStatus === 'cancelled')
+                <div style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
+                    <i class="fas fa-ban"></i> Cancelled
+                </div>
+            @elseif($totalPaid >= $booking->total)
                 <div style="background: #ecfdf5; color: #059669; border: 1px solid #10b98133; padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600;">
                     <i class="fas fa-check-double"></i> Fully Paid
                 </div>
@@ -277,7 +289,11 @@
             <div class="recap-row"><span>Total Fare</span> <span>₱{{ number_format($booking->total, 2) }}</span></div>
             <div class="recap-row"><span>Payment Received</span> <span style="color: var(--success-green);">₱{{ number_format($totalPaid, 2) }}</span></div>
 
-            @if($balance <= 0)
+            @if($closedStatus === 'rejected')
+                <div class="recap-row grand-total" style="color: #b91c1c;"><span>TO BE REFUNDED</span> <span>₱{{ number_format($totalPaid, 2) }}</span></div>
+            @elseif($closedStatus === 'cancelled')
+                <div class="recap-row grand-total" style="color: #475569;"><span>BOOKING CANCELLED</span> <span></span></div>
+            @elseif($balance <= 0)
                 <div class="recap-row grand-total"><span>BALANCE</span> <span>₱0.00</span></div>
             @else
                 <div class="recap-row grand-total" style="color: #ef4444;"><span>BALANCE DUE</span> <span>₱{{ number_format($balance, 2) }}</span></div>
@@ -289,7 +305,7 @@
         @include('partials.payment-history')
     @endif
 
-    @if($balance > 0)
+    @if($balance > 0 && !$closedStatus)
         <div class="pay-balance-card">
             @if($installmentAllowed)
                 <h4><i class="fas fa-hand-holding-dollar"></i> Pay in Installments</h4>

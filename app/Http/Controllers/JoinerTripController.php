@@ -475,12 +475,16 @@ public function payBalanceCheckout(Request $request, $id)
     $booking = DB::table('joiner_bookings')
         ->join('joiner_trips', 'joiner_bookings.joiner_trip_id', '=', 'joiner_trips.id')
         ->where('joiner_bookings.id', $id)
-        ->select('joiner_bookings.*', 'joiner_trips.trip_date')
+        ->select('joiner_bookings.*', 'joiner_trips.trip_date', 'joiner_trips.status as joiner_trip_status')
         ->first();
     if (!$booking) {
         abort(404);
     }
     $this->authorizeBookingOwner($booking);
+
+    if ($closed = $this->closedStatus($booking)) {
+        return redirect("/joiner-receipt/{$id}")->with('error', "This booking was {$closed}, so payments are no longer accepted.");
+    }
 
     $totalPaid = (float) ($booking->downpayment ?? 0);
     $balance   = round(max(0, (float) $booking->total_price - $totalPaid), 2);
@@ -620,6 +624,7 @@ public function showReceipt($id)
             'joiner_trips.van',
             'joiner_trips.plate_number',
             'joiner_trips.driver_name',
+            'joiner_trips.status as joiner_trip_status',
             'drivers.phone as driver_phone'
         )
         ->first();
@@ -645,8 +650,26 @@ public function showReceipt($id)
         ->orderBy('paid_at')
         ->get();
 
+    $closedStatus  = $this->closedStatus($booking);
+    $closedReason  = null; // trip rejections don't record a reason
+    $paymentStatus = $booking->payment_status ?? null;
+
     // 3. Pass everything to the view
-    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed', 'payments'));
+    return view('joiner_receipt', compact('booking', 'totalPaid', 'balance', 'daysUntilTrip', 'installmentAllowed', 'payments',
+        'closedStatus', 'closedReason', 'paymentStatus'));
+}
+
+/**
+ * 'rejected' or 'cancelled' once a joiner booking can no longer be paid for, otherwise null.
+ * Admins reject the whole trip (joiner_trips.status), not each booking.
+ */
+private function closedStatus($booking): ?string
+{
+    if (strtolower((string) ($booking->joiner_trip_status ?? '')) === 'rejected' || strtolower((string) $booking->status) === 'rejected') {
+        return 'rejected';
+    }
+
+    return strtolower((string) $booking->status) === 'cancelled' ? 'cancelled' : null;
 }
 
 /** Only the customer who owns a joiner booking (or an admin) may see its ticket or pay its balance. */
@@ -664,7 +687,7 @@ public function downloadReceiptPdf($id)
         ->where('joiner_bookings.id', $id)
         ->select('joiner_bookings.*', 'joiner_trips.destination', 'joiner_trips.trip_date', 'joiner_trips.meetup_point',
                  'joiner_trips.meetup_time', 'joiner_trips.van', 'joiner_trips.plate_number', 'joiner_trips.driver_name',
-                 'users.first_name', 'users.last_name', 'users.email')
+                 'joiner_trips.status as joiner_trip_status', 'users.first_name', 'users.last_name', 'users.email')
         ->first();
 
     if (!$booking) {
@@ -702,6 +725,8 @@ public function downloadReceiptPdf($id)
         'total'       => (float) $booking->total_price,
         'totalPaid'   => $totalPaid,
         'balance'     => $balance,
+        'closedStatus' => $this->closedStatus($booking),
+        'closedReason' => null,
     ]);
 }
 

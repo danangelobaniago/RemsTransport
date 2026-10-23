@@ -19,6 +19,7 @@ class ReceiptPdf
      */
     public static function download(array $data)
     {
+        $data += ['closedStatus' => null, 'closedReason' => null]; // 'rejected' / 'cancelled'
         $data['details']    = array_filter($data['details'], fn ($v) => $v !== null && trim((string) $v) !== '');
         $data['passengers'] = collect($data['passengers'])->filter()->values();
         $data['issuedAt']   = Carbon::now(LocalDate::TIMEZONE)->format('F d, Y h:i A');

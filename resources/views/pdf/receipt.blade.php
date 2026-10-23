@@ -55,7 +55,11 @@
                 <tr><td class="k right" style="padding-right: 8px;">Date Issued</td><td class="v right">{{ $issuedAt }}</td></tr>
             </table>
             <div style="margin-top: 6px;">
-                <span class="chip {{ $fullyPaid ? 'chip-paid' : 'chip-partial' }}">{{ $fullyPaid ? 'FULLY PAID' : 'PARTIALLY PAID' }}</span>
+                @if($closedStatus)
+                    <span class="chip" style="background: {{ $closedStatus === 'rejected' ? '#fee2e2; color: #b91c1c' : '#f1f5f9; color: #475569' }};">{{ strtoupper($closedStatus) }}</span>
+                @else
+                    <span class="chip {{ $fullyPaid ? 'chip-paid' : 'chip-partial' }}">{{ $fullyPaid ? 'FULLY PAID' : 'PARTIALLY PAID' }}</span>
+                @endif
             </div>
         </td>
     </tr>
@@ -139,16 +143,34 @@
             <table class="totals">
                 <tr><td class="muted">Total Amount</td><td class="right">{{ $peso($total) }}</td></tr>
                 <tr><td class="muted">Total Paid</td><td class="right" style="color: #15803d;">{{ $peso($totalPaid) }}</td></tr>
-                <tr class="grand">
-                    <td>Balance Due</td>
-                    <td class="right" style="color: {{ $fullyPaid ? '#15803d' : '#b91c1c' }};">{{ $peso($balance) }}</td>
-                </tr>
+                @if($closedStatus === 'rejected')
+                    <tr class="grand"><td>To Be Refunded</td><td class="right" style="color: #b91c1c;">{{ $peso($totalPaid) }}</td></tr>
+                @elseif($closedStatus === 'cancelled')
+                    <tr class="grand"><td colspan="2" style="color: #475569;">Booking Cancelled</td></tr>
+                @else
+                    <tr class="grand">
+                        <td>Balance Due</td>
+                        <td class="right" style="color: {{ $fullyPaid ? '#15803d' : '#b91c1c' }};">{{ $peso($balance) }}</td>
+                    </tr>
+                @endif
             </table>
         </td>
     </tr>
 </table>
 
-@if($fullyPaid)
+@if($closedStatus === 'rejected')
+    <div class="note note-due" style="background: #fef2f2; border-color: #fecaca; color: #991b1b;">
+        <strong>This booking was rejected by the admin.</strong>
+        @if($closedReason) Reason: {{ $closedReason }}. @endif
+        @if($totalPaid > 0)
+            The customer is eligible for a refund of the {{ $peso($totalPaid) }} paid; the admin will make contact for payment details.
+        @endif
+    </div>
+@elseif($closedStatus === 'cancelled')
+    <div class="note" style="background: #f8fafc; border: 1px solid #e2e8f0; color: #334155;">
+        <strong>This booking has been cancelled.</strong> Payments are no longer accepted for this booking.
+    </div>
+@elseif($fullyPaid)
     <div class="note note-paid"><strong>This booking is fully paid.</strong> No further payment is needed. Thank you for choosing Rem's Transport!</div>
 @else
     <div class="note note-due">

@@ -280,7 +280,17 @@
         <div class="alert-banner error no-print"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
     @endif
 
+    @if($closedStatus)
+        @include('partials.booking-closed-notice')
+    @endif
+
     {{-- Logic: Header color changes based on status --}}
+    @if($closedStatus)
+        <div class="ticket-header" style="background: {{ $closedStatus === 'rejected' ? '#991b1b' : '#475569' }};">
+            <h1 style="margin:0; font-size: 1.4rem;">BOOKING <span style="color: #fecaca;">{{ strtoupper($closedStatus) }}</span></h1>
+            <div class="status-badge">Not Valid for Travel</div>
+        </div>
+    @else
     <div class="ticket-header {{ $booking->status === 'fully_paid' ? 'fully-paid' : '' }}">
         @if($booking->status === 'fully_paid')
             <h1 style="margin:0; font-size: 1.4rem;">TRIP <span style="color: #ffffff;">FULLY PAID</span></h1>
@@ -289,6 +299,7 @@
         @endif
         <div class="status-badge">Reservation Confirmed</div>
     </div>
+    @endif
 
     <div class="ticket-divider">
         <div class="dashed-line"></div>
@@ -351,7 +362,16 @@
             </div>
 
             {{-- Logic: Show balance row only if balance exists --}}
-            @if($balance > 0)
+            @if($closedStatus === 'rejected')
+                <div class="balance-row">
+                    <span class="label" style="color: var(--danger); margin:0;">To Be Refunded</span>
+                    <div class="balance-amount">₱{{ number_format($totalPaid, 2) }}</div>
+                </div>
+            @elseif($closedStatus === 'cancelled')
+                <div class="balance-row">
+                    <span class="label" style="margin:0;">Booking Cancelled</span>
+                </div>
+            @elseif($balance > 0)
                 <div class="balance-row">
                     <div>
                         <span class="label" style="color: var(--danger); margin:0;">Balance Owed (Cash)</span>
@@ -370,7 +390,7 @@
             @include('partials.payment-history')
         @endif
 
-        @if($balance > 0)
+        @if($balance > 0 && !$closedStatus)
             <div class="pay-balance-box no-print">
                 @if($installmentAllowed)
                     <h4><i class="fas fa-hand-holding-dollar"></i> Pay in Installments</h4>

@@ -791,6 +791,10 @@ public function payBalanceCheckout(Request $request, $id)
     }
     $this->authorizeBookingOwner($booking);
 
+    if ($closed = $this->closedStatus($booking)) {
+        return redirect("/receipt/{$id}")->with('error', "This booking was {$closed}, so payments are no longer accepted.");
+    }
+
     $totalPaid = (float) ($booking->amount_paid ?? 0);
     $balance   = round(max(0, (float) $booking->total - $totalPaid), 2);
 
@@ -940,7 +944,12 @@ public function showReceipt($id)
     $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
     $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
 
-    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed'));
+    $closedStatus = $this->closedStatus($booking);
+    $closedReason = $booking->rejection_reason ?? null;
+    $paymentStatus = $booking->payment_status ?? null;
+
+    return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed',
+        'closedStatus', 'closedReason', 'paymentStatus'));
 }
 
 /** The official receipt as a one-page PDF download — only for the booking's owner or an admin. */
@@ -978,7 +987,17 @@ public function downloadReceiptPdf($id)
         'total'       => (float) $booking->total,
         'totalPaid'   => $totalPaid,
         'balance'     => $balance,
+        'closedStatus' => $this->closedStatus($booking),
+        'closedReason' => $booking->rejection_reason ?? null,
     ]);
+}
+
+/** 'rejected' or 'cancelled' once a booking can no longer be paid for, otherwise null. */
+private function closedStatus($booking): ?string
+{
+    $status = strtolower((string) $booking->status);
+
+    return in_array($status, ['rejected', 'cancelled'], true) ? $status : null;
 }
 
 /** Only the customer who owns a booking (or an admin) may see its receipt or pay its balance. */
