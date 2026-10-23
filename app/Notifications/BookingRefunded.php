@@ -18,6 +18,7 @@ class BookingRefunded extends Notification
         protected string $bookingType,
         protected float $amount,
         protected string $proofPath, // photo of the refund receipt on the public disk
+        protected ?string $message = null, // admin's message to the customer
     ) {
     }
 
@@ -29,7 +30,8 @@ class BookingRefunded extends Notification
     public function toDatabase($notifiable)
     {
         return [
-            'message'    => "Your refund of ₱" . number_format($this->amount, 2) . " for {$this->bookingType} #{$this->bookingId} to {$this->destination} has been sent. The refund receipt is attached to your booking.",
+            'message'    => "Your refund of ₱" . number_format($this->amount, 2) . " for {$this->bookingType} #{$this->bookingId} to {$this->destination} has been sent. The refund receipt is attached to your booking."
+                            . ($this->message ? " Message from Rem's Transport: \"{$this->message}\"" : ''),
             'booking_id' => $this->bookingId,
             'amount'     => $this->amount,
             'type'       => 'booking_refunded',
@@ -45,6 +47,7 @@ class BookingRefunded extends Notification
             ->greeting('Hello ' . ($fullName ?: 'Customer') . ',')
             ->line("Your refund for **{$this->bookingType} #{$this->bookingId}** to **{$this->destination}** has been sent.")
             ->line('**Amount refunded:** ₱' . number_format($this->amount, 2))
+            ->when($this->message, fn ($mail) => $mail->line("**Message from Rem's Transport:** " . e($this->message)))
             ->line('The photo of the refund receipt is attached to this email. Please check your account. If you have not received it within a few days, contact us at remstransport1@gmail.com.')
             ->action('View My Bookings', url('/my-bookings'))
             ->line("Thank you for your patience, and we hope to serve you again!");

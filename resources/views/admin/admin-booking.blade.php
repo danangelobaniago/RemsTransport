@@ -465,8 +465,8 @@
                     <img id="refundProofPreview" alt="" style="display:none; margin-top:8px; max-width:100%; max-height:220px; border-radius:8px; border:1px solid #e5e7eb;">
                 </div>
                 <div>
-                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Notes <span style="font-weight:400; color:#9ca3af;">(optional, admin only)</span></label>
-                    <textarea name="notes" maxlength="500" rows="2" placeholder="e.g. Sent to customer's GCash 0917 xxx xxxx"
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Message to Customer</label>
+                    <textarea name="notes" maxlength="500" rows="2" required placeholder="e.g. Your refund has been sent to your GCash. Thank you for your patience!"
                         style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
                 </div>
             </div>

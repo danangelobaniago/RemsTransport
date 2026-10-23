@@ -15,7 +15,10 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    // Shown to customers (email header, "Regards," and footer). Not read from
+    // APP_NAME: the server's APP_NAME is "remstransport", and the session
+    // cookie name is built from it, so changing it there would log everyone out.
+    'name' => "Rem's Transport",
 
     /*
     |--------------------------------------------------------------------------

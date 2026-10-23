@@ -589,8 +589,9 @@ class AdminController extends Controller
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
             'amount' => "required|numeric|min:1|max:{$paid}",
             'proof'  => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
-            'notes'  => 'nullable|string|max:500',
+            'notes'  => 'required|string|max:500', // message shown to the customer
         ], [
+            'notes.required' => 'Please write a message to the customer.',
             'amount.max'     => 'The refund can\'t be more than the ₱' . number_format($paid, 2) . ' the customer paid.',
             'proof.required' => 'Please attach a photo of the refund receipt.',
             'proof.image'    => 'The refund receipt must be a photo (JPG, PNG or WEBP).',
@@ -609,7 +610,7 @@ class AdminController extends Controller
             'source'      => 'bookings',
             'amount'      => $data['amount'],
             'proof_path'  => $proofPath,
-            'notes'       => trim((string) ($data['notes'] ?? '')) ?: null,
+            'notes'       => trim($data['notes']),
             'refunded_by' => auth()->id(),
             'refunded_at' => now(),
             'created_at'  => now(),
@@ -623,7 +624,8 @@ class AdminController extends Controller
                 $booking->package_name ?? $booking->destination ?? 'N/A',
                 $booking->tour_id ? 'Tour Booking' : 'Van Rental',
                 (float) $data['amount'],
-                $proofPath
+                $proofPath,
+                trim($data['notes'])
             ));
         }
 

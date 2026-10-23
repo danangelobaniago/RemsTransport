@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('source', 30)->default('bookings');
             $table->decimal('amount', 10, 2);
             $table->string('proof_path');                 // photo of the refund receipt (public disk)
-            $table->string('notes', 500)->nullable();     // admin only
+            $table->string('notes', 500)->nullable();     // message to the customer
             $table->unsignedBigInteger('refunded_by')->nullable(); // admin user id
             $table->timestamp('refunded_at');
             $table->timestamps();

@@ -80,7 +80,7 @@
         .recap-row.grand-total { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #cbd5e1; font-size: 18px; font-weight: 800; color: var(--primary-blue); }
 
         .action-bar { display: flex; justify-content: space-between; margin-bottom: 30px; }
-        .btn { cursor: pointer; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: none; }
+        .btn { box-sizing: border-box; cursor: pointer; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; border: none; }
         .btn-print { background: var(--primary-blue); color: white; }
         .btn-back { background: #f1f5f9; color: var(--text-main); }
 
