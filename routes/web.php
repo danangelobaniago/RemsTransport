@@ -300,7 +300,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/booking/{id}/pay-balance/success', [BookingController::class, 'payBalanceSuccess']);
 });
 
-/* ================= RECEIPT PDF DOWNLOADS (owner or admin only) ================= */
+/* ================= RECEIPT PDF DOWNLOADS (booking owner only) ================= */
 Route::middleware(['auth'])->group(function () {
     Route::get('/receipt/{id}/pdf', [BookingController::class, 'downloadReceiptPdf'])->whereNumber('id')->name('receipt.pdf');
     Route::get('/joiner-receipt/{id}/pdf', [JoinerTripController::class, 'downloadReceiptPdf'])->whereNumber('id')->name('joiner.receipt.pdf');

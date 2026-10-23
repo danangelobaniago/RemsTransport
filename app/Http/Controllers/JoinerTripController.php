@@ -672,13 +672,13 @@ private function closedStatus($booking): ?string
     return strtolower((string) $booking->status) === 'cancelled' ? 'cancelled' : null;
 }
 
-/** Only the customer who owns a joiner booking (or an admin) may see its ticket or pay its balance. */
+/** Only the customer who owns a joiner booking may see its ticket or pay its balance — not even admins. */
 private function authorizeBookingOwner($booking): void
 {
-    abort_unless((int) $booking->user_id === (int) Auth::id() || Auth::user()->role === 'admin', 403);
+    abort_unless((int) $booking->user_id === (int) Auth::id(), 403);
 }
 
-/** The joiner ticket's receipt as a one-page PDF download — only for the booking's owner or an admin. */
+/** The joiner ticket's receipt as a one-page PDF download — only for the booking's owner. */
 public function downloadReceiptPdf($id)
 {
     $booking = DB::table('joiner_bookings')

@@ -16,7 +16,8 @@
 @endphp
 
 <style>
-    .ph-card { margin-top: 24px; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #fff; }
+    /* Sized by the card, not the screen: the joiner ticket is a narrow card even on desktop */
+    .ph-card { margin-top: 24px; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #fff; container-type: inline-size; }
     .ph-head { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
     .ph-head h4 { margin: 0; font-size: 14px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px; }
     .ph-head h4 i { color: #2563eb; }
@@ -36,9 +37,11 @@
     .ph-amt { text-align: right !important; font-weight: 700; color: #16a34a; white-space: nowrap; }
     .ph-total td { background: #f8fafc; border-top: 1px solid #e2e8f0; font-weight: 700; }
     .ph-total .ph-amt { font-size: 15px; }
-    @media (max-width: 640px) {
+    .ph-ref-inline { display: none; }
+    @container (max-width: 600px) {
         .ph-table th, .ph-table td { padding: 12px 12px; }
         .ph-col-ref, .ph-num { display: none; }
+        .ph-ref-inline { display: block; margin-top: 4px; }
     }
 </style>
 
@@ -78,6 +81,9 @@
                             <span>
                                 <strong>{{ $byDriver ? 'Cash' : \App\Support\PaymentReceipt::methodLabel($p->method) }}</strong>
                                 <span class="ph-via">{{ $byDriver ? 'Collected by driver' : 'Paid online' }}</span>
+                                @if($p->reference)
+                                    <span class="ph-ref ph-ref-inline">{{ $p->reference }}</span>
+                                @endif
                             </span>
                         </div>
                     </td>

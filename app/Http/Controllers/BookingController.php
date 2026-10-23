@@ -964,7 +964,7 @@ public function showReceipt($id)
         'closedStatus', 'closedReason', 'paymentStatus', 'refund'));
 }
 
-/** The official receipt as a one-page PDF download — only for the booking's owner or an admin. */
+/** The official receipt as a one-page PDF download — only for the booking's owner. */
 public function downloadReceiptPdf($id)
 {
     [$booking, $totalPaid, $balance, $payments] = $this->receiptData($id);
@@ -1013,10 +1013,10 @@ private function closedStatus($booking): ?string
     return in_array($status, ['rejected', 'cancelled'], true) ? $status : null;
 }
 
-/** Only the customer who owns a booking (or an admin) may see its receipt or pay its balance. */
+/** Only the customer who owns a booking may see its receipt or pay its balance — not even admins (they use Admin → Bookings). */
 private function authorizeBookingOwner($booking): void
 {
-    abort_unless((int) $booking->user_id === (int) auth()->id() || auth()->user()->role === 'admin', 403);
+    abort_unless((int) $booking->user_id === (int) auth()->id(), 403);
 }
 
 /** Booking row (with customer, vehicle and driver), amounts and payment history for a receipt. */
