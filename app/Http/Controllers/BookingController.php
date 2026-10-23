@@ -947,9 +947,10 @@ public function showReceipt($id)
     $closedStatus = $this->closedStatus($booking);
     $closedReason = $booking->rejection_reason ?? null;
     $paymentStatus = $booking->payment_status ?? null;
+    $refund = \App\Support\BookingRefund::find($id);
 
     return view('receipt', compact('booking', 'passengers', 'totalPaid', 'balance', 'payments', 'daysUntilTrip', 'installmentAllowed',
-        'closedStatus', 'closedReason', 'paymentStatus'));
+        'closedStatus', 'closedReason', 'paymentStatus', 'refund'));
 }
 
 /** The official receipt as a one-page PDF download — only for the booking's owner or an admin. */
@@ -989,6 +990,7 @@ public function downloadReceiptPdf($id)
         'balance'     => $balance,
         'closedStatus' => $this->closedStatus($booking),
         'closedReason' => $booking->rejection_reason ?? null,
+        'refund'       => \App\Support\BookingRefund::find($id),
     ]);
 }
 

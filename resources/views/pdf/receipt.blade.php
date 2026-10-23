@@ -143,7 +143,9 @@
             <table class="totals">
                 <tr><td class="muted">Total Amount</td><td class="right">{{ $peso($total) }}</td></tr>
                 <tr><td class="muted">Total Paid</td><td class="right" style="color: #15803d;">{{ $peso($totalPaid) }}</td></tr>
-                @if($closedStatus === 'rejected')
+                @if($closedStatus && $refund)
+                    <tr class="grand"><td>Refunded</td><td class="right" style="color: #15803d;">{{ $peso($refund->amount) }}</td></tr>
+                @elseif($closedStatus === 'rejected')
                     <tr class="grand"><td>To Be Refunded</td><td class="right" style="color: #b91c1c;">{{ $peso($totalPaid) }}</td></tr>
                 @elseif($closedStatus === 'cancelled')
                     <tr class="grand"><td colspan="2" style="color: #475569;">Booking Cancelled</td></tr>
@@ -162,7 +164,9 @@
     <div class="note note-due" style="background: #fef2f2; border-color: #fecaca; color: #991b1b;">
         <strong>This booking was rejected by the admin.</strong>
         @if($closedReason) Reason: {{ $closedReason }}. @endif
-        @if($totalPaid > 0)
+        @if($refund)
+            Refund of {{ $peso($refund->amount) }} sent on {{ \App\Support\BookingRefund::refundedOn($refund) }}.
+        @elseif($totalPaid > 0)
             The customer is eligible for a refund of the {{ $peso($totalPaid) }} paid; the admin will make contact for payment details.
         @endif
     </div>

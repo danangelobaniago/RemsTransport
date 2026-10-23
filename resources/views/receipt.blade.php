@@ -289,7 +289,9 @@
             <div class="recap-row"><span>Total Fare</span> <span>₱{{ number_format($booking->total, 2) }}</span></div>
             <div class="recap-row"><span>Payment Received</span> <span style="color: var(--success-green);">₱{{ number_format($totalPaid, 2) }}</span></div>
 
-            @if($closedStatus === 'rejected')
+            @if($closedStatus && $refund)
+                <div class="recap-row grand-total" style="color: #15803d;"><span>REFUNDED</span> <span>₱{{ number_format($refund->amount, 2) }}</span></div>
+            @elseif($closedStatus === 'rejected')
                 <div class="recap-row grand-total" style="color: #b91c1c;"><span>TO BE REFUNDED</span> <span>₱{{ number_format($totalPaid, 2) }}</span></div>
             @elseif($closedStatus === 'cancelled')
                 <div class="recap-row grand-total" style="color: #475569;"><span>BOOKING CANCELLED</span> <span></span></div>

@@ -54,6 +54,8 @@
         .icon-btn-reschedule:hover   { background: #ddd6fe; }
         .icon-btn-info         { background: #f3f4f6; color: #4b5563; }
         .icon-btn-info:hover         { background: #e5e7eb; }
+        .icon-btn-refund       { background: #f59e0b; color: white; }
+        .icon-btn-refund:hover       { background: #d97706; }
         .icon-btn-remit        { background: #059669; color: white; }
         .icon-btn-remit:hover        { background: #047857; }
         .status-icon { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 6px; font-size: 12px; flex-shrink: 0; }
@@ -228,7 +230,20 @@
                                             ₱{{ number_format($booking->amount_paid ?? 0, 2) }}
                                         </span>
                                     </div>
-                                    <div><strong>Balance:</strong> <span style="color:{{ ($booking->computed_balance ?? 0) > 0 ? 'red' : 'green' }};">₱{{ number_format($booking->computed_balance ?? 0, 2) }}</span></div>
+                                    @if(in_array(strtolower($booking->status), ['rejected', 'cancelled']))
+                                        {{-- No balance is collected on a closed booking — show where the refund stands instead --}}
+                                        @if($booking->refund_amount !== null)
+                                            <div><strong>Refunded:</strong> <span style="color:#15803d;font-weight:700;">₱{{ number_format($booking->refund_amount, 2) }}</span></div>
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($booking->refund_proof_path) }}" target="_blank" rel="noopener"
+                                               style="font-size:11px;color:#2563eb;"><i class="fas fa-image"></i> View receipt</a>
+                                        @elseif($booking->refundable_amount > 0)
+                                            <div><strong>To refund:</strong> <span style="color:#b45309;font-weight:700;">₱{{ number_format($booking->refundable_amount, 2) }}</span></div>
+                                        @else
+                                            <div style="color:#64748b;">Non-refundable</div>
+                                        @endif
+                                    @else
+                                        <div><strong>Balance:</strong> <span style="color:{{ ($booking->computed_balance ?? 0) > 0 ? 'red' : 'green' }};">₱{{ number_format($booking->computed_balance ?? 0, 2) }}</span></div>
+                                    @endif
                                 </div>
                             </td>
 
@@ -307,6 +322,22 @@
 
                                     @else
                                         <span class="status-icon" style="background:#f1f5f9;color:#9ca3af;" title="Processing"><i class="fas fa-ellipsis"></i></span>
+                                    @endif
+
+                                    {{-- Refund: send back what's owed on a rejected / cancelled booking --}}
+                                    @if(in_array($statusClean, ['rejected', 'cancelled']))
+                                        @if($booking->refund_amount !== null)
+                                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($booking->refund_proof_path) }}" target="_blank" rel="noopener"
+                                               class="status-icon" style="background:#dcfce7;color:#15803d;"
+                                               title="Refunded ₱{{ number_format($booking->refund_amount, 2) }} on {{ \Carbon\Carbon::parse($booking->refunded_at, 'UTC')->setTimezone(\App\Support\LocalDate::TIMEZONE)->format('M d, Y g:i A') }} — view receipt">
+                                                <i class="fas fa-rotate-left"></i>
+                                            </a>
+                                        @elseif($booking->refundable_amount > 0)
+                                            <button type="button" class="icon-btn icon-btn-refund" title="Refund Customer"
+                                                onclick="openRefundModal({{ $booking->id }}, {{ $booking->refundable_amount }}, {{ (float) $booking->amount_paid }}, @js(trim(($booking->first_name ?? '') . ' ' . ($booking->last_name ?? ''))))">
+                                                <i class="fas fa-money-bill-transfer"></i>
+                                            </button>
+                                        @endif
                                     @endif
 
                                     @if(!in_array($statusClean, ['cancelled', 'rejected', 'completed']))
@@ -409,6 +440,45 @@
     </div>
 </div>
 
+{{-- Refund Modal --}}
+<div id="refundModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
+    <div style="background:white; border-radius:14px; max-width:440px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">
+        <form method="POST" id="refundForm" enctype="multipart/form-data" onsubmit="return confirm('Send this refund receipt to the customer? This can\'t be undone.')">
+            @csrf
+            <div style="padding:20px 24px; border-bottom:1px solid #e5e7eb;">
+                <h3 style="margin:0 0 2px; color:#111827; font-size:16px; font-weight:700;"><i class="fas fa-money-bill-transfer" style="color:#f59e0b;"></i> Refund Customer</h3>
+                <p id="refundModalInfo" style="margin:0; color:#6b7280; font-size:13px;"></p>
+            </div>
+
+            <div style="padding:20px 24px; display:grid; gap:12px;">
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Refund Amount (₱)</label>
+                    <input type="number" name="amount" id="refundAmount" step="0.01" min="1" required
+                        style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <small id="refundAmountHint" style="color:#6b7280; font-size:12px;"></small>
+                </div>
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Photo of Refund Receipt</label>
+                    <input type="file" name="proof" id="refundProof" accept="image/*" required onchange="previewRefundProof(this)"
+                        style="width:100%; font-size:13px;">
+                    <small style="color:#6b7280; font-size:12px;">e.g. screenshot of the GCash / bank transfer. This photo is sent to the customer.</small>
+                    <img id="refundProofPreview" alt="" style="display:none; margin-top:8px; max-width:100%; max-height:220px; border-radius:8px; border:1px solid #e5e7eb;">
+                </div>
+                <div>
+                    <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Notes <span style="font-weight:400; color:#9ca3af;">(optional, admin only)</span></label>
+                    <textarea name="notes" maxlength="500" rows="2" placeholder="e.g. Sent to customer's GCash 0917 xxx xxxx"
+                        style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box;"></textarea>
+                </div>
+            </div>
+
+            <div style="padding:14px 24px; border-top:1px solid #e5e7eb; background:#f9fafb; display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" onclick="closeRefundModal()" style="padding:9px 16px; background:#e5e7eb; color:#374151; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Cancel</button>
+                <button type="submit" style="padding:9px 16px; background:#f59e0b; color:white; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Send Refund Receipt</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {{-- Reschedule Booking Modal --}}
 <div id="adminRescheduleModal" style="display:none; position:fixed; z-index:9999; left:0; top:0; width:100%; height:100%; background:rgba(15,23,42,0.65); align-items:center; justify-content:center; padding:20px;">
     <div style="background:white; border-radius:14px; max-width:420px; width:100%; box-shadow:0 20px 50px rgba(0,0,0,0.25); overflow:hidden;">
@@ -490,6 +560,32 @@ function openRejectModal(bookingId) {
 }
 function closeRejectModal() {
     document.getElementById('rejectModal').style.display = 'none';
+}
+function openRefundModal(bookingId, refundable, paid, customer) {
+    const peso = v => '₱' + Number(v).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    document.getElementById('refundForm').action = '/admin/bookings/' + bookingId + '/refund';
+    document.getElementById('refundForm').reset();
+    document.getElementById('refundModalInfo').textContent = 'Booking #' + bookingId + (customer ? ' — ' + customer : '');
+    const amount = document.getElementById('refundAmount');
+    amount.value = refundable.toFixed(2);
+    amount.max = paid;
+    document.getElementById('refundAmountHint').textContent = refundable < paid
+        ? 'Customer paid ' + peso(paid) + '. Suggested refund is 80% (20% cancellation fee).'
+        : 'Full amount the customer paid: ' + peso(paid) + '.';
+    document.getElementById('refundProofPreview').style.display = 'none';
+    document.getElementById('refundModal').style.display = 'flex';
+}
+function previewRefundProof(input) {
+    const img = document.getElementById('refundProofPreview');
+    if (input.files && input.files[0]) {
+        img.src = URL.createObjectURL(input.files[0]);
+        img.style.display = 'block';
+    } else {
+        img.style.display = 'none';
+    }
+}
+function closeRefundModal() {
+    document.getElementById('refundModal').style.display = 'none';
 }
 function openAdminRescheduleModal(bookingId, vanId) {
     document.getElementById('adminRescheduleForm').action = '/booking/' + bookingId + '/reschedule';

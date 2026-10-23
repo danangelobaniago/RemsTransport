@@ -218,8 +218,14 @@ class AdminController extends Controller
         ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
         ->leftJoin('vans', 'bookings.van_id', '=', 'vans.id')
         ->leftJoin('drivers', 'bookings.driver', '=', 'drivers.id')
+        ->leftJoin('booking_refunds', function ($join) {
+            $join->on('booking_refunds.booking_id', '=', 'bookings.id')->where('booking_refunds.source', 'bookings');
+        })
         ->select(
             'bookings.*',
+            'booking_refunds.amount as refund_amount',
+            'booking_refunds.proof_path as refund_proof_path',
+            'booking_refunds.refunded_at',
             'users.first_name',
             'users.last_name',
             DB::raw('COALESCE(NULLIF(bookings.phone, ""), users.phone_number) as contact_number'),
@@ -286,6 +292,7 @@ class AdminController extends Controller
     $bookings->through(function ($booking) use ($paymentHistories, $conflicts) {
         $booking->payments = $paymentHistories->get($booking->id, collect())->values();
         $booking->conflicts_with = $conflicts[$booking->id] ?? [];
+        $booking->refundable_amount = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid);
         return $booking;
     });
 
@@ -559,6 +566,68 @@ class AdminController extends Controller
         ]);
 
         return back()->with('success', 'Driver status updated!');
+    }
+
+    // ✅ RECORD A REFUND for a rejected / cancelled booking and tell the customer
+    public function refundBooking(Request $request, $id)
+    {
+        $booking = DB::table('bookings')->where('id', $id)->first();
+        if (!$booking) {
+            return back()->with('error', 'Booking not found.');
+        }
+
+        $eligible = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid);
+        if ($eligible <= 0) {
+            return back()->with('error', "Booking #{$id} has nothing to refund.");
+        }
+        if (\App\Support\BookingRefund::find($id)) {
+            return back()->with('error', "Booking #{$id} has already been refunded.");
+        }
+
+        $paid = round((float) $booking->amount_paid, 2);
+        // Report as a page-level error; the bookings table has no per-field error slots.
+        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+            'amount' => "required|numeric|min:1|max:{$paid}",
+            'proof'  => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+            'notes'  => 'nullable|string|max:500',
+        ], [
+            'amount.max'     => 'The refund can\'t be more than the ₱' . number_format($paid, 2) . ' the customer paid.',
+            'proof.required' => 'Please attach a photo of the refund receipt.',
+            'proof.image'    => 'The refund receipt must be a photo (JPG, PNG or WEBP).',
+            'proof.max'      => 'The refund receipt photo must be 5 MB or smaller.',
+        ]);
+        if ($validator->fails()) {
+            return back()->with('error', "Booking #{$id}: " . $validator->errors()->first());
+        }
+        $data = $validator->validated();
+
+        // Random file name, so the photo's link can't be guessed from the booking id
+        $proofPath = $request->file('proof')->store('refunds', 'public');
+
+        DB::table('booking_refunds')->insert([
+            'booking_id'  => $id,
+            'source'      => 'bookings',
+            'amount'      => $data['amount'],
+            'proof_path'  => $proofPath,
+            'notes'       => trim((string) ($data['notes'] ?? '')) ?: null,
+            'refunded_by' => auth()->id(),
+            'refunded_at' => now(),
+            'created_at'  => now(),
+            'updated_at'  => now(),
+        ]);
+
+        $user = User::find($booking->user_id);
+        if ($user) {
+            $user->notify(new \App\Notifications\BookingRefunded(
+                $booking->id,
+                $booking->package_name ?? $booking->destination ?? 'N/A',
+                $booking->tour_id ? 'Tour Booking' : 'Van Rental',
+                (float) $data['amount'],
+                $proofPath
+            ));
+        }
+
+        return back()->with('success', "Refund of ₱" . number_format($data['amount'], 2) . " recorded for booking #{$id}. The customer has been notified.");
     }
 
     // ✅ TOGGLE VAN STATUS
