@@ -135,9 +135,16 @@
                         <div class="footer-actions" style="display: flex; align-items: center; gap: 10px;">
                             {{-- CANCEL LOGIC --}}
                             @if(!in_array($statusClean, ['completed', 'cancelled', 'rejected']))
+                                @php
+                                    // Cancelling within 3 days (72 hours) of booking, with the trip 3+ days away, gets a full refund
+                                    $inGrace = \App\Support\BookingRefund::graceActive($booking->created_at, $booking->start_date);
+                                    $graceUntil = $inGrace
+                                        ? \App\Support\BookingRefund::fullRefundDeadline($booking->created_at, $booking->start_date)->setTimezone(\App\Support\LocalDate::TIMEZONE)->format('M d, Y g:i A')
+                                        : '';
+                                @endphp
                                 <a href="javascript:void(0);"
                                    style="text-decoration: none; color: #ef4444; font-size: 0.85rem; font-weight: 600;"
-                                   onclick="confirmCancellation('{{ $booking->id }}', '{{ $urlType }}', '{{ $jsStatus }}')">
+                                   onclick="confirmCancellation('{{ $booking->id }}', '{{ $urlType }}', '{{ $jsStatus }}', {{ $inGrace ? 'true' : 'false' }}, '{{ $graceUntil }}')">
                                     <i class="fa fa-times-circle"></i> Cancel
                                 </a>
                             @endif
@@ -210,9 +217,15 @@
 </div>
 
 <script>
-function confirmCancellation(id, type, paymentStatus) {
+function confirmCancellation(id, type, paymentStatus, inGrace, graceUntil) {
     let message = "";
-    if (paymentStatus === 'fully_paid') {
+    if (inGrace) {
+        // Within 3 days (72 hours) of booking: everything paid comes back
+        message = "You booked less than 3 days ago and your trip is still at least 3 days away, so if you cancel now you are eligible for a FULL REFUND of everything you paid.\n\n" +
+                  "This full-refund period ends on " + graceUntil + ".\n" +
+                  "Our admin will contact you via Email or SMS to get your payment details for the refund.\n\n" +
+                  "Are you sure you want to proceed with the cancellation?";
+    } else if (paymentStatus === 'fully_paid') {
         message = "⚠️ WARNING: You have paid in FULL.\n\n" +
                   "According to our policy, the 20% downpayment is NON-REFUNDABLE.\n" +
                   "The remaining 80% will be returned to you. Our admin will contact you via Email or SMS " +

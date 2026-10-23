@@ -197,7 +197,8 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
             <h4>5. Cancellations, Rescheduling, and Refunds</h4>
             <p>
                 Cancellation and rescheduling requests must be made through your account as early as
-                possible. Refund eligibility depends on how far in advance you cancel and on the
+                possible. Bookings cancelled within 3 days (72 hours) of being made, and at least 3 days
+                before the scheduled trip, are eligible for a full refund of the amount paid. Refund eligibility depends on how far in advance you cancel and on the
                 specific van, joiner trip, or tour policy shown at the time of booking. Downpayments
                 may be non-refundable. Refunds, when approved, are returned through the original
                 payment method and may take several business days to process. No-shows are generally

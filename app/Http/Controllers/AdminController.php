@@ -292,7 +292,7 @@ class AdminController extends Controller
     $bookings->through(function ($booking) use ($paymentHistories, $conflicts) {
         $booking->payments = $paymentHistories->get($booking->id, collect())->values();
         $booking->conflicts_with = $conflicts[$booking->id] ?? [];
-        $booking->refundable_amount = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid);
+        $booking->refundable_amount = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid, $booking->created_at, $booking->cancelled_at ?? null, $booking->start_date);
         return $booking;
     });
 
@@ -576,7 +576,7 @@ class AdminController extends Controller
             return back()->with('error', 'Booking not found.');
         }
 
-        $eligible = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid);
+        $eligible = \App\Support\BookingRefund::eligibleAmount($booking->status, $booking->payment_status ?? null, $booking->amount_paid, $booking->created_at, $booking->cancelled_at ?? null, $booking->start_date);
         if ($eligible <= 0) {
             return back()->with('error', "Booking #{$id} has nothing to refund.");
         }

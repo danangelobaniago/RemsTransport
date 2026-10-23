@@ -3,15 +3,19 @@
     in place of the "pay your balance" box.
     Expects: $closedStatus ('rejected'|'cancelled'), $closedReason (?string),
              $totalPaid (float), $paymentStatus (?string, e.g. 'fully_paid'),
-             optional $refund (booking_refunds row once the admin has sent it).
+             optional $refund (booking_refunds row once the admin has sent it),
+             $booking (for created_at / cancelled_at — the 3-day full-refund window).
 --}}
 @php
     $refund   = $refund ?? null;
     $rejected = $closedStatus === 'rejected';
     $peso     = fn ($v) => '₱' . number_format((float) $v, 2);
 
+    $tripDate    = $booking->start_date ?? $booking->trip_date ?? null; // van/tour vs joiner
+    $graceCancel = !$rejected && \App\Support\BookingRefund::cancelledWithinGrace($booking->created_at ?? null, $booking->cancelled_at ?? null, $tripDate);
+
     // What the customer is owed when nothing has been sent yet
-    $owed = \App\Support\BookingRefund::eligibleAmount($closedStatus, $paymentStatus, $totalPaid);
+    $owed = \App\Support\BookingRefund::eligibleAmount($closedStatus, $paymentStatus, $totalPaid, $booking->created_at ?? null, $booking->cancelled_at ?? null, $tripDate);
 @endphp
 
 <style>
@@ -87,6 +91,8 @@
                     <div class="bc-meta">
                         @if($rejected)
                             You are eligible for a refund of the amount you paid.
+                        @elseif($graceCancel)
+                            You cancelled within 3 days of booking and at least 3 days before the trip, so you are eligible for a full refund of the amount you paid.
                         @else
                             80% of your payment — 20% is retained as a cancellation fee.
                         @endif

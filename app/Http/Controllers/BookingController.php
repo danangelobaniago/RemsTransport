@@ -691,15 +691,29 @@ public function cancelBooking($id, $type)
         return redirect('/my-bookings')->with('error', "Booking #{$id} is already {$status} and can no longer be cancelled.");
     }
 
+    $cancelledAt = now();
     $updated = DB::table($table)
         ->where('id', $id)
         ->where('user_id', auth()->id())
         ->update([
             'status' => 'cancelled',
+            'cancelled_at' => $cancelledAt,
             'updated_at' => now()
         ]);
 
     if ($updated) {
+        // Cancelled within 3 days (72 hours) of booking, with the trip still 3+ days away → everything paid comes back
+        $tripDate = $table === 'joiner_bookings'
+            ? DB::table('joiner_trips')->where('id', $booking->joiner_trip_id)->value('trip_date')
+            : $booking->start_date;
+        if (\App\Support\BookingRefund::cancelledWithinGrace($booking->created_at, $cancelledAt, $tripDate)) {
+            // joiner_bookings keeps the running total in downpayment
+            $paid = (float) ($table === 'joiner_bookings' ? $booking->downpayment : ($booking->amount_paid ?? $booking->downpayment));
+            return redirect('/my-bookings')->with('success', $paid > 0
+                ? 'Booking cancelled within 3 days of booking and at least 3 days before the trip, so you are eligible for a full refund of ₱' . number_format($paid, 2) . '. Our admin will contact you to get your payment details for the refund.'
+                : 'Booking cancelled.');
+        }
+
         // Use isset() to safely check the property
         if (isset($booking->payment_status) && $booking->payment_status === 'fully_paid') {
             return redirect('/my-bookings')->with('success', 'Booking cancelled. Note: 20% is retained as a fee. Admin will contact you regarding the 80% refund.');
