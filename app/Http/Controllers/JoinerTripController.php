@@ -493,10 +493,10 @@ public function payBalanceCheckout(Request $request, $id)
         return redirect("/joiner-receipt/{$id}")->with('error', 'This booking has no remaining balance.');
     }
 
-    // Installments only while the trip is more than a week away — otherwise the
-    // full balance must be settled in one go (matches BookingController's rule).
+    // Installments up to and including the trip day (even if the trip is tomorrow);
+    // after that the full balance must be settled in one go (matches BookingController's rule).
     $daysUntilTrip       = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
-    $installmentAllowed  = $daysUntilTrip > 7;
+    $installmentAllowed  = $daysUntilTrip >= 0;
 
     $amount = ($installmentAllowed && $request->filled('amount'))
         ? round(min((float) $request->amount, $balance), 2)
@@ -640,9 +640,9 @@ public function showReceipt($id)
     // 2. Define $balance as total price minus what was paid
     $balance = round(max(0, $booking->total_price - $totalPaid), 2);
 
-    // Installments only while the trip is more than a week away
+    // Installments up to and including the trip day
     $daysUntilTrip      = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(\Carbon\Carbon::parse($booking->trip_date)->startOfDay(), false);
-    $installmentAllowed = $daysUntilTrip > 7;
+    $installmentAllowed = $daysUntilTrip >= 0;
 
     $payments = DB::table('booking_payments')
         ->where('booking_id', $id)

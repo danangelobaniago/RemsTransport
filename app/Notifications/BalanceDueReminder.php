@@ -53,6 +53,6 @@ class BalanceDueReminder extends Notification
             ->line("Your trip to {$this->destination} is coming up on " . Carbon::parse($this->tripDate)->format('F d, Y') . '.')
             ->line('You still have an outstanding balance of ₱' . number_format($this->balance, 2) . '.')
             ->action('View Booking', url('/my-bookings'))
-            ->line('You can pay online (if more than 7 days before the trip) or settle it in cash with your driver.');
+            ->line('You can pay any amount online from My Bookings before your trip, or settle it in cash with your driver.');
     }
 }

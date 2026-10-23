@@ -394,13 +394,13 @@
             <div class="pay-balance-box no-print">
                 @if($installmentAllowed)
                     <h4><i class="fas fa-hand-holding-dollar"></i> Pay in Installments</h4>
-                    <p>Your trip is still {{ $daysUntilTrip }} days away. Pay any amount now toward your
-                       ₱{{ number_format($balance, 2) }} balance — as many times as you like — or settle
-                       whatever's left with your driver on the trip.</p>
+                    <p>{{ $daysUntilTrip === 0 ? 'Your trip is today.' : ($daysUntilTrip === 1 ? 'Your trip is tomorrow.' : "Your trip is {$daysUntilTrip} days away.") }}
+                       Pay any amount now toward your ₱{{ number_format($balance, 2) }} balance — as many times
+                       as you like — or settle whatever's left with your driver on the trip.</p>
                 @else
                     <h4><i class="fas fa-hand-holding-dollar"></i> Pay Remaining Balance</h4>
-                    <p>Your trip is close, so installments are closed. You may pay the full
-                       ₱{{ number_format($balance, 2) }} balance now, or pay it to your driver on the trip.</p>
+                    <p>Your trip date has passed, so installments are closed. You may pay the full
+                       ₱{{ number_format($balance, 2) }} balance now.</p>
                 @endif
 
                 <form action="/joiner-booking/{{ $booking->id }}/pay-balance" method="POST">

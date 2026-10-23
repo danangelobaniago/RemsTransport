@@ -796,10 +796,10 @@ public function rescheduleBooking(Request $request, $id)
     return redirect("/receipt/{$id}")->with('success', 'Your booking has been rescheduled successfully.');
 }
 
-// Installments may be paid online up to this many days before the trip.
-// Closer than that, only the full remaining balance can be settled online;
-// whatever is left is collected by the driver on the trip.
-private const INSTALLMENT_CUTOFF_DAYS = 7;
+// Installments (any amount) may be paid online up to and including the trip
+// day — even when the trip is tomorrow. After the trip date, only the full
+// remaining balance can be settled online.
+private const INSTALLMENT_CUTOFF_DAYS = 0;
 
 private const MIN_ONLINE_PAYMENT = 100; // PayMongo minimum (PHP)
 
@@ -828,7 +828,7 @@ public function payBalanceCheckout(Request $request, $id)
     }
 
     $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
-    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
+    $installmentAllowed = $daysUntilTrip >= self::INSTALLMENT_CUTOFF_DAYS;
 
     // Decide how much to charge now
     if ($installmentAllowed && $request->filled('amount')) {
@@ -965,9 +965,9 @@ public function showReceipt($id)
 
     $passengers = DB::table('passengers')->where('booking_id', $id)->get();
 
-    // Installments can be paid online only while the trip is more than a week away
+    // Installments can be paid online up to and including the trip day
     $daysUntilTrip     = \Carbon\Carbon::parse(\App\Support\LocalDate::today())->diffInDays(Carbon::parse($booking->start_date)->startOfDay(), false);
-    $installmentAllowed = $daysUntilTrip > self::INSTALLMENT_CUTOFF_DAYS;
+    $installmentAllowed = $daysUntilTrip >= self::INSTALLMENT_CUTOFF_DAYS;
 
     $closedStatus = $this->closedStatus($booking);
     $closedReason = $booking->rejection_reason ?? null;
