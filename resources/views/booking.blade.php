@@ -58,10 +58,11 @@
 <div id="map" style="width:100%; height:300px; border-radius:10px;"></div>
 
 <!-- INPUTS -->
-<label>Pickup Location</label>
+<label>Pickup Location <small style="color:#6b7280;font-weight:400;">(within Luzon — outside Metro Manila needs admin approval)</small></label>
 <input type="text" id="pickup" name="pickup" required autocomplete="off">
 <input type="hidden" id="pickup_lat" name="pickup_lat" value="">
 <input type="hidden" id="pickup_lng" name="pickup_lng" value="">
+@include('partials.pickup-outside-ncr-notice')
 
 <label>Destination</label>
 <input type="text" id="destination" name="destination" required>

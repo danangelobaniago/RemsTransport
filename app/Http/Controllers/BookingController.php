@@ -208,14 +208,22 @@ class BookingController extends Controller
             'passengers' => 'required|integer|min:1|max:' . $van->seats,
         ]);
 
-        // Server-side NCR pickup validation
+        // Server-side pickup validation: anywhere in Luzon. Pickups outside
+        // NCR are flagged so the admin can decide before approving.
         $pickupLat = (float) $request->pickup_lat;
         $pickupLng = (float) $request->pickup_lng;
         if (!$pickupLat || !$pickupLng
-            || $pickupLat < 14.38 || $pickupLat > 14.78
-            || $pickupLng < 120.92 || $pickupLng > 121.15) {
-            return back()->withInput()->with('error', '⚠️ Pickup location must be within NCR (Metro Manila) only. Please select a valid Metro Manila address from the dropdown suggestions.');
+            || $pickupLat < 12.45 || $pickupLat > 21.12
+            || $pickupLng < 116.85 || $pickupLng > 126.60) {
+            return back()->withInput()->with('error', '⚠️ Pickup location must be within Luzon. Please select a valid address from the dropdown suggestions.');
         }
+
+        // The page decides by city name; the box catches anything it missed.
+        $insideNcrBox = $pickupLat >= 14.38 && $pickupLat <= 14.78
+            && $pickupLng >= 120.92 && $pickupLng <= 121.15;
+        $request->merge([
+            'pickup_outside_ncr' => $request->boolean('pickup_outside_ncr') || !$insideNcrBox ? 1 : 0,
+        ]);
 
         // 3. CROSS-TABLE MULTI-DAY VALIDATION
         // We check every day between start and end date
@@ -424,6 +432,7 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
                 'van_id' => $formData['van_id'],
                 'plate_number' => $van->plate_number ?? null,
                 'pickup' => $formData['pickup'],
+                'pickup_outside_ncr' => !empty($formData['pickup_outside_ncr']),
                 'destination' => $formData['destination'],
                 'start_date' => $start,
                 'end_date' => $end,

@@ -197,7 +197,15 @@
                             {{-- Uses the display_van alias from Controller --}}
                             <td>{{ $booking->display_van ?? 'None' }}</td>
 
-                            <td><span class="cell-clamp" data-full="{{ $booking->pickup }}">{{ $booking->pickup }}</span></td>
+                            <td>
+                                <span class="cell-clamp" data-full="{{ $booking->pickup }}">{{ $booking->pickup }}</span>
+                                @if($booking->pickup_outside_ncr ?? false)
+                                    <span style="display:inline-block;margin-top:4px;background:#fef3c7;color:#92400e;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:50px;white-space:nowrap;"
+                                          title="Pickup is outside Metro Manila — approve only if you can accept this pickup; otherwise reject and refund">
+                                        <i class="fas fa-exclamation-triangle"></i> Outside NCR
+                                    </span>
+                                @endif
+                            </td>
                             <td><span class="cell-clamp" data-full="{{ $booking->destination }}">{{ $booking->destination }}</span></td>
                             <td>
                                 <small>{{ date('M d', strtotime($booking->start_date)) }}</small><br>

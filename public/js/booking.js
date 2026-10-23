@@ -2,7 +2,7 @@
 let map, directionsService, directionsRenderer;
 let bookedDates = [];
 let startPicker, endPicker;
-let pickupNCRValid = false;
+let pickupValid = false;
 
 
 const LUZON_BOUNDS = {
@@ -45,11 +45,11 @@ function initMap() {
         new google.maps.LatLng(14.77, 121.17)
     );
 
-    // Pickup: strictly limited to NCR autocomplete results only
+    // Pickup: Luzon-wide, with Metro Manila results suggested first
     const pickupOptions = {
         componentRestrictions: { country: "ph" },
         bounds: ncrBounds,
-        strictBounds: true,
+        strictBounds: false,
         fields: ["address_components", "geometry", "name"],
     };
 
@@ -62,12 +62,13 @@ function initMap() {
     const pickupAuto = new google.maps.places.Autocomplete(pickupInput, pickupOptions);
     const destAuto   = new google.maps.places.Autocomplete(destInput,   destOptions);
 
-    pickupAuto.addListener('place_changed', () => validateNCROnly(pickupAuto, "pickup"));
+    pickupAuto.addListener('place_changed', () => validatePickup(pickupAuto, "pickup"));
     destAuto.addListener('place_changed',   () => validateLuzonOnly(destAuto, "destination"));
 }
 
 function clearPickupState() {
-    pickupNCRValid = false;
+    pickupValid = false;
+    setPickupOutsideNcr(false);
     document.getElementById('pickup_lat').value = '';
     document.getElementById('pickup_lng').value = '';
     document.getElementById('distance').value = '';
@@ -78,9 +79,20 @@ function clearPickupState() {
 }
 
 /**
- * Ensures pickup location is within NCR (Metro Manila) by checking address components.
+ * Shows/hides the "needs admin approval" notice for pickups outside NCR.
  */
-function validateNCROnly(autocomplete, inputId) {
+function setPickupOutsideNcr(outside) {
+    const flag = document.getElementById('pickup_outside_ncr');
+    const notice = document.getElementById('pickupOutsideNotice');
+    if (flag) flag.value = outside ? '1' : '0';
+    if (notice) notice.style.display = outside ? 'block' : 'none';
+}
+
+/**
+ * Pickup can be anywhere in Luzon. Outside NCR (Metro Manila) is allowed but
+ * flagged, since the admin has to agree to it before approving the booking.
+ */
+function validatePickup(autocomplete, inputId) {
     const place = autocomplete.getPlace();
     const input = document.getElementById(inputId);
 
@@ -91,21 +103,24 @@ function validateNCROnly(autocomplete, inputId) {
     if (!place || !place.geometry || !place.geometry.location) {
         input.value = '';
         input.style.borderColor = '#ef4444';
-        alert("⚠️ Pumili ng specific na address sa loob ng NCR (Metro Manila) mula sa mga mungkahi.");
+        alert("⚠️ Pumili ng specific na pickup address mula sa mga mungkahi.");
+        return;
+    }
+
+    const lat = place.geometry.location.lat();
+    const lng = place.geometry.location.lng();
+    if (lat < LUZON_BOUNDS.south || lat > LUZON_BOUNDS.north || lng < LUZON_BOUNDS.west || lng > LUZON_BOUNDS.east) {
+        input.value = '';
+        input.style.borderColor = '#ef4444';
+        alert("⚠️ Rem's Transport currently only picks up within Luzon. Please select a pickup address within Luzon.");
         return;
     }
 
     const components = place.address_components || [];
     const isNCR = components.some(c => NCR_CITIES.has(c.long_name.toLowerCase()));
 
-    if (!isNCR) {
-        input.value = '';
-        input.style.borderColor = '#ef4444';
-        alert("⚠️ Ang pickup location ng Rem's Transport ay NCR (Metro Manila) lang. Pumili ng Metro Manila address mula sa mga mungkahi.");
-        return;
-    }
-
-    pickupNCRValid = true;
+    pickupValid = true;
+    setPickupOutsideNcr(!isNCR);
     document.getElementById('pickup_lat').value = place.geometry.location.lat();
     document.getElementById('pickup_lng').value = place.geometry.location.lng();
     input.style.borderColor = '#10b981';
@@ -177,7 +192,7 @@ function calculateDays(start, end) {
 
 function calculateDistance() {
     if (!directionsService) return; // Maps not loaded, user enters distance manually
-    if (!pickupNCRValid) return; // Pickup not confirmed as NCR location
+    if (!pickupValid) return; // Pickup not confirmed as NCR location
 
     let origin = document.getElementById("pickup").value;
     let destination = document.getElementById("destination").value;
@@ -273,12 +288,12 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // Block form submission if pickup was not selected from NCR autocomplete
+    // Block form submission if pickup was not selected from the autocomplete
     if (bookingForm) {
         bookingForm.addEventListener("submit", function (e) {
-            if (!pickupNCRValid) {
+            if (!pickupValid) {
                 e.preventDefault();
-                alert("⚠️ Please select a Pickup Location within NCR (Metro Manila) from the dropdown suggestions.");
+                alert("⚠️ Please select a Pickup Location within Luzon from the dropdown suggestions.");
                 if (pickupInput) {
                     pickupInput.focus();
                     pickupInput.style.borderColor = '#ef4444';
