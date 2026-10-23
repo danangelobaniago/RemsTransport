@@ -6,8 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\PaymentReceiptMail;
+use App\Support\PaymentReceipt;
 use App\Models\User;
 use App\Notifications\NewBookingReceived;
 use App\Notifications\PaymentReceived;
@@ -390,26 +389,24 @@ public function processBooking(Request $request, $id)
                     'created_at'   => now(),
                     'updated_at'   => now(),
                 ]);
+
+                // Inside the guard so refreshing this page doesn't email the receipt again.
+                $trip = DB::table('joiner_trips')->find($booking->joiner_trip_id);
+                PaymentReceipt::send(
+                    $booking->user_id,
+                    'Joiner Trip',
+                    $booking->id,
+                    $trip ? $trip->destination : 'Joiner Trip',
+                    $booking->payment_id ?? $reference,
+                    (float) $booking->downpayment,
+                    PaymentReceipt::initialLabel(null, (float) $booking->total_price - (float) $booking->downpayment),
+                    $paymentMethod,
+                    (float) $booking->total_price,
+                    (float) $booking->total_price - (float) $booking->downpayment
+                );
             }
 
-            try {
-                $user = DB::table('users')->find($booking->user_id);
-                $trip = DB::table('joiner_trips')->find($booking->joiner_trip_id);
-                if ($user && $user->email) {
-                    Mail::to($user->email)->send(new PaymentReceiptMail(
-                        trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
-                        'Joiner Trip',
-                        $trip ? $trip->destination : 'Joiner Trip',
-                        $booking->payment_id ?? $reference,
-                        (float) $booking->downpayment,
-                        $paymentMethod,
-                        now()->format('F d, Y h:i A'),
-                        $newStatus
-                    ));
-                }
-            } catch (\Exception $e) {
-                \Log::error('Payment receipt email failed (joiner): ' . $e->getMessage());
-            }
+            $user = DB::table('users')->find($booking->user_id);
 
             // If this booking belongs to someone other than the person completing
             // checkout, an admin made it on behalf of a walk-in customer — send them
@@ -592,6 +589,20 @@ public function payBalanceSuccess(Request $request, $id)
     if ($notifyUser) {
         $notifyUser->notify(new PaymentReceived($id, 'Joiner Trip', (float) $pending['amount'], $newBalance));
     }
+
+    $trip = DB::table('joiner_trips')->find($booking->joiner_trip_id);
+    PaymentReceipt::send(
+        $booking->user_id,
+        'Joiner Trip',
+        $id,
+        $trip ? $trip->destination : 'Joiner Trip',
+        $pending['session_id'],
+        (float) $pending['amount'],
+        $newBalance <= 0 ? 'Balance Payment' : 'Installment Payment',
+        $paymentMethod,
+        (float) $booking->total_price,
+        $newBalance
+    );
 
     session()->forget('pending_joiner_balance_checkout');
 

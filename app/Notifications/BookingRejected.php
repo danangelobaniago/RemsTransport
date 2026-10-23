@@ -14,13 +14,27 @@ class BookingRejected extends Notification
     protected string $destination;
     protected string $bookingType;
     protected ?string $reason;
+    protected ?float $amountPaid;
 
-    public function __construct(int $bookingId, string $destination, string $bookingType = 'Booking', ?string $reason = null)
+    public function __construct(int $bookingId, string $destination, string $bookingType = 'Booking', ?string $reason = null, $amountPaid = null)
     {
         $this->bookingId   = $bookingId;
         $this->destination = $destination;
         $this->bookingType = $bookingType;
         $this->reason      = $reason;
+        $this->amountPaid  = $amountPaid !== null ? (float) $amountPaid : null;
+    }
+
+    /**
+     * "You are eligible for a refund of the ₱1,277.30 you paid." — the customer
+     * may have paid only a downpayment, and nothing is sent back until the
+     * admin has their payment details.
+     */
+    protected function refundLine(): string
+    {
+        return $this->amountPaid > 0
+            ? 'You are eligible for a refund of the ₱' . number_format($this->amountPaid, 2) . ' you paid.'
+            : 'You are eligible for a refund of any payment you made.';
     }
 
     public function via($notifiable)
@@ -33,7 +47,7 @@ class BookingRejected extends Notification
         $reasonLine = $this->reason ? " Reason: {$this->reason}." : '';
 
         return [
-            'message'      => "Your {$this->bookingType} #{$this->bookingId} to {$this->destination} has been rejected.{$reasonLine} Your full payment will be refunded. Please contact the admin for more information.",
+            'message'      => "Your {$this->bookingType} #{$this->bookingId} to {$this->destination} has been rejected.{$reasonLine} " . $this->refundLine() . " Our admin will contact you to get your payment details for the refund.",
             'booking_id'   => $this->bookingId,
             'reason'       => $this->reason,
             'type'         => 'booking_rejected',
@@ -60,7 +74,7 @@ class BookingRejected extends Notification
         }
 
         return $mail
-            ->line('✅ **Your full payment will be refunded.** Please allow a few business days for the refund to reflect on your account.')
+            ->line('✅ **' . $this->refundLine() . '** Our admin will contact you to get your payment details for the refund (e.g. your GCash number or bank account).')
             ->line('Please contact us directly so we can assist you further or help reschedule your trip:')
             ->line('📧 **Email:** remstransport1@gmail.com')
             ->line('📞 **Phone/SMS:** Available during business hours')

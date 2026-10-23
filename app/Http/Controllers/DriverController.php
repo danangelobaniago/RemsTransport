@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use App\Notifications\PaymentReceived;
+use App\Support\PaymentReceipt;
 use App\Notifications\TripCompletedFeedbackRequest;
 
 class DriverController extends Controller
@@ -367,6 +368,9 @@ class DriverController extends Controller
             $notifyUser->notify(new PaymentReceived($bookingId, 'Joiner Trip', $balance, 0));
         }
 
+        PaymentReceipt::send($booking->user_id, 'Joiner Trip', $bookingId, $trip->destination ?? 'Joiner Trip',
+            null, (float) $balance, 'Balance Payment', 'cash', (float) $booking->total_price, 0);
+
         return back()->with('success', $booking->passenger_name . ' — ₱' . number_format($balance, 2) . ' collected.');
     }
 
@@ -490,6 +494,27 @@ class DriverController extends Controller
             'updated_at'        => now(),
         ]);
 
+        DB::table('booking_payments')->insert([
+            'booking_id'   => $bookingId,
+            'source'       => 'bookings',
+            'amount'       => $balance,
+            'method'       => 'cash',
+            'reference'    => null,
+            'collected_by' => 'driver',
+            'paid_at'      => now(),
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ]);
+
+        $notifyUser = User::find($booking->user_id);
+        if ($notifyUser) {
+            $notifyUser->notify(new PaymentReceived($bookingId, 'Tour Package', $balance, 0));
+        }
+
+        PaymentReceipt::send($booking->user_id, 'Tour Package', $bookingId,
+            $booking->package_name ?? $tour->name ?? 'Tour Package',
+            null, (float) $balance, 'Balance Payment', 'cash', (float) $booking->total, 0);
+
         return back()->with('success', 'Balance of ₱' . number_format($balance, 2) . ' collected.');
     }
 
@@ -534,6 +559,10 @@ class DriverController extends Controller
         if ($notifyUser) {
             $notifyUser->notify(new PaymentReceived($request->booking_id, $booking->tour_id ? 'Tour Package' : 'Van Rental', $balance, 0));
         }
+
+        PaymentReceipt::send($booking->user_id, $booking->tour_id ? 'Tour Package' : 'Van Rental', $booking->id,
+            $booking->package_name ?? $booking->destination ?? 'N/A',
+            null, (float) $balance, 'Balance Payment', 'cash', (float) $booking->total, 0);
 
         return back()->with('success', '₱' . number_format($balance, 2) . ' collected successfully. Trip is now fully paid.');
     }

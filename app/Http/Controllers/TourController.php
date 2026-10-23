@@ -8,8 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Mail;
-use App\Mail\PaymentReceiptMail;
+use App\Support\PaymentReceipt;
 use App\Notifications\BookingApproved;
 use App\Notifications\BookingRejected;
 use App\Notifications\NewBookingReceived;
@@ -103,7 +102,7 @@ class TourController extends Controller
             $user = User::find($booking->user_id);
             if ($user) {
                 $destination = $booking->package_name ?? $booking->destination ?? 'Tour Package';
-                $user->notify(new BookingRejected($booking->id, $destination, 'Tour Booking'));
+                $user->notify(new BookingRejected($booking->id, $destination, 'Tour Booking', null, $booking->amount_paid));
             }
         }
 
@@ -513,26 +512,24 @@ public function showMyBookings(Request $request)
                     $remainingBal = max(0, (float) $targetBooking->total - (float) $targetBooking->downpayment);
                     $notifyUser->notify(new PaymentReceived($targetBooking->id, 'Tour Package', (float) $targetBooking->downpayment, $remainingBal));
                 }
+
+                // Inside the guard so refreshing this page doesn't email the receipt again.
+                $remainingBal = max(0, (float) $targetBooking->total - (float) $targetBooking->downpayment);
+                PaymentReceipt::send(
+                    $targetBooking->user_id,
+                    'Tour Package',
+                    $targetBooking->id,
+                    $targetBooking->package_name ?? $targetBooking->destination ?? 'Tour Package',
+                    $actualPaymentId,
+                    (float) $targetBooking->downpayment,
+                    PaymentReceipt::initialLabel(null, $remainingBal),
+                    $paymentMethodLabel,
+                    (float) $targetBooking->total,
+                    $remainingBal
+                );
             }
 
-            try {
-                $user = DB::table('users')->find($targetBooking->user_id);
-                if ($user && $user->email) {
-                    $tourName = $targetBooking->package_name ?? $targetBooking->destination ?? 'Tour Package';
-                    Mail::to($user->email)->send(new PaymentReceiptMail(
-                        trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
-                        'Tour Package',
-                        $tourName,
-                        $actualPaymentId,
-                        (float) $targetBooking->downpayment,
-                        $paymentMethodLabel,
-                        now()->format('F d, Y h:i A'),
-                        $finalStatus
-                    ));
-                }
-            } catch (\Exception $e) {
-                \Log::error('Payment receipt email failed (tour): ' . $e->getMessage());
-            }
+            $user = DB::table('users')->find($targetBooking->user_id);
 
             // If this booking belongs to someone other than the person completing
             // checkout, an admin made it on behalf of a walk-in customer — send them

@@ -95,7 +95,7 @@ class AdminController extends Controller
             $user = User::find($booking->user_id);
             if ($user) {
                 $destination = $booking->destination ?? $booking->package_name ?? 'N/A';
-                $user->notify(new BookingRejected($booking->id, $destination, 'Van Rental', $request->reason));
+                $user->notify(new BookingRejected($booking->id, $destination, 'Van Rental', $request->reason, $booking->amount_paid));
             }
         }
 
@@ -1194,7 +1194,7 @@ public function rejectJoinerTrip(Request $request, $id)
         foreach ($bookings as $jBooking) {
             $user = User::find($jBooking->user_id);
             if ($user) {
-                $user->notify(new BookingRejected($jBooking->id, $trip->destination, 'Joiner Trip'));
+                $user->notify(new BookingRejected($jBooking->id, $trip->destination, 'Joiner Trip', null, $jBooking->amount_paid));
             }
         }
     }

@@ -5,12 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Carbon\Carbon;
 use App\Models\Van;
 use App\Models\TourPackage;
 use App\Models\User;
-use App\Mail\PaymentReceiptMail;
+use App\Support\PaymentReceipt;
 use App\Http\Traits\BookingValidator;
 use App\Notifications\NewBookingReceived;
 use App\Notifications\PaymentReceived;
@@ -495,23 +494,18 @@ $status = ($formData['payment_type'] === 'full' || $remaining <= 0) ? 'fully_pai
         $passengers = DB::table('passengers')->where('booking_id', $bookingId)->get();
         $booking = DB::table('bookings')->find($bookingId);
 
-        try {
-            $user = DB::table('users')->find($bookingUserId);
-            if ($user && $user->email) {
-                Mail::to($user->email)->send(new PaymentReceiptMail(
-                    trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')),
-                    'Van Rental',
-                    $formData['destination'] ?? 'N/A',
-                    $paymentId,
-                    $paid,
-                    $paymentMethodLabel,
-                    now()->format('F d, Y h:i A'),
-                    $status
-                ));
-            }
-        } catch (\Exception $e) {
-            \Log::error('Payment receipt email failed (van): ' . $e->getMessage());
-        }
+        PaymentReceipt::send(
+            $bookingUserId,
+            'Van Rental',
+            $bookingId,
+            $formData['destination'] ?? 'N/A',
+            $paymentId,
+            $paid,
+            PaymentReceipt::initialLabel($formData['payment_type'] ?? null, $remaining),
+            $paymentMethodLabel,
+            $total,
+            $remaining
+        );
 
         $notifyUser = User::find($bookingUserId);
         if ($notifyUser) {
@@ -916,6 +910,19 @@ public function payBalanceSuccess(Request $request, $id)
     if ($notifyUser) {
         $notifyUser->notify(new PaymentReceived($id, $booking->tour_id ? 'Tour Package' : 'Van Rental', (float) $pending['amount'], $newBalance));
     }
+
+    PaymentReceipt::send(
+        $booking->user_id,
+        $booking->tour_id ? 'Tour Package' : 'Van Rental',
+        $id,
+        $booking->package_name ?? $booking->destination ?? 'N/A',
+        $paymentId,
+        (float) $pending['amount'],
+        $newBalance <= 0 ? 'Balance Payment' : 'Installment Payment',
+        $pending['method'] ?? null,
+        (float) $booking->total,
+        $newBalance
+    );
 
     session()->forget('pending_balance_checkout');
 
