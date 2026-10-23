@@ -227,11 +227,12 @@
                                     <i class="fas fa-peso-sign"></i>
                                 </button>
 
-                                {{-- Color --}}
-                                <button class="btn small" style="background:#db2777;color:white;"
-                                        onclick="openColorModal({{ $van->id }}, '{{ addslashes($van->name) }} ({{ $van->plate_number }})', '{{ addslashes($van->color ?? '') }}')"
-                                        title="Edit Color">
-                                    <i class="fas fa-palette"></i>
+                                {{-- Edit details --}}
+                                <button class="btn small" style="background:#2563eb;color:white;"
+                                        data-van="{{ json_encode(collect((array) $van)->only(['id', 'name', 'color', 'plate_number', 'seats', 'transmission'])) }}"
+                                        onclick="openEditVanModal(JSON.parse(this.dataset.van))"
+                                        title="Edit Van">
+                                    <i class="fas fa-pen"></i>
                                 </button>
 
                                 {{-- Delete --}}
@@ -286,21 +287,43 @@
     </div>
 </div>
 
-{{-- COLOR MODAL --}}
-<div class="modal-overlay" id="colorModal">
+{{-- EDIT VAN MODAL --}}
+<div class="modal-overlay" id="editVanModal">
     <div class="modal-box">
-        <button class="modal-close" onclick="closeModal('colorModal')">&times;</button>
-        <h3 style="margin-bottom:4px;"><i class="fas fa-palette" style="color:#db2777;"></i> Edit Color</h3>
-        <p id="colorModalVan" style="color:#6b7280;font-size:14px;margin-bottom:14px;"></p>
-        <form method="POST" id="colorForm">
+        <button class="modal-close" onclick="closeModal('editVanModal')">&times;</button>
+        <h3 style="margin-bottom:4px;"><i class="fas fa-pen" style="color:#2563eb;"></i> Edit Van</h3>
+        <p style="color:#6b7280;font-size:12.5px;margin-bottom:14px;">To change the price range, use the <i class="fas fa-peso-sign"></i> button.</p>
+        <form method="POST" id="editVanForm" enctype="multipart/form-data">
             @csrf
-            <div class="form-group">
-                <label>Color</label>
-                <input type="text" name="color" id="editColor" list="vanColorOptions" placeholder="e.g. White" maxlength="50" required>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group">
+                    <label>Van Name / Model</label>
+                    <input type="text" name="name" id="editVanName" maxlength="255" required>
+                </div>
+                <div class="form-group">
+                    <label>Color</label>
+                    <input type="text" name="color" id="editVanColor" list="vanColorOptions" placeholder="e.g. White" maxlength="50" required>
+                </div>
+                <div class="form-group">
+                    <label>Plate Number</label>
+                    <input type="text" name="plate_number" id="editVanPlate" maxlength="100" required>
+                </div>
+                <div class="form-group">
+                    <label>Seats / Capacity</label>
+                    <input type="number" name="seats" id="editVanSeats" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Transmission</label>
+                    <input type="text" name="transmission" id="editVanTransmission" required>
+                </div>
+                <div class="form-group">
+                    <label>Replace Image <span style="font-weight:400;color:#6b7280;">(optional)</span></label>
+                    <input type="file" name="image" accept="image/*">
+                </div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
-                <button type="button" class="btn gray" onclick="closeModal('colorModal')">Cancel</button>
-                <button type="submit" class="btn" style="background:#db2777;color:white;">Save Color</button>
+                <button type="button" class="btn gray" onclick="closeModal('editVanModal')">Cancel</button>
+                <button type="submit" class="btn" style="background:#2563eb;color:white;">Save Changes</button>
             </div>
         </form>
     </div>
@@ -498,11 +521,15 @@ function openPriceModal(id, label, min, max) {
     document.getElementById('priceModal').classList.add('open');
 }
 
-function openColorModal(id, label, color) {
-    document.getElementById('colorModalVan').textContent = 'Van: ' + label;
-    document.getElementById('colorForm').action = '/admin/vans/' + id + '/color';
-    document.getElementById('editColor').value = color;
-    document.getElementById('colorModal').classList.add('open');
+function openEditVanModal(van) {
+    document.getElementById('editVanForm').action = '/admin/vans/' + van.id + '/update';
+    document.getElementById('editVanName').value = van.name;
+    document.getElementById('editVanColor').value = van.color || '';
+    document.getElementById('editVanPlate').value = van.plate_number;
+    document.getElementById('editVanSeats').value = van.seats;
+    document.getElementById('editVanTransmission').value = van.transmission;
+    document.querySelector('#editVanForm input[name="image"]').value = '';
+    document.getElementById('editVanModal').classList.add('open');
 }
 
 function validatePriceModal() {

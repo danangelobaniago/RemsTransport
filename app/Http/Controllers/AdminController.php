@@ -841,23 +841,70 @@ public function updateVanPrice(Request $request, $id)
         . number_format($request->price_min) . ' – ₱' . number_format($request->price_max) . '.');
 }
 
-// ✅ UPDATE VAN COLOR (picked by the customer on the public van page)
-public function updateVanColor(Request $request, $id)
+// ✅ EDIT VAN DETAILS (price has its own modal so changes get logged)
+public function updateVan(Request $request, $id)
 {
     $van = DB::table('vans')->where('id', $id)->first();
     if (!$van) {
         return back()->with('error', 'Van not found.');
     }
 
-    $request->validate(['color' => 'required|string|max:50']);
-    $color = ucwords(trim($request->color));
-
-    DB::table('vans')->where('id', $id)->update([
-        'color'      => $color,
-        'updated_at' => now(),
+    // Report as a page-level error rather than under the Add Van form's fields.
+    $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        'name'         => 'required|string|max:255',
+        'color'        => 'required|string|max:50',
+        'plate_number' => 'required|string|max:100|unique:vans,plate_number,' . $van->id,
+        'seats'        => 'required|integer|min:1',
+        'transmission' => 'required|string',
+        'image'        => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+    ], [
+        'plate_number.unique' => 'That plate number is already registered. Please use a different plate.',
     ]);
+    if ($validator->fails()) {
+        return back()->with('error', "{$van->name} ({$van->plate_number}): " . $validator->errors()->first());
+    }
 
-    return back()->with('success', "Color of {$van->name} ({$van->plate_number}) set to {$color}.");
+    $name  = trim($request->name);
+    $plate = trim($request->plate_number);
+
+    $data = [
+        'name'         => $name,
+        'color'        => ucwords(trim($request->color)),
+        'plate_number' => $plate,
+        'seats'        => $request->seats,
+        'transmission' => $request->transmission,
+        'updated_at'   => now(),
+    ];
+    if ($request->hasFile('image')) {
+        $data['image'] = $request->file('image')->store('vans', 'public');
+    }
+
+    DB::transaction(function () use ($van, $data, $name, $plate) {
+        DB::table('vans')->where('id', $van->id)->update($data);
+
+        if ($name === $van->name && $plate === $van->plate_number) {
+            return;
+        }
+
+        // Trips, tours and holds point at a van by its name/plate (availability
+        // and the van calendar match on them), so carry the new values over.
+        DB::table('joiner_trips')
+            ->where(fn ($q) => $q->where('plate_number', $van->plate_number)
+                ->orWhere(fn ($q2) => $q2->whereNull('plate_number')->where('van', $van->name)))
+            ->update(['van' => $name, 'plate_number' => $plate]);
+
+        DB::table('tour_packages')
+            ->where(fn ($q) => $q->where('van_id', $van->id)->orWhere('plate_number', $van->plate_number))
+            ->update(['van' => $name, 'plate_number' => $plate]);
+
+        DB::table('bookings')->where('van_id', $van->id)
+            ->update(['van' => $name, 'plate_number' => $plate]);
+
+        DB::table('booking_holds')->where('plate_number', $van->plate_number)
+            ->update(['plate_number' => $plate]);
+    });
+
+    return back()->with('success', "{$name} ({$plate}) updated successfully.");
 }
 
 public function deleteVan($id)
