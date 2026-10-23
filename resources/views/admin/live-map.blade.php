@@ -25,9 +25,18 @@
         .driver-list-name { font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; }
         .driver-list-meta { font-size: 11px; color: #94a3b8; margin-top: 3px; }
         .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-        .dot-live { background: #22c55e; }
-        .dot-stale { background: #f59e0b; }
-        .empty-list { padding: 30px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+        .dot-live { background: #22c55e; box-shadow: 0 0 0 3px #dcfce7; }
+        .dot-offline { background: #cbd5e1; }
+        .empty-list { padding: 18px 16px; text-align: center; color: #94a3b8; font-size: 13px; }
+        .list-group-title { padding: 8px 16px; font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: #64748b; background: #f8fafc; border-bottom: 1px solid #f1f5f9; }
+        .driver-list-item.offline .driver-list-name { color: #64748b; }
+        .driver-list-item.following { background: #eff6ff; }
+        .src-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 99px; background: #f1f5f9; color: #475569; }
+        .src-badge.app { background: #ede9fe; color: #6d28d9; }
+        .follow-btn { margin-left: auto; font-size: 11px; font-weight: 700; color: #2563eb; background: #eff6ff; border: none; border-radius: 6px; padding: 3px 8px; cursor: pointer; }
+        .follow-btn.on { background: #2563eb; color: #fff; }
+        .follow-banner { display: none; align-items: center; gap: 10px; margin-bottom: 10px; padding: 8px 14px; background: #2563eb; color: #fff; border-radius: 10px; font-size: 13px; font-weight: 600; }
+        .follow-banner button { margin-left: auto; background: rgba(255,255,255,.2); color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-weight: 700; }
 
         #map { width: 100%; height: 75vh; min-height: 420px; border-radius: 12px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); }
     </style>
@@ -65,18 +74,25 @@
         </div>
 
         <p style="color:#64748b;font-size:13px;margin:-12px 0 20px;">
-            Shows drivers who currently have their Driver Portal open with location sharing on. Positions refresh every 10 seconds.
+            <strong>Live</strong> = sent a location in the last 2 minutes, from the Driver Portal (while it's open)
+            or the Traccar Client app (works in the background). Refreshes every 5 seconds; live drivers show their trail for the last hour.
         </p>
 
         <div class="map-layout">
             <div class="driver-list">
-                <div class="driver-list-header"><i class="fas fa-van-shuttle"></i> Drivers Online</div>
+                <div class="driver-list-header"><i class="fas fa-van-shuttle"></i> Drivers</div>
                 <div id="driverListBody">
                     <div class="empty-list">Loading...</div>
                 </div>
             </div>
 
-            <div id="map"></div>
+            <div>
+                <div class="follow-banner" id="followBanner">
+                    <i class="fas fa-location-crosshairs"></i> <span id="followText"></span>
+                    <button type="button" onclick="stopFollowing()">Stop</button>
+                </div>
+                <div id="map"></div>
+            </div>
         </div>
 
     </div>
@@ -88,18 +104,25 @@ function toggleSidebar() {
     document.getElementById('sidebarOverlay').classList.toggle('open');
 }
 
-let map;
-const markers = {}; // driver id -> google.maps.Marker
-const accuracyCircles = {}; // driver id -> google.maps.Circle
-const STALE_AFTER_MS = 2 * 60 * 1000; // 2 minutes without an update = stale
+const REFRESH_MS = 5000;
+const MOVE_ANIMATION_MS = 1200; // markers glide to their new position instead of jumping
+
+let map, infoWindow;
+let driverById = {};
+let followId = null;          // driver the map keeps centered on
+const markers = {};           // driver id -> google.maps.Marker
+const accuracyCircles = {};   // driver id -> google.maps.Circle
+const trails = {};            // driver id -> google.maps.Polyline
 
 function initMap() {
     map = new google.maps.Map(document.getElementById('map'), {
         center: { lat: 14.5995, lng: 120.9842 }, // Metro Manila
         zoom: 11,
     });
+    // Dragging the map yourself ends follow mode
+    map.addListener('dragstart', () => { if (followId) stopFollowing(); });
     fetchLocations();
-    setInterval(fetchLocations, 10000);
+    setInterval(fetchLocations, REFRESH_MS);
 }
 
 function mapsLoadError() {
@@ -107,12 +130,40 @@ function mapsLoadError() {
         '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;">Could not load Google Maps.</div>';
 }
 
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+// Server times are UTC 'Y-m-d H:i:s'
 function timeAgo(dateStr) {
     if (!dateStr) return 'never';
-    const diffSec = Math.floor((Date.now() - new Date(dateStr.replace(' ', 'T') + 'Z')) / 1000);
+    const diffSec = Math.max(0, Math.floor((Date.now() - new Date(dateStr.replace(' ', 'T') + 'Z')) / 1000));
     if (diffSec < 60) return diffSec + 's ago';
     if (diffSec < 3600) return Math.floor(diffSec / 60) + 'm ago';
-    return Math.floor(diffSec / 3600) + 'h ago';
+    if (diffSec < 172800) return Math.floor(diffSec / 3600) + 'h ago';
+    return Math.floor(diffSec / 86400) + 'd ago';
+}
+
+function speedLabel(d) {
+    if (d.location_speed === null || d.location_speed === undefined) return '';
+    const kmh = Math.round(parseFloat(d.location_speed) * 3.6);
+    return kmh >= 3 ? ` &bull; ${kmh} km/h` : ' &bull; stopped';
+}
+
+function accuracyLabel(accuracy) {
+    return accuracy ? ` &bull; &plusmn;${Math.round(accuracy)}m` : '';
+}
+
+function sourceBadge(d) {
+    if (d.location_source === 'app') return '<span class="src-badge app" title="Traccar Client app — keeps working in the background">App</span>';
+    if (d.location_source === 'portal') return '<span class="src-badge" title="Driver Portal — only while the page is open">Portal</span>';
+    return '';
+}
+
+function tripSummary(trip) {
+    if (!trip) return 'No active trip';
+    const who = trip.customer ? ` &bull; ${escapeHtml(trip.customer)}` : '';
+    return `${escapeHtml(trip.type)}: ${escapeHtml(trip.destination)}${who}`;
 }
 
 function fetchLocations() {
@@ -122,124 +173,154 @@ function fetchLocations() {
         .catch(() => {});
 }
 
-function accuracyLabel(accuracy) {
-    if (!accuracy) return '';
-    return ` &bull; &plusmn;${Math.round(accuracy)}m`;
+function listItem(d) {
+    const following = followId === d.id;
+    return `<div class="driver-list-item ${d.is_live ? '' : 'offline'} ${following ? 'following' : ''}" onclick="showDriver(${d.id})">
+        <div class="driver-list-name">
+            <span class="dot ${d.is_live ? 'dot-live' : 'dot-offline'}"></span>${escapeHtml(d.name)} ${sourceBadge(d)}
+            ${d.is_live ? `<button type="button" class="follow-btn ${following ? 'on' : ''}" onclick="event.stopPropagation(); toggleFollow(${d.id})">${following ? 'Following' : 'Follow'}</button>` : ''}
+        </div>
+        <div class="driver-list-meta">${d.is_live ? 'Updated' : 'Last seen'} ${timeAgo(d.location_updated_at)}${d.is_live ? speedLabel(d) + accuracyLabel(d.location_accuracy) : ''}</div>
+        <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
+    </div>`;
 }
 
-function tripSummary(trip) {
-    if (!trip) return 'No active trip';
-    const who = trip.customer ? ` &bull; ${trip.customer}` : '';
-    return `${trip.type}: ${trip.destination}${who}`;
+function renderList(drivers) {
+    const live = drivers.filter(d => d.is_live);
+    const offline = drivers.filter(d => !d.is_live);
+    document.getElementById('driverListBody').innerHTML =
+        `<div class="list-group-title">🟢 Live (${live.length})</div>` +
+        (live.length ? live.map(listItem).join('') : '<div class="empty-list">No driver is sharing their location right now.</div>') +
+        `<div class="list-group-title">⚪ Offline (${offline.length})</div>` +
+        (offline.length ? offline.map(listItem).join('') : '<div class="empty-list">—</div>');
+}
+
+function markerIcon(d) {
+    const color = d.is_live ? '#2563eb' : '#94a3b8';
+    const moving = d.is_live && d.location_heading !== null && parseFloat(d.location_speed || 0) * 3.6 >= 3;
+    // An arrow pointing where the van is heading while it moves; a dot when stopped or offline
+    return moving
+        ? { path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW, scale: 6, rotation: parseFloat(d.location_heading),
+            fillColor: color, fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 }
+        : { path: google.maps.SymbolPath.CIRCLE, scale: 8, fillColor: color, fillOpacity: 1, strokeColor: 'white', strokeWeight: 2 };
+}
+
+// Glide a marker from where it is to `to` over MOVE_ANIMATION_MS
+function animateMarker(marker, to) {
+    const from = marker.getPosition();
+    if (!from || (from.lat() === to.lat && from.lng() === to.lng)) { marker.setPosition(to); return; }
+    if (marker._anim) cancelAnimationFrame(marker._anim);
+    const start = performance.now();
+    const step = (now) => {
+        const t = Math.min(1, (now - start) / MOVE_ANIMATION_MS);
+        const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; // ease in-out
+        marker.setPosition({ lat: from.lat() + (to.lat - from.lat()) * e, lng: from.lng() + (to.lng - from.lng()) * e });
+        if (t < 1) marker._anim = requestAnimationFrame(step);
+    };
+    marker._anim = requestAnimationFrame(step);
 }
 
 function renderDrivers(drivers) {
     const seenIds = new Set();
-    const listBody = document.getElementById('driverListBody');
     driverById = {};
+    drivers.forEach(d => { d.id = Number(d.id); driverById[d.id] = d; });
 
-    if (drivers.length === 0) {
-        listBody.innerHTML = '<div class="empty-list">No drivers are currently sharing their location.</div>';
-    } else {
-        listBody.innerHTML = drivers.map(d => {
-            const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
-            return `<div class="driver-list-item" onclick="showDriver(${d.id})">
-                <div class="driver-list-name"><span class="dot ${isStale ? 'dot-stale' : 'dot-live'}"></span>${d.name}</div>
-                <div class="driver-list-meta">Updated ${timeAgo(d.location_updated_at)} &bull; ${d.status}${accuracyLabel(d.location_accuracy)}</div>
-                <div class="driver-list-meta">${tripSummary(d.current_trip)}</div>
-            </div>`;
-        }).join('');
-    }
+    // Following someone who went offline — stop
+    if (followId && !(driverById[followId] && driverById[followId].is_live)) stopFollowing(false);
+
+    renderList(drivers);
 
     drivers.forEach(d => {
         seenIds.add(d.id);
-        driverById[d.id] = d;
         const pos = { lat: parseFloat(d.current_lat), lng: parseFloat(d.current_lng) };
-        const isStale = (Date.now() - new Date(d.location_updated_at.replace(' ', 'T') + 'Z')) > STALE_AFTER_MS;
         const accuracy = d.location_accuracy ? parseFloat(d.location_accuracy) : null;
 
         if (markers[d.id]) {
-            markers[d.id].setPosition(pos);
-            markers[d.id].setOpacity(isStale ? 0.4 : 1);
+            animateMarker(markers[d.id], pos);
+            markers[d.id].setIcon(markerIcon(d));
+            markers[d.id].setZIndex(d.is_live ? 10 : 1);
         } else {
-            markers[d.id] = new google.maps.Marker({
-                position: pos,
-                map: map,
-                title: d.name,
-                opacity: isStale ? 0.4 : 1,
-                icon: {
-                    path: google.maps.SymbolPath.CIRCLE,
-                    scale: 8,
-                    fillColor: '#2563eb',
-                    fillOpacity: 1,
-                    strokeColor: 'white',
-                    strokeWeight: 2,
-                },
-            });
+            markers[d.id] = new google.maps.Marker({ position: pos, map, title: d.name, icon: markerIcon(d), zIndex: d.is_live ? 10 : 1 });
             markers[d.id].addListener('click', () => showDriver(d.id));
         }
 
-        // A faint circle showing the GPS fix's own margin of error, so a
-        // wide, hazy circle reads as "don't fully trust this pin."
-        if (accuracy && !isStale) {
+        // Faint circle = the GPS fix's own margin of error (live drivers only)
+        if (accuracy && d.is_live) {
             if (accuracyCircles[d.id]) {
                 accuracyCircles[d.id].setCenter(pos);
                 accuracyCircles[d.id].setRadius(accuracy);
             } else {
                 accuracyCircles[d.id] = new google.maps.Circle({
-                    center: pos,
-                    radius: accuracy,
-                    map: map,
-                    fillColor: '#2563eb',
-                    fillOpacity: 0.08,
-                    strokeColor: '#2563eb',
-                    strokeOpacity: 0.25,
-                    strokeWeight: 1,
-                    clickable: false,
+                    center: pos, radius: accuracy, map, clickable: false,
+                    fillColor: '#2563eb', fillOpacity: 0.08, strokeColor: '#2563eb', strokeOpacity: 0.25, strokeWeight: 1,
                 });
             }
         } else if (accuracyCircles[d.id]) {
             accuracyCircles[d.id].setMap(null);
             delete accuracyCircles[d.id];
         }
-    });
 
-    // Remove markers (and circles) for drivers no longer reporting a location.
-    Object.keys(markers).forEach(id => {
-        if (!seenIds.has(Number(id))) {
-            markers[id].setMap(null);
-            delete markers[id];
-            if (accuracyCircles[id]) {
-                accuracyCircles[id].setMap(null);
-                delete accuracyCircles[id];
+        // Trail of the last hour while live
+        const path = (d.trail || []).map(([lat, lng]) => ({ lat, lng }));
+        if (d.is_live && path.length > 1) {
+            if (trails[d.id]) {
+                trails[d.id].setPath(path);
+            } else {
+                trails[d.id] = new google.maps.Polyline({ path, map, clickable: false, strokeColor: '#2563eb', strokeOpacity: 0.55, strokeWeight: 4 });
             }
+        } else if (trails[d.id]) {
+            trails[d.id].setMap(null);
+            delete trails[d.id];
         }
     });
-}
 
-let driverById = {};
-let infoWindow;
+    // Drop anything for drivers no longer reporting
+    Object.keys(markers).forEach(id => {
+        if (seenIds.has(Number(id))) return;
+        markers[id].setMap(null); delete markers[id];
+        if (accuracyCircles[id]) { accuracyCircles[id].setMap(null); delete accuracyCircles[id]; }
+        if (trails[id]) { trails[id].setMap(null); delete trails[id]; }
+    });
+
+    if (followId && driverById[followId]) {
+        const d = driverById[followId];
+        map.panTo({ lat: parseFloat(d.current_lat), lng: parseFloat(d.current_lng) });
+    }
+}
 
 function showDriver(id) {
     const d = driverById[id];
     if (!d || !markers[id]) return;
 
-    panTo(parseFloat(d.current_lat), parseFloat(d.current_lng));
+    map.panTo({ lat: parseFloat(d.current_lat), lng: parseFloat(d.current_lng) });
+    if (map.getZoom() < 15) map.setZoom(15);
 
     if (!infoWindow) infoWindow = new google.maps.InfoWindow();
     infoWindow.setContent(`
-        <div style="font-size:13px;min-width:180px;">
-            <div style="font-weight:700;margin-bottom:4px;">${d.name}</div>
+        <div style="font-size:13px;min-width:190px;">
+            <div style="font-weight:700;margin-bottom:4px;">${escapeHtml(d.name)} ${sourceBadge(d)}</div>
             <div style="color:#64748b;margin-bottom:2px;">${tripSummary(d.current_trip)}</div>
-            <div style="color:#94a3b8;font-size:11px;">Updated ${timeAgo(d.location_updated_at)}${accuracyLabel(d.location_accuracy)}</div>
+            <div style="color:#94a3b8;font-size:11px;">${d.is_live ? 'Updated' : 'Last seen'} ${timeAgo(d.location_updated_at)}${speedLabel(d)}${accuracyLabel(d.location_accuracy)}</div>
+            ${d.phone ? `<div style="margin-top:6px;"><a href="tel:${escapeHtml(d.phone)}" style="color:#2563eb;font-weight:600;"><i class="fas fa-phone"></i> ${escapeHtml(d.phone)}</a></div>` : ''}
         </div>
     `);
     infoWindow.open(map, markers[id]);
 }
 
-function panTo(lat, lng) {
-    map.panTo({ lat, lng });
-    map.setZoom(15);
+function toggleFollow(id) {
+    if (followId === id) { stopFollowing(); return; }
+    followId = id;
+    const d = driverById[id];
+    document.getElementById('followText').textContent = 'Following ' + d.name;
+    document.getElementById('followBanner').style.display = 'flex';
+    showDriver(id);
+    renderList(Object.values(driverById));
+}
+
+function stopFollowing(rerender = true) {
+    followId = null;
+    document.getElementById('followBanner').style.display = 'none';
+    if (rerender) renderList(Object.values(driverById));
 }
 </script>
 <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.key') }}&callback=initMap&onerror=mapsLoadError" async defer></script>

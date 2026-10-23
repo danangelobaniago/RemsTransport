@@ -484,17 +484,35 @@ class AdminController extends Controller
 
     public function driverLocations()
     {
+        // Same 'Y-m-d H:i:s' (UTC) format as location_updated_at, so plain string comparison works
+        $liveSince = now()->subSeconds(\App\Support\DriverLocation::LIVE_SECONDS)->toDateTimeString();
+
         $drivers = DB::table('drivers')
             ->whereNotNull('current_lat')
             ->whereNotNull('current_lng')
-            ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_accuracy', 'location_updated_at')
-            ->get()
-            ->map(function ($driver) {
-                $driver->current_trip = $this->currentTripForDriver($driver);
-                return $driver;
-            });
+            ->select('id', 'name', 'phone', 'status', 'current_lat', 'current_lng', 'location_accuracy',
+                     'location_speed', 'location_heading', 'location_source', 'location_updated_at')
+            ->orderByDesc('location_updated_at')
+            ->get();
 
-        return response()->json(['drivers' => $drivers]);
+        // Last hour of positions for the drivers who are live, drawn as a trail
+        $trails = DB::table('driver_location_points')
+            ->whereIn('driver_id', $drivers->filter(fn ($d) => $d->location_updated_at >= $liveSince)->pluck('id'))
+            ->where('recorded_at', '>=', now()->subHour())
+            ->orderBy('recorded_at')
+            ->get(['driver_id', 'lat', 'lng'])
+            ->groupBy('driver_id');
+
+        $drivers = $drivers->map(function ($driver) use ($liveSince, $trails) {
+            $driver->is_live = $driver->location_updated_at >= $liveSince;
+            $driver->current_trip = $this->currentTripForDriver($driver);
+            $driver->trail = $driver->is_live
+                ? $trails->get($driver->id, collect())->map(fn ($p) => [(float) $p->lat, (float) $p->lng])->values()
+                : [];
+            return $driver;
+        });
+
+        return response()->json(['drivers' => $drivers, 'live_seconds' => \App\Support\DriverLocation::LIVE_SECONDS]);
     }
 
     // Finds the trip a driver is actively out on right now (arrived/in transit),

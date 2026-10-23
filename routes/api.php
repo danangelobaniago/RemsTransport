@@ -17,3 +17,9 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+// Background location from the Traccar Client app on a driver's phone.
+// Authenticated by the driver's secret tracking token (the app's device id).
+Route::match(['get', 'post'], '/driver-tracking', [\App\Http\Controllers\DriverTrackingController::class, 'store'])
+    ->middleware('throttle:240,1')
+    ->name('driver.tracking');

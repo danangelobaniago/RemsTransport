@@ -210,7 +210,10 @@ class DriverController extends Controller
             ->selectRaw('ROUND(AVG(driver_rating), 1) as avg_rating, COUNT(*) as rating_count')
             ->first();
 
-        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages', 'nextTrip', 'ratingStats'));
+        // Device id for the Traccar Client app (background location sharing)
+        $trackingToken = \App\Support\DriverLocation::trackingToken($driver);
+
+        return view('driver.dashboard', compact('driver', 'bookings', 'bookingsForJs', 'joinerTrips', 'tourPackages', 'nextTrip', 'ratingStats', 'trackingToken'));
     }
 
     public function updateLocation(Request $request)
@@ -219,6 +222,8 @@ class DriverController extends Controller
             'lat'      => 'required|numeric|between:-90,90',
             'lng'      => 'required|numeric|between:-180,180',
             'accuracy' => 'nullable|numeric|min:0',
+            'speed'    => 'nullable|numeric',
+            'heading'  => 'nullable|numeric',
         ]);
 
         $driver = DB::table('drivers')->where('user_id', Auth::id())->first();
@@ -226,12 +231,15 @@ class DriverController extends Controller
             return response()->json(['error' => 'No driver record linked to your account.'], 404);
         }
 
-        DB::table('drivers')->where('id', $driver->id)->update([
-            'current_lat'         => $request->lat,
-            'current_lng'         => $request->lng,
-            'location_accuracy'   => $request->accuracy !== null ? round($request->accuracy) : null,
-            'location_updated_at' => now(),
-        ]);
+        \App\Support\DriverLocation::record(
+            $driver->id,
+            (float) $request->lat,
+            (float) $request->lng,
+            $request->accuracy !== null ? (float) $request->accuracy : null,
+            $request->speed !== null ? (float) $request->speed : null,
+            $request->heading !== null ? (float) $request->heading : null,
+            'portal'
+        );
 
         return response()->json(['success' => true]);
     }

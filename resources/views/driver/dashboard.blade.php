@@ -461,6 +461,46 @@
         </div>
     @endif
 
+    {{-- LIVE LOCATION SHARING --}}
+    @php
+        $appLive = $driver->location_source === 'app' && $driver->location_updated_at
+            && \Illuminate\Support\Carbon::parse($driver->location_updated_at, 'UTC')->gt(now()->subSeconds(\App\Support\DriverLocation::LIVE_SECONDS));
+    @endphp
+    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; margin-bottom:20px; overflow:hidden;">
+        <div onclick="document.getElementById('trackingSetup').classList.toggle('open')" style="display:flex; align-items:center; gap:12px; padding:14px 18px; cursor:pointer;">
+            <i class="fas fa-location-dot" style="color:#2563eb; font-size:18px;"></i>
+            <div style="flex:1; font-size:14px; color:#334155;">
+                <strong>Keep this page open while on a trip</strong> so the office can see your location.
+                <span style="color:#64748b;">Locking your phone or switching apps pauses it —
+                    <span style="color:#2563eb; font-weight:600;">set up background tracking</span>.</span>
+            </div>
+            @if($appLive)
+                <span style="background:#dcfce7; color:#15803d; font-size:12px; font-weight:700; padding:4px 10px; border-radius:99px; white-space:nowrap;">
+                    <i class="fas fa-circle-check"></i> Tracking app connected
+                </span>
+            @endif
+            <i class="fas fa-chevron-down" style="color:#94a3b8;"></i>
+        </div>
+        <div id="trackingSetup" class="tracking-setup">
+            <ol style="margin:0; padding:0 18px 4px 38px; font-size:14px; color:#334155; line-height:1.8;">
+                <li>Install <strong>Traccar Client</strong> from the Play Store or App Store (free).</li>
+                <li>Open it and set <strong>Device identifier</strong> to:
+                    <code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; font-weight:700;">{{ $trackingToken }}</code></li>
+                <li>Set <strong>Server URL</strong> to:
+                    <code style="background:#f1f5f9; padding:2px 8px; border-radius:6px; word-break:break-all;">{{ route('driver.tracking') }}</code></li>
+                <li>Set <strong>Frequency</strong> to <strong>10</strong> seconds and turn <strong>High accuracy</strong> on.</li>
+                <li>Allow location access <strong>"All the time"</strong>, then switch <strong>Service status</strong> on before each trip.</li>
+            </ol>
+            <p style="margin:6px 18px 16px; font-size:12px; color:#64748b;">
+                Keep the device identifier private — it is how the system knows the location is yours. Turn the service off after your trip to save battery.
+            </p>
+        </div>
+    </div>
+    <style>
+        .tracking-setup { display: none; border-top: 1px solid #f1f5f9; padding-top: 12px; }
+        .tracking-setup.open { display: block; }
+    </style>
+
     {{-- DASHBOARD GRID --}}
     <div class="dashboard-grid">
 
@@ -1033,7 +1073,7 @@ init();
 // ── LIVE LOCATION SHARING ──
 // Shares this driver's position with the admin dashboard while this tab stays open.
 // Sends at most once every 8 seconds, even if the browser reports position more often.
-const LOCATION_SEND_INTERVAL_MS = 8000;
+const LOCATION_SEND_INTERVAL_MS = 5000; // the admin live map refreshes every 5 s
 const MAX_ACCEPTABLE_ACCURACY_M = 150; // GPS fixes worse than this are likely cell/Wi-Fi triangulation, not GPS
 const MAX_PLAUSIBLE_SPEED_MPS = 55;    // ~200 km/h — faster than that between two fixes is a bad reading, not real travel
 let lastLocationSendAt = 0;
@@ -1057,18 +1097,18 @@ function haversineMeters(lat1, lon1, lat2, lon2) {
 
 function sendLocation(position) {
     const now = Date.now();
-    const { latitude, longitude, accuracy } = position.coords;
+    const { latitude, longitude, accuracy, speed, heading } = position.coords;
 
     // Remember the best (lowest-accuracy-number) fix seen even when we're not
     // due to send yet, so a driver with a weak signal still reports the best
     // reading available instead of going dark for the whole interval.
     if (!bestPendingFix || accuracy < bestPendingFix.accuracy) {
-        bestPendingFix = { lat: latitude, lng: longitude, accuracy, time: now };
+        bestPendingFix = { lat: latitude, lng: longitude, accuracy, speed, heading, time: now };
     }
 
     if (now - lastLocationSendAt < LOCATION_SEND_INTERVAL_MS) return;
 
-    let fix = { lat: latitude, lng: longitude, accuracy };
+    let fix = { lat: latitude, lng: longitude, accuracy, speed, heading };
 
     // This fix is unusually imprecise — prefer the best one seen this
     // window instead, unless we haven't sent anything in a while (better to
@@ -1102,6 +1142,8 @@ function sendLocation(position) {
             lat: fix.lat,
             lng: fix.lng,
             accuracy: fix.accuracy,
+            speed: Number.isFinite(fix.speed) ? fix.speed : null,       // m/s, null when standing still or unknown
+            heading: Number.isFinite(fix.heading) ? fix.heading : null, // degrees from north
         }),
     }).then(r => {
         if (r.ok) {
