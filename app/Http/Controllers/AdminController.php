@@ -134,17 +134,6 @@ class AdminController extends Controller
     // Stats Logic
     $totalBookings = DB::table('bookings')->count() + DB::table('joiner_bookings')->count();
 
-    // --- FIX: Total Revenue now only sums 'completed' trips ---
-    $privateRevenue = DB::table('bookings')
-        ->where('status', 'completed')
-        ->sum('total');
-
-    $joinerRevenue = DB::table('joiner_bookings')
-        ->where('status', 'completed')
-        ->sum('total_price');
-
-    $totalRevenue = $privateRevenue + $joinerRevenue;
-
     // Counts for Pending and Completed status
     $pending = DB::table('bookings')->where('status', 'pending')->count() +
                DB::table('joiner_bookings')->where('status', 'pending')->count();
@@ -210,7 +199,7 @@ class AdminController extends Controller
     $monthly  = $this->monthlyCollections(6);
 
     return view('admin.dashboard', compact(
-        'totalBookings', 'totalRevenue', 'pending', 'completed', 'recent', 'upcoming',
+        'totalBookings', 'pending', 'completed', 'recent', 'upcoming',
         'needsApproval', 'collected', 'todo', 'monthly'
     ));
 }
@@ -1154,6 +1143,13 @@ public function deleteVan($id)
         return back()->with('error', 'Van not found.');
     }
 
+    // A van with upcoming or ongoing trips can't be removed — the bookings depend on it
+    $uses = \App\Support\VanUsage::activeTrips($van);
+    if ($uses) {
+        return back()->with('error', "{$van->name} ({$van->plate_number}) can't be deleted while it has active trips: "
+            . implode('; ', array_slice($uses, 0, 5)) . (count($uses) > 5 ? '; and ' . (count($uses) - 5) . ' more' : '') . '.');
+    }
+
     // Delete the record from the database
     DB::table('vans')->where('id', $id)->delete();
 
@@ -1628,112 +1624,108 @@ public function updateVanMaintenance(Request $request, $id)
     return back()->with('success', 'Van maintenance updated.');
 }
 
-public function reports()
+/**
+ * The period the Reports page covers: ?range=week|month|year|all, or
+ * ?range=custom&from=YYYY-MM-DD&to=YYYY-MM-DD (Philippine dates). Defaults to this month.
+ */
+private function reportRange(Request $request): array
 {
-    // All-time revenue
-    $privateRevenue = DB::table('bookings')->where('status', 'completed')->sum('total');
-    $joinerRevenue  = DB::table('joiner_bookings')->where('status', 'completed')->sum('total_price');
-    $totalRevenue   = $privateRevenue + $joinerRevenue;
+    $range = $request->input('range', 'month');
 
-    // Revenue by period
-    $weekRevenue = DB::table('bookings')->where('status', 'completed')
-        ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()])->sum('total')
-        + DB::table('joiner_bookings')->where('status', 'completed')
-        ->whereBetween('updated_at', [now()->startOfWeek(), now()->endOfWeek()])->sum('total_price');
+    if ($range === 'custom') {
+        try {
+            $from = \Illuminate\Support\Carbon::parse($request->input('from'))->toDateString();
+            $to   = \Illuminate\Support\Carbon::parse($request->input('to'))->toDateString();
+        } catch (\Throwable $e) {
+            [$from, $to] = \App\Support\ReportData::preset('month');
+            $range = 'month';
+        }
+        if ($from > $to) {
+            [$from, $to] = [$to, $from];
+        }
+        return [$range, $from, $to];
+    }
 
-    $monthRevenue = DB::table('bookings')->where('status', 'completed')
-        ->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->sum('total')
-        + DB::table('joiner_bookings')->where('status', 'completed')
-        ->whereMonth('updated_at', now()->month)->whereYear('updated_at', now()->year)->sum('total_price');
+    $preset = \App\Support\ReportData::preset($range) ?? \App\Support\ReportData::preset('month');
+    return [in_array($range, ['week', 'month', 'year', 'all'], true) ? $range : 'month', $preset[0], $preset[1]];
+}
 
-    $yearRevenue = DB::table('bookings')->where('status', 'completed')
-        ->whereYear('updated_at', now()->year)->sum('total')
-        + DB::table('joiner_bookings')->where('status', 'completed')
-        ->whereYear('updated_at', now()->year)->sum('total_price');
+public function reports(Request $request)
+{
+    [$range, $from, $to] = $this->reportRange($request);
+    $report = new \App\Support\ReportData($from, $to);
+    $trips  = $report->trips();
 
-    // Booking counts
-    $privateCount = DB::table('bookings')->count();
-    $joinerCount  = DB::table('joiner_bookings')->count();
+    $completedTrips = $trips->where('outcome', 'completed');
+    $liveTrips      = $trips->whereNotIn('outcome', ['cancelled', 'rejected']);
+    $outcomes       = collect(\App\Support\ReportData::OUTCOMES)->map(fn ($label, $key) => $trips->where('outcome', $key)->count());
 
-    // Get recent completed bookings for a small table
-    $recentEarnings = DB::table('bookings')
-        ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
-        ->select(
-            'bookings.id', 'bookings.destination', 'bookings.total as amount', 'bookings.updated_at as date',
-            DB::raw("'Private' as type"),
-            DB::raw("COALESCE(NULLIF(bookings.name, ''), CONCAT(users.first_name, ' ', users.last_name)) as customer_name"),
-            'bookings.payment_method',
-            'bookings.payment_id',
-            'bookings.status'
-        )
-        ->where('bookings.status', 'completed')
-        ->union(
-            DB::table('joiner_bookings')
-                ->leftJoin('joiner_trips', 'joiner_bookings.joiner_trip_id', '=', 'joiner_trips.id')
-                ->leftJoin('users', 'joiner_bookings.user_id', '=', 'users.id')
-                ->select(
-                    'joiner_bookings.id', 'joiner_trips.destination', 'joiner_bookings.total_price as amount',
-                    'joiner_bookings.updated_at as date',
-                    DB::raw("'Joiner' as type"),
-                    DB::raw("COALESCE(NULLIF(joiner_bookings.passenger_name, ''), CONCAT(users.first_name, ' ', users.last_name)) as customer_name"),
-                    'joiner_bookings.payment_method',
-                    'joiner_bookings.payment_id',
-                    'joiner_bookings.status'
-                )
-                ->where('joiner_bookings.status', 'completed')
-        )
-        ->orderBy('date', 'desc')
-        ->get();
+    $kpi = [
+        'revenue'        => $completedTrips->sum('total'),
+        'completed'      => $completedTrips->count(),
+        'bookings'       => $liveTrips->count(),
+        'avg_value'      => $completedTrips->count() ? $completedTrips->sum('total') / $completedTrips->count() : 0,
+        'cancel_rate'    => $trips->count() ? round($outcomes['cancelled'] / $trips->count() * 100) : 0,
+        'reject_rate'    => $trips->count() ? round($outcomes['rejected'] / $trips->count() * 100) : 0,
+    ];
 
-    // Vans with last trip date from bookings
-    $vans = DB::table('vans')
-        ->leftJoin(DB::raw('(SELECT van_id, MAX(end_date) as last_trip FROM bookings GROUP BY van_id) as bt'), 'vans.id', '=', 'bt.van_id')
-        ->select('vans.*', 'bt.last_trip as last_trip_date')
-        ->orderBy('vans.name')
-        ->get();
+    // Completed revenue by booking type, for the donut
+    $revenueByType = collect(['Van Rental', 'Tour Package', 'Joiner Trip'])
+        ->mapWithKeys(fn ($type) => [$type => round($completedTrips->where('type', $type)->sum('total'), 2)]);
 
-    // ---- Analytics dashboard data ----
+    $payments    = $report->payments();
+    $outstanding = \App\Support\ReportData::outstandingBalances();
+    $refundsOwed = \App\Support\ReportData::refundsOwed();
 
-    // Revenue trend, last 6 months (completed private + joiner bookings)
-    $monthlyRevenue = collect(range(5, 0))->map(function ($monthsAgo) {
-        $start = now()->subMonths($monthsAgo)->startOfMonth();
-        $end   = now()->subMonths($monthsAgo)->endOfMonth();
+    $vanUse       = $report->vanUtilization($trips);
+    $drivers      = $report->driverPerformance($trips);
+    $destinations = $report->topDestinations($trips);
+    $weekdays     = $report->byWeekday($trips);
+    $trend        = \App\Support\ReportData::monthlyTrend(min($to, \App\Support\LocalDate::today()));
+    $customers    = $report->customers($trips);
+    $leadTime     = $report->leadTime($trips);
 
-        $private = DB::table('bookings')->where('status', 'completed')
-            ->whereBetween('updated_at', [$start, $end])->sum('total');
-        $joiner  = DB::table('joiner_bookings')->where('status', 'completed')
-            ->whereBetween('updated_at', [$start, $end])->sum('total_price');
-
-        return [
-            'label' => $start->format('M Y'),
-            'total' => round((float) $private + (float) $joiner, 2),
-        ];
-    })->values();
-
-    // Bookings per van (private rentals) — vans are a small, clean, bounded
-    // category set, unlike free-text destinations, so this is the reliable
-    // "what's in demand" chart.
-    $bookingsPerVan = DB::table('bookings')
-        ->join('vans', 'bookings.van_id', '=', 'vans.id')
-        ->whereNotIn('bookings.status', ['cancelled', 'rejected'])
-        ->select('vans.name', DB::raw('COUNT(*) as bookings'))
-        ->groupBy('vans.id', 'vans.name')
-        ->orderByDesc('bookings')
-        ->limit(6)
-        ->get();
-
-    $completedTripsCount = DB::table('bookings')->where('status', 'completed')->count()
-        + DB::table('joiner_bookings')->where('status', 'completed')->count();
-
-    $customerCount = DB::table('users')->where('role', 'customer')->count();
-
-    $avgBookingValue = $completedTripsCount > 0 ? $totalRevenue / $completedTripsCount : 0;
+    // Van maintenance records (not range-bound): last trip from rentals, tours and joiners
+    $lastTrips = DB::table('bookings')->whereNotNull('van_id')->select('van_id', DB::raw('MAX(end_date) as last_trip'))
+        ->groupBy('van_id')->pluck('last_trip', 'van_id');
+    $vans = DB::table('vans')->orderBy('name')->get()->map(function ($van) use ($lastTrips) {
+        $joinerLast = DB::table('joiner_trips')->where('plate_number', $van->plate_number)
+            ->where('status', 'completed')->max('trip_date');
+        $dates = array_filter([$lastTrips[$van->id] ?? null, $joinerLast]);
+        $van->last_trip_date = $dates ? max($dates) : null;
+        return $van;
+    });
 
     return view('admin.reports', compact(
-        'totalRevenue', 'weekRevenue', 'monthRevenue', 'yearRevenue',
-        'privateCount', 'joinerCount', 'recentEarnings', 'vans',
-        'monthlyRevenue', 'bookingsPerVan', 'completedTripsCount', 'customerCount', 'avgBookingValue'
+        'range', 'from', 'to', 'report', 'trips', 'completedTrips', 'outcomes', 'kpi', 'revenueByType',
+        'payments', 'outstanding', 'refundsOwed', 'vanUse', 'drivers', 'destinations', 'weekdays', 'trend',
+        'customers', 'leadTime', 'vans'
     ));
+}
+
+/** Every booking in the selected period as a CSV file (opens in Excel / Google Sheets). */
+public function exportReport(Request $request)
+{
+    [, $from, $to] = $this->reportRange($request);
+    $trips = (new \App\Support\ReportData($from, $to))->trips();
+
+    $filename = "rems-transport-report-{$from}-to-{$to}.csv";
+
+    return response()->streamDownload(function () use ($trips) {
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM so Excel shows ₱ and ñ correctly
+        fputcsv($out, ['Booking', 'Type', 'Trip Date', 'End Date', 'Customer', 'Destination / Package', 'Van', 'Plate',
+                       'Driver', 'Outcome', 'Total (PHP)', 'Paid (PHP)', 'Balance (PHP)', 'Booked On']);
+        foreach ($trips as $t) {
+            fputcsv($out, [
+                $t->ref, $t->type, $t->date, $t->end_date, $t->customer, $t->destination, $t->van_name, $t->plate,
+                $t->driver_name, \App\Support\ReportData::OUTCOMES[$t->outcome], number_format($t->total, 2, '.', ''),
+                number_format($t->paid, 2, '.', ''), number_format(max(0, $t->total - $t->paid), 2, '.', ''),
+                $t->created_at ? \Illuminate\Support\Carbon::parse($t->created_at, 'UTC')->setTimezone(\App\Support\LocalDate::TIMEZONE)->format('Y-m-d H:i') : '',
+            ]);
+        }
+        fclose($out);
+    }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
 }
 
 }

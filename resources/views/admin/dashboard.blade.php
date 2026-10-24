@@ -55,7 +55,7 @@
     </div>
 
     <style>
-        .dash-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 16px; }
+        .dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
         .dash-grid.todo { grid-template-columns: repeat(4, 1fr); margin-bottom: 24px; }
         .dash-card { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 8px 20px rgba(0,0,0,.05); text-decoration: none; color: inherit; display: block; border: 1px solid transparent; transition: border-color .15s; }
         a.dash-card:hover { border-color: #cbd5e1; }
@@ -94,11 +94,6 @@
             <h4><i class="fas fa-ticket"></i> Total Bookings</h4>
             <div class="num">{{ $totalBookings }}</div>
             <div class="sub">Van, tour and joiner</div>
-        </div>
-        <div class="dash-card">
-            <h4><i class="fas fa-sack-dollar"></i> Revenue</h4>
-            <div class="num">{{ $peso($totalRevenue) }}</div>
-            <div class="sub">From completed trips</div>
         </div>
         <div class="dash-card is-good">
             <h4><i class="fas fa-wallet"></i> Payments Collected</h4>

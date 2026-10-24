@@ -169,6 +169,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
         $vans = DB::table('vans')->get()->map(function ($van) use ($galleries) {
             $van->images = $galleries->get($van->id, collect())->values();
+            // Upcoming / ongoing trips — while there are any, the van can't be deleted
+            $van->active_uses = \App\Support\VanUsage::activeTrips($van);
             return $van;
         });
 
@@ -267,6 +269,7 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/drivers/toggle/{id}', [AdminController::class, 'toggleDriverStatus'])->name('admin.drivers.toggle');
     Route::get('/admin/reports', [AdminController::class, 'reports'])->name('admin.reports');
+    Route::get('/admin/reports/export', [AdminController::class, 'exportReport'])->name('admin.reports.export');
 
     Route::delete('/admin/tours/delete/{id}', [TourController::class, 'delete'])->name('admin.tours.delete');
     Route::post('/admin/tours/update/{id}', [HomeController::class, 'updateTour']);

@@ -235,13 +235,20 @@
                                     <i class="fas fa-pen"></i>
                                 </button>
 
-                                {{-- Delete --}}
-                                <a href="{{ route('admin.vans.delete', $van->id) }}"
-                                   class="btn small red"
-                                   onclick="return confirm('Delete {{ addslashes($van->name) }}?')"
-                                   title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </a>
+                                {{-- Delete — locked while the van has upcoming or ongoing trips --}}
+                                @if(count($van->active_uses))
+                                    <span class="btn small" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;"
+                                          title="Can't delete — active trips: {{ implode('; ', $van->active_uses) }}">
+                                        <i class="fas fa-lock"></i>
+                                    </span>
+                                @else
+                                    <a href="{{ route('admin.vans.delete', $van->id) }}"
+                                       class="btn small red"
+                                       onclick="return confirm('Delete {{ addslashes($van->name) }}?')"
+                                       title="Delete">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                @endif
                             </div>
                         </td>
                     </tr>
