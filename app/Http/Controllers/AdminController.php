@@ -198,9 +198,163 @@ class AdminController extends Controller
             ->get();
     }
 
+    $upcoming = $this->upcomingTrips();
+
+    // Same rule as the "Not Yet Approved" tab on the Bookings page (paid or not, awaiting the admin)
+    $needsApproval = DB::table('bookings')->whereIn('status', ['pending', 'downpayment_paid', 'fully_paid'])->count();
+
+    // Money actually received (every logged payment), less refunds already sent back
+    $collected = (float) DB::table('booking_payments')->sum('amount') - (float) DB::table('booking_refunds')->sum('amount');
+
+    $todo     = $this->dashboardTodo($upcoming);
+    $monthly  = $this->monthlyCollections(6);
+
     return view('admin.dashboard', compact(
-        'totalBookings', 'totalRevenue', 'pending', 'completed', 'recent'
+        'totalBookings', 'totalRevenue', 'pending', 'completed', 'recent', 'upcoming',
+        'needsApproval', 'collected', 'todo', 'monthly'
     ));
+}
+
+/** The "needs attention" numbers: refunds to send, balances due soon, drivers out, vans free. */
+private function dashboardTodo($upcoming): array
+{
+    // Rejected / cancelled bookings that are owed money and haven't been refunded yet
+    $refunds = DB::table('bookings')
+        ->leftJoin('booking_refunds', function ($join) {
+            $join->on('booking_refunds.booking_id', '=', 'bookings.id')->where('booking_refunds.source', 'bookings');
+        })
+        ->whereIn('bookings.status', ['rejected', 'cancelled'])
+        ->whereNull('booking_refunds.id')
+        ->get(['bookings.status', 'bookings.payment_status', 'bookings.amount_paid', 'bookings.created_at',
+               'bookings.cancelled_at', 'bookings.start_date'])
+        ->map(fn ($b) => \App\Support\BookingRefund::eligibleAmount($b->status, $b->payment_status, $b->amount_paid,
+            $b->created_at, $b->cancelled_at ?? null, $b->start_date))
+        ->filter(fn ($amount) => $amount > 0);
+
+    // Balances still open on trips in the next 7 days
+    $weekEnd = \Illuminate\Support\Carbon::parse(\App\Support\LocalDate::today())->addDays(7)->toDateString();
+    $dueSoon = $upcoming->filter(fn ($t) => $t->date <= $weekEnd && $t->balance > 0);
+
+    $liveSince = now()->subSeconds(\App\Support\DriverLocation::LIVE_SECONDS);
+    $idleSince = now()->subSeconds(\App\Support\DriverLocation::IDLE_SECONDS);
+
+    $vans = DB::table('vans')->get(['name', 'plate_number', 'status']);
+    $unavailable = $vans->where('status', '!=', 'available');
+
+    return [
+        'refund_count'   => $refunds->count(),
+        'refund_amount'  => $refunds->sum(),
+        'balance_count'  => $dueSoon->count(),
+        'balance_amount' => $dueSoon->sum('balance'),
+        'drivers_live'   => DB::table('drivers')->where('location_updated_at', '>=', $liveSince)->count(),
+        'drivers_idle'   => DB::table('drivers')->whereBetween('location_updated_at', [$idleSince, $liveSince])->count(),
+        'drivers_total'  => DB::table('drivers')->count(),
+        'vans_available' => $vans->count() - $unavailable->count(),
+        'vans_total'     => $vans->count(),
+        'vans_out'       => $unavailable->map(fn ($v) => "{$v->name} ({$v->plate_number})")->values(),
+    ];
+}
+
+/**
+ * Payments received per month (Philippine time) for the last $months months, oldest first,
+ * net of refunds sent that month. The last entry is the current month.
+ */
+private function monthlyCollections(int $months): array
+{
+    $tz  = \App\Support\LocalDate::TIMEZONE;
+    $now = \Illuminate\Support\Carbon::now($tz)->startOfMonth();
+
+    $rows = [];
+    for ($i = $months - 1; $i >= 0; $i--) {
+        $start = $now->copy()->subMonths($i);
+        // paid_at / refunded_at are stored in UTC
+        $from = $start->copy()->setTimezone('UTC');
+        $to   = $start->copy()->addMonth()->setTimezone('UTC');
+
+        $rows[] = [
+            'label'  => $start->format('M'),
+            'amount' => (float) DB::table('booking_payments')->where('paid_at', '>=', $from)->where('paid_at', '<', $to)->sum('amount')
+                      - (float) DB::table('booking_refunds')->where('refunded_at', '>=', $from)->where('refunded_at', '<', $to)->sum('amount'),
+        ];
+    }
+
+    return $rows;
+}
+
+/**
+ * Trips in the next 14 days (Philippine dates), soonest first: van rentals and
+ * tour bookings that are still active, plus active joiner trips with their seat count.
+ */
+private function upcomingTrips(int $days = 14)
+{
+    $today = \App\Support\LocalDate::today();
+    $until = \Illuminate\Support\Carbon::parse($today)->addDays($days)->toDateString();
+
+    $bookings = DB::table('bookings')
+        ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
+        ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+        ->leftJoin('vans', 'bookings.van_id', '=', 'vans.id')
+        ->leftJoin('drivers', 'bookings.driver', '=', 'drivers.id')
+        ->whereBetween('bookings.start_date', [$today, $until])
+        ->whereNotIn('bookings.status', ['cancelled', 'rejected', 'completed'])
+        ->select(
+            'bookings.id', 'bookings.tour_id', 'bookings.status', 'bookings.start_date', 'bookings.end_date',
+            'bookings.pickup', 'bookings.destination', 'bookings.package_name', 'bookings.passengers',
+            'bookings.total', 'bookings.amount_paid',
+            'users.first_name', 'users.last_name',
+            DB::raw('COALESCE(tour_packages.van, vans.name) as van_name'),
+            DB::raw('COALESCE(tour_packages.plate_number, bookings.plate_number) as plate'),
+            DB::raw('COALESCE(tour_packages.driver_name, drivers.name) as driver_name'),
+            DB::raw('CASE WHEN bookings.tour_id IS NOT NULL THEN tour_packages.trip_status ELSE bookings.trip_status END as trip_status')
+        )
+        ->get()
+        ->reject(fn ($b) => $b->trip_status === 'completed')
+        ->map(fn ($b) => (object) [
+            'date'           => $b->start_date,
+            'end_date'       => $b->end_date,
+            'kind'           => $b->tour_id ? 'Tour Package' : 'Van Rental',
+            'ref'            => 'PV-' . $b->id,
+            'link'           => '/admin/bookings?search=' . $b->id,
+            'who'            => trim(($b->first_name ?? '') . ' ' . ($b->last_name ?? '')) ?: 'Customer',
+            'pax'            => (int) $b->passengers . ' pax',
+            'route'          => $b->tour_id ? ($b->package_name ?? $b->destination) : trim(($b->pickup ?? '') . ' → ' . ($b->destination ?? ''), ' →'),
+            'van'            => trim(($b->van_name ?? '') . ($b->plate ? " ({$b->plate})" : '')),
+            'driver'         => $b->driver_name,
+            'trip_status'    => $b->trip_status,
+            // Paid but not yet approved by the admin
+            'needs_approval' => in_array($b->status, ['pending', 'downpayment_paid', 'fully_paid'], true),
+            'balance'        => max(0, round((float) $b->total - (float) $b->amount_paid, 2)),
+        ]);
+
+    $joiners = DB::table('joiner_trips')
+        ->where('status', 'active')
+        ->whereBetween('trip_date', [$today, $until])
+        ->get()
+        ->reject(fn ($t) => $t->trip_status === 'completed')
+        ->map(function ($t) {
+            $seats = DB::table('joiner_bookings')
+                ->where('joiner_trip_id', $t->id)
+                ->whereIn('status', ['paid', 'pending', 'downpayment_paid', 'fully_paid'])
+                ->sum('seats_booked');
+
+            return (object) [
+                'date'           => $t->trip_date,
+                'end_date'       => $t->end_date ?? $t->trip_date,
+                'kind'           => 'Joiner Trip',
+                'ref'            => 'Trip #' . $t->id, // "JT-" is a joiner *booking* id elsewhere
+                'link'           => '/admin/joiner-trips/' . $t->id . '/passengers',
+                'who'            => (int) $seats . ' / ' . (int) $t->total_seats . ' seats booked',
+                'pax'            => null,
+                'route'          => trim(($t->meetup_point ?? '') . ' → ' . ($t->destination ?? ''), ' →'),
+                'van'            => trim(($t->van ?? '') . ($t->plate_number ? " ({$t->plate_number})" : '')),
+                'driver'         => $t->driver_name,
+                'trip_status'    => $t->trip_status,
+                'needs_approval' => false,
+                'balance'        => 0,
+            ];
+        });
+
+    return $bookings->concat($joiners)->sortBy('date')->values();
 }
 
     public function bookings(Request $request)
