@@ -28,9 +28,9 @@ class SingleSession
 
     public static function isCurrent(User $user): bool
     {
-        // Accounts that have not logged in since this was added have no token yet.
+        // No token yet = a session from before this was added; make it log in again.
         if ($user->session_token === null) {
-            return true;
+            return false;
         }
 
         return hash_equals($user->session_token, (string) session(self::KEY));
