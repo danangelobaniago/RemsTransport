@@ -308,7 +308,7 @@
                                     </form>
 
                                     @if(($trip->trip_status ?? 'not_started') !== 'completed')
-                                        <button type="button" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                        <button type="button" title="Change Van / Driver" onclick="openTripChange(this)"
                                             style="background:none;border:none;color:#0369a1;cursor:pointer;padding:0;font-size:inherit;"
                                             data-trip="{{ json_encode([
                                                 'type' => 'joiner', 'id' => $trip->id, 'label' => 'Joiner Trip to ' . $trip->destination,

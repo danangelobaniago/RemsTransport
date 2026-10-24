@@ -1,5 +1,6 @@
 {{--
-    "Change Van / Driver / Route" modal (Terms & Conditions §6).
+    "Change Van / Driver" modal (Terms & Conditions §6). The route (pickup /
+    destination) is shown for reference but can't be changed — the fare is based on it.
     Open with openTripChange(this) on a button carrying data-trip='{...}':
       type          rental | tour | joiner
       id            booking / tour package / joiner trip id
@@ -50,7 +51,7 @@
         @csrf
         <div class="tc-head">
             <div>
-                <h3><i class="fas fa-shuffle" style="color:#2563eb;"></i> Change Van / Driver / Route</h3>
+                <h3><i class="fas fa-shuffle" style="color:#2563eb;"></i> Change Van / Driver</h3>
                 <p id="tcLabel"></p>
             </div>
             <button type="button" class="tc-x" onclick="closeTripChange()" aria-label="Close">&times;</button>
@@ -80,17 +81,6 @@
                             </option>
                         @endforeach
                     </select>
-                </div>
-            </div>
-
-            <div class="tc-row">
-                <div class="tc-field">
-                    <label for="tcPickup" id="tcPickupLabel">Pickup point</label>
-                    <input type="text" name="pickup" id="tcPickup" maxlength="255">
-                </div>
-                <div class="tc-field">
-                    <label for="tcDestination">Destination</label>
-                    <input type="text" name="destination" id="tcDestination" maxlength="255">
                 </div>
             </div>
 
@@ -173,15 +163,13 @@
         trip = JSON.parse(btn.dataset.trip);
         form.action = `/admin/trip-change/${trip.type}/${trip.id}`;
         document.getElementById('tcLabel').textContent = trip.label;
-        document.getElementById('tcPickupLabel').textContent = trip.type === 'joiner' ? 'Meetup point' : 'Pickup point';
+        // The route is shown for reference only — pickup and destination can't be changed
         document.getElementById('tcCurrent').innerHTML =
             `<strong>Current:</strong> ${esc(trip.van_label || 'No van')} · ${esc(trip.driver_name || 'No driver')}<br>` +
             `<strong>Route:</strong> ${esc(trip.pickup || 'N/A')} → ${esc(trip.destination || 'N/A')}`;
 
         pick(vanSel, 'plate', trip.van_plate);
         pick(drvSel, 'name', trip.driver_name);
-        document.getElementById('tcPickup').value = trip.pickup || '';
-        document.getElementById('tcDestination').value = trip.destination || '';
         document.getElementById('tcReason').selectedIndex = 0;
         document.getElementById('tcDetails').value = '';
         refreshSeats();

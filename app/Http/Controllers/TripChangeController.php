@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Terms & Conditions §6 — "Vehicle, Route, and Driver Changes".
  *
- * Lets the admin swap the van, driver and/or route of a van rental, a tour
+ * Lets the admin swap the van and/or driver of a van rental, a tour
  * package or a joiner trip, with a recorded reason. The replacement van must
  * be comparable (enough seats) and the van/driver must be free on the trip's
  * dates. Affected customers are told by bell notification, chat and email;
@@ -42,8 +42,6 @@ class TripChangeController extends Controller
         $data = $request->validate([
             'van_id'      => 'nullable|integer|exists:vans,id',
             'driver_id'   => 'nullable|integer|exists:drivers,id',
-            'pickup'      => 'nullable|string|max:255',
-            'destination' => 'nullable|string|max:255',
             'reason'      => 'required|in:' . implode(',', array_keys(self::REASONS)),
             'details'     => 'required|string|max:500',
         ]);
@@ -64,14 +62,13 @@ class TripChangeController extends Controller
             $newDriver = DB::table('drivers')->where('id', $data['driver_id'])->first();
         }
 
-        $newPickup = trim($data['pickup'] ?? '');
-        $newPickup = ($newPickup !== '' && $newPickup !== (string) $trip['pickup']) ? $newPickup : null;
+        // The route (pickup / destination) is fixed once booked — the fare is based on it.
+        // Only the van and driver can be swapped; any pickup/destination sent is ignored.
+        $newPickup = null;
+        $newDestination = null;
 
-        $newDestination = trim($data['destination'] ?? '');
-        $newDestination = ($newDestination !== '' && $newDestination !== (string) $trip['destination']) ? $newDestination : null;
-
-        if (!$newVan && !$newDriver && !$newPickup && !$newDestination) {
-            return back()->with('error', 'Nothing to change — pick a different van, driver, pickup point or destination.');
+        if (!$newVan && !$newDriver) {
+            return back()->with('error', 'Nothing to change — pick a different van or driver.');
         }
 
         // ---- "Comparable" replacement + availability checks ----

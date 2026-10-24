@@ -301,7 +301,7 @@
                             <div style="display: flex; gap: 5px; justify-content: center;">
                                 <button class="btn-action btn-manifest" onclick="openManifest({{ $tour->id }}, '{{ addslashes($tour->name) }}')" title="View Bookings & Manifest"><i class="fas fa-users"></i></button>
                                 @if($ts !== 'completed')
-                                    <button type="button" class="btn-action icon-btn-change" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                    <button type="button" class="btn-action icon-btn-change" title="Change Van / Driver" onclick="openTripChange(this)"
                                         data-trip="{{ json_encode([
                                             'type' => 'tour', 'id' => $tour->id, 'label' => 'Tour Package "' . $tour->name . '" — applies to all of its bookings',
                                             'van_plate' => $tour->plate_number, 'van_label' => trim(($tour->van ?? '') . ($tour->plate_number ? ' (' . $tour->plate_number . ')' : '')),

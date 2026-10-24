@@ -348,9 +348,9 @@
                                         </button>
                                     @endif
 
-                                    {{-- T&C §6: swap van / driver / route (tour bookings change from the Tours page) --}}
+                                    {{-- T&C §6: swap van / driver (tour bookings change from the Tours page) --}}
                                     @if(!$isTour && !in_array($statusClean, ['cancelled', 'rejected', 'completed']) && $tripStatus !== 'completed')
-                                        <button type="button" class="icon-btn icon-btn-change" title="Change Van / Driver / Route" onclick="openTripChange(this)"
+                                        <button type="button" class="icon-btn icon-btn-change" title="Change Van / Driver" onclick="openTripChange(this)"
                                             data-trip="{{ json_encode([
                                                 'type' => 'rental', 'id' => $booking->id, 'label' => 'Van Rental #' . $booking->id,
                                                 'van_plate' => $booking->plate_number, 'van_label' => trim(($booking->display_van ?? '') . ($booking->plate_number ? ' (' . $booking->plate_number . ')' : '')),
