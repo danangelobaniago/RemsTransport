@@ -108,7 +108,25 @@
                     </td>
                     <td style="padding: 15px; vertical-align: top;">
                         @foreach($paxList as $pax)
-                            <div>{{ $pax->name }}</div>
+                            <div>
+                                {{ $pax->name }}
+                                @if($b->manifest_editable && !empty($pax->id))
+                                    @php
+                                        $editPax = collect((array) $pax)->only(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'birthday', 'gender', 'contact'])->all();
+                                        // Older bookings only stored the full name — split it so the form isn't blank
+                                        if (empty($editPax['first_name']) && !empty($pax->name)) {
+                                            $parts = preg_split('/\s+/', trim($pax->name));
+                                            $editPax['last_name']  = count($parts) > 1 ? array_pop($parts) : '';
+                                            $editPax['first_name'] = implode(' ', $parts);
+                                        }
+                                    @endphp
+                                    <button type="button" class="pe-edit-link no-print" title="Edit / replace this passenger"
+                                        data-passenger="{{ json_encode($editPax) }}"
+                                        onclick="openPassengerEditor({ url: '/admin/joiner-passengers/{{ $pax->id }}', passenger: JSON.parse(this.dataset.passenger), withContact: true, onSaved: () => location.reload() })">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                @endif
+                            </div>
                         @endforeach
                     </td>
                     <td style="padding: 15px; vertical-align: top;">
@@ -173,5 +191,6 @@
     </div>
 </div>
 
+@include('admin.partials.passenger-edit-modal')
 </body>
 </html>

@@ -455,10 +455,13 @@ public function processBooking(Request $request, $id)
         ->select('joiner_bookings.*', 'users.first_name', 'users.last_name', 'users.email')
         ->orderBy('joiner_bookings.created_at')
         ->get()
-        ->map(function ($b) {
+        ->map(function ($b) use ($trip) {
             $b->passengers  = DB::table('joiner_passengers')->where('joiner_booking_id', $b->id)->get();
             $b->actual_paid = ($b->amount_paid > 0) ? $b->amount_paid : ($b->downpayment ?? 0);
             $b->balance     = $b->total_price - $b->actual_paid;
+            // Admin may replace passengers until the trip starts (a rejected trip closes every booking)
+            $status = in_array(strtolower((string) $trip->status), ['rejected', 'cancelled'], true) ? $trip->status : $b->status;
+            $b->manifest_editable = \App\Support\Manifest::editable($status, $trip->trip_status);
             return $b;
         });
 

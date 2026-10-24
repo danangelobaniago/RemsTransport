@@ -9,6 +9,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icons/icon-192.svg">
 <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{{ asset('css/responsive.css') }}">
 <style>
 .page-header { margin-bottom: 24px; }
@@ -201,6 +202,17 @@ tbody tr:hover { background: #f9fafb; }
     vertical-align: middle;
 }
 .manifesto-table tr:last-child td { border-bottom: none; }
+.manifesto-note { font-size: 12px; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.manifesto-msg { font-size: 13px; border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+.manifesto-msg.ok { background: #dcfce7; color: #166534; }
+.manifesto-msg.err { background: #fee2e2; color: #991b1b; }
+.pax-edit-btn { background: #eff6ff; color: #2563eb; border: none; border-radius: 6px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pax-form { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.pax-form input, .pax-form select { width: 100%; padding: 7px 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; font-family: inherit; box-sizing: border-box; }
+.pax-form label { display: block; font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 3px; }
+.pax-form-actions { grid-column: 1 / -1; display: flex; gap: 8px; justify-content: flex-end; }
+.pax-form-actions button { border: none; border-radius: 6px; padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; }
+@media (max-width: 600px) { .pax-form { grid-template-columns: 1fr; } }
 .no-passengers { color: #9ca3af; font-size: 13px; padding: 16px 0; text-align: center; }
 
 @media (max-width: 768px) {
@@ -329,6 +341,8 @@ tbody tr:hover { background: #f9fafb; }
                 <button class="back-btn" onclick="showCustomerPanel()">&#8592; Back to bookings</button>
                 <div id="manifesto-booking-title" class="manifesto-booking-title"></div>
                 <div id="manifesto-booking-sub" class="manifesto-booking-sub"></div>
+                <div id="manifesto-note" class="manifesto-note"></div>
+                <div id="manifesto-msg" class="manifesto-msg" hidden></div>
                 <table class="manifesto-table">
                     <thead>
                         <tr>
@@ -336,6 +350,7 @@ tbody tr:hover { background: #f9fafb; }
                             <th>Name</th>
                             <th>Birthday</th>
                             <th>Gender</th>
+                            <th id="manifesto-action-col"></th>
                         </tr>
                     </thead>
                     <tbody id="manifesto-body"></tbody>
@@ -371,7 +386,7 @@ function openModal(userId) {
             const statusClass = 'status-' + b.status;
             const label = b.status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
             return `
-                <div class="booking-item" onclick="showManifesto(${b.id}, '${b.destination.replace(/'/g,"\\'")}', '${b.start_date}', '${b.end_date || b.start_date}')">
+                <div class="booking-item" onclick="showManifesto(${b.id})">
                     <div class="booking-item-top">
                         <span class="booking-destination">${b.destination}</span>
                         <span class="status-pill ${statusClass}">${label}</span>
@@ -386,30 +401,114 @@ function openModal(userId) {
     document.getElementById('modal').classList.add('open');
 }
 
-function showManifesto(bookingId, destination, startDate, endDate) {
-    document.getElementById('manifesto-booking-title').textContent = destination;
-    document.getElementById('manifesto-booking-sub').textContent   =
-        startDate + (endDate && endDate !== startDate ? ' → ' + endDate : '');
+const SUFFIXES = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V'];
+let currentBooking = null;
 
-    const pax    = passengers[bookingId] || [];
-    const tbody  = document.getElementById('manifesto-body');
-
-    if (pax.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4" class="no-passengers">No passenger manifesto recorded.</td></tr>`;
-    } else {
-        tbody.innerHTML = pax.map((p, i) => {
-            const name = [p.first_name, p.middle_name, p.last_name].filter(Boolean).join(' ');
-            return `<tr>
-                <td>${i + 1}</td>
-                <td>${name}</td>
-                <td>${p.birthday || '—'}</td>
-                <td>${p.gender ? p.gender.charAt(0).toUpperCase() + p.gender.slice(1) : '—'}</td>
-            </tr>`;
-        }).join('');
+function findBooking(id) {
+    for (const list of Object.values(bookings)) {
+        const b = list.find(x => x.id == id);
+        if (b) return b;
     }
+    return null;
+}
+
+function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function paxName(p) {
+    return [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ');
+}
+
+function showManifesto(bookingId) {
+    currentBooking = findBooking(bookingId);
+    const b = currentBooking;
+    document.getElementById('manifesto-booking-title').textContent = b.destination;
+    document.getElementById('manifesto-booking-sub').textContent   =
+        b.start_date + (b.end_date && b.end_date !== b.start_date ? ' → ' + b.end_date : '');
+    document.getElementById('manifesto-note').innerHTML = b.manifest_editable
+        ? '<i class="fas fa-pen"></i> If a listed passenger can no longer join, replace them here before the trip starts. The number of passengers stays the same; the customer is notified of every change.'
+        : '<i class="fas fa-lock"></i> This manifest can no longer be edited — the booking is closed or the trip has already started.';
+    document.getElementById('manifesto-action-col').textContent = b.manifest_editable ? 'Action' : '';
+    setManifestMsg('');
+    renderManifest();
 
     document.getElementById('panel-customer').style.display  = 'none';
     document.getElementById('panel-manifesto').classList.add('open');
+}
+
+function renderManifest() {
+    const b = currentBooking;
+    const pax   = passengers[b.id] || [];
+    const tbody = document.getElementById('manifesto-body');
+
+    if (pax.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="no-passengers">No passenger manifesto recorded.</td></tr>`;
+        return;
+    }
+    tbody.innerHTML = pax.map((p, i) => `<tr id="pax-row-${p.id}">
+        <td>${i + 1}</td>
+        <td>${esc(paxName(p))}</td>
+        <td>${esc(p.birthday || '—')}</td>
+        <td>${p.gender ? esc(p.gender.charAt(0).toUpperCase() + p.gender.slice(1)) : '—'}</td>
+        <td>${b.manifest_editable ? `<button type="button" class="pax-edit-btn" onclick="editPassenger(${p.id})"><i class="fas fa-pen"></i> Edit</button>` : ''}</td>
+    </tr>`).join('');
+}
+
+function editPassenger(id) {
+    const p = (passengers[currentBooking.id] || []).find(x => x.id == id);
+    if (!p) return;
+    renderManifest(); // close any other open form
+    const maxBirthday = new Date(Date.now() - 31 * 86400000).toISOString().slice(0, 10);
+    document.getElementById('pax-row-' + id).innerHTML = `<td colspan="5">
+        <form class="pax-form" onsubmit="savePassenger(event, ${id})">
+            <div><label>First name</label><input name="first_name" maxlength="30" required value="${esc(p.first_name)}"></div>
+            <div><label>Middle name</label><input name="middle_name" maxlength="30" value="${esc(p.middle_name)}"></div>
+            <div><label>Last name</label><input name="last_name" maxlength="30" required value="${esc(p.last_name)}"></div>
+            <div><label>Suffix</label><select name="suffix">${SUFFIXES.map(s => `<option value="${s}" ${s === (p.suffix || '') ? 'selected' : ''}>${s || '—'}</option>`).join('')}</select></div>
+            <div><label>Birthday</label><input type="date" name="birthday" required max="${maxBirthday}" value="${esc(p.birthday)}"></div>
+            <div><label>Gender</label><select name="gender" required>
+                <option value="Male" ${p.gender === 'Male' ? 'selected' : ''}>Male</option>
+                <option value="Female" ${p.gender === 'Female' ? 'selected' : ''}>Female</option>
+            </select></div>
+            <div class="pax-form-actions">
+                <button type="button" style="background:#e5e7eb;color:#374151;" onclick="renderManifest()">Cancel</button>
+                <button type="submit" style="background:#2563eb;color:#fff;">Save</button>
+            </div>
+        </form>
+    </td>`;
+}
+
+function savePassenger(e, id) {
+    e.preventDefault();
+    const form = e.target;
+    const btn  = form.querySelector('button[type=submit]');
+    btn.disabled = true; btn.textContent = 'Saving...';
+
+    fetch(`/admin/passengers/${id}`, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': '{{ csrf_token() }}', 'Accept': 'application/json' },
+        body: new FormData(form),
+    })
+        .then(r => r.json().then(d => ({ ok: r.ok, d })))
+        .then(({ ok, d }) => {
+            if (!ok) throw new Error(d.error || 'Could not save the passenger.');
+            const list = passengers[currentBooking.id];
+            list[list.findIndex(x => x.id == id)] = d.passenger;
+            renderManifest();
+            setManifestMsg('Passenger updated. The customer has been notified.', true);
+        })
+        .catch(err => {
+            setManifestMsg(err.message, false);
+            btn.disabled = false; btn.textContent = 'Save';
+        });
+}
+
+function setManifestMsg(text, ok) {
+    const el = document.getElementById('manifesto-msg');
+    el.hidden = !text;
+    el.textContent = text;
+    el.className = 'manifesto-msg ' + (ok ? 'ok' : 'err');
 }
 
 function showCustomerPanel() {

@@ -181,7 +181,10 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
                 Passenger counts must not exceed the seating capacity stated for the vehicle or package.
                 You are responsible for the conduct of all passengers included in your booking, and for
                 arriving at the agreed pick-up point on time. The driver may decline to transport
-                passengers who are intoxicated, disruptive, or unsafe.
+                passengers who are intoxicated, disruptive, or unsafe. If a listed passenger can no longer join,
+                you may ask us before the trip starts to replace them with another passenger; we will
+                update the passenger manifest. The number of passengers stays the same as booked, and no
+                changes can be made once the trip has started.
             </p>
 
             <h4>4. Payments</h4>

@@ -437,7 +437,13 @@
                 const calcAge = dob => { if (!dob) return '—'; const b = new Date(dob), t = new Date(); let a = t.getFullYear()-b.getFullYear(); const m=t.getMonth()-b.getMonth(); if(m<0||(m===0&&t.getDate()<b.getDate())) a--; return a+''; };
                 let html = '<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="background:#f9fafb;"><th style="padding:10px;border-bottom:2px solid #eee;text-align:left;">NAME</th><th style="padding:10px;border-bottom:2px solid #eee;text-align:left;">BIRTHDAY</th><th style="padding:10px;border-bottom:2px solid #eee;text-align:left;">AGE</th><th style="padding:10px;border-bottom:2px solid #eee;text-align:left;">GENDER</th></tr></thead><tbody>';
                 if (!data.length) html += '<tr><td colspan="4" style="text-align:center;padding:20px;color:#9ca3af;">No passengers found.</td></tr>';
-                else data.forEach(p => { html += `<tr><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${p.first_name} ${p.last_name}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${p.birthday ?? '—'}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${calcAge(p.birthday)}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${p.gender ?? '—'}</td></tr>`; });
+                else data.forEach(p => {
+                    const fullName = [p.first_name, p.middle_name, p.last_name, p.suffix].filter(Boolean).join(' ');
+                    // Replace-a-passenger button, until the tour starts (hidden when printing)
+                    const editBtn = p.editable
+                        ? `<button type="button" class="pe-edit-link" data-passenger='${JSON.stringify(p).replace(/'/g, '&#39;')}' onclick="openPassengerEditor({ url: '/admin/passengers/${p.id}', passenger: JSON.parse(this.dataset.passenger), onSaved: () => { loadBookings(_currentManifestTourId); loadPassengerManifest(_currentManifestTourId); } })"><i class="fas fa-pen"></i> Edit</button>`
+                        : '';
+                    html += `<tr><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${fullName}${editBtn}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${p.birthday ?? '—'}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${calcAge(p.birthday)}</td><td style="padding:10px;border-bottom:1px solid #f1f1f1;">${p.gender ?? '—'}</td></tr>`; });
                 html += '</tbody></table>';
                 document.getElementById('manifestData').innerHTML = html;
             });
@@ -457,7 +463,7 @@
         const title = document.getElementById('manifestTitle').innerText;
         const table = document.getElementById('manifestData').innerHTML;
         const pw = window.open('', '', 'height=600,width=800');
-        pw.document.write(`<html><head><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:10px;text-align:left;} th{background:#f2f2f2;}</style></head><body><h1>${title}</h1>${table}</body></html>`);
+        pw.document.write(`<html><head><style>body{font-family:sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;} th,td{border:1px solid #ddd;padding:10px;text-align:left;} th{background:#f2f2f2;} .pe-edit-link{display:none;}</style></head><body><h1>${title}</h1>${table}</body></html>`);
         pw.document.close(); pw.print();
     }
     window.onclick = e => { if (e.target == document.getElementById('manifestModal')) closeManifest(); }
@@ -531,5 +537,6 @@ function toggleSidebar() {
 </script>
 <script src="/js/pwa.js"></script>
 @include('admin.partials.trip-change-modal')
+@include('admin.partials.passenger-edit-modal')
 </body>
 </html>

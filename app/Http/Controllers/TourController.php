@@ -632,17 +632,28 @@ $allBookings = DB::table('joiner_bookings')
 public function getManifest($id)
 {
     // Fetch passengers only from bookings that are NOT cancelled
+    $tripStatus = DB::table('tour_packages')->where('id', $id)->value('trip_status');
+
     $passengers = DB::table('passengers')
         ->join('bookings', 'passengers.booking_id', '=', 'bookings.id')
         ->where('bookings.tour_id', $id)
         ->where('bookings.status', '!=', 'cancelled') // This removes cancelled users
         ->select(
+            'passengers.id',
             'passengers.first_name',
+            'passengers.middle_name',
             'passengers.last_name',
+            'passengers.suffix',
             'passengers.birthday',
-            'passengers.gender'
+            'passengers.gender',
+            'bookings.status as booking_status'
         )
-        ->get();
+        ->get()
+        ->map(function ($p) use ($tripStatus) {
+            // Admin may replace a passenger until the tour starts
+            $p->editable = \App\Support\Manifest::editable($p->booking_status, $tripStatus);
+            return $p;
+        });
 
     return response()->json($passengers);
 }

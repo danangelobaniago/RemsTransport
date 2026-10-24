@@ -218,6 +218,8 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/tours', [HomeController::class, 'manageTours'])->name('admin.tours');
     Route::post('/admin/tours/add', [TourController::class, 'store']);
     Route::get('/admin/customers', [AdminController::class, 'customers'])->name('admin.customers');
+    Route::post('/admin/passengers/{id}', [AdminController::class, 'updatePassenger'])->whereNumber('id')->name('admin.passengers.update');
+    Route::post('/admin/joiner-passengers/{id}', [AdminController::class, 'updateJoinerPassenger'])->whereNumber('id')->name('admin.joiner_passengers.update');
     Route::get('/admin/joiner-trips', [AdminController::class, 'joinerTrips'])->name('admin.joiner');
     Route::get('/admin/pricing', [AdminController::class, 'pricing']);
     Route::post('/admin/pricing/update', [AdminController::class, 'updatePricing']);

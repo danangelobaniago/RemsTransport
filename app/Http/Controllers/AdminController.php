@@ -1066,17 +1066,174 @@ public function customers()
         ->get();
 
     $allBookings = DB::table('bookings')
-        ->select('id', 'user_id', 'destination', 'start_date', 'end_date', 'status', 'total', 'van', 'driver')
-        ->orderBy('start_date', 'desc')
+        ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
+        ->select('bookings.id', 'bookings.user_id', 'bookings.destination', 'bookings.start_date', 'bookings.end_date',
+                 'bookings.status', 'bookings.total', 'bookings.van', 'bookings.driver',
+                 // tours keep their trip status on the package
+                 DB::raw('CASE WHEN bookings.tour_id IS NOT NULL THEN tour_packages.trip_status ELSE bookings.trip_status END as eff_trip_status'))
+        ->orderBy('bookings.start_date', 'desc')
         ->get()
+        ->map(function ($b) {
+            $b->manifest_editable = $this->manifestEditable($b->status, $b->eff_trip_status);
+            return $b;
+        })
         ->groupBy('user_id');
 
     $passengers = DB::table('passengers')
-        ->select('booking_id', 'first_name', 'middle_name', 'last_name', 'birthday', 'gender')
+        ->select('id', 'booking_id', 'first_name', 'middle_name', 'last_name', 'suffix', 'birthday', 'gender')
+        ->orderBy('id')
         ->get()
         ->groupBy('booking_id');
 
     return view('admin.customers', compact('customers', 'allBookings', 'passengers'));
+}
+
+/** Passengers can be swapped until the trip starts, and only on a booking that's still active. */
+private function manifestEditable(?string $status, ?string $tripStatus): bool
+{
+    return \App\Support\Manifest::editable($status, $tripStatus);
+}
+
+// ✅ EDIT ONE PASSENGER ON A BOOKING'S MANIFEST (substitution — the head count stays the same)
+public function updatePassenger(Request $request, $id)
+{
+    $passenger = DB::table('passengers')->where('id', $id)->first();
+    $booking   = $passenger ? DB::table('bookings')->where('id', $passenger->booking_id)->first() : null;
+    if (!$passenger || !$booking) {
+        return response()->json(['error' => 'Passenger not found.'], 404);
+    }
+
+    $tripStatus = $booking->tour_id
+        ? DB::table('tour_packages')->where('id', $booking->tour_id)->value('trip_status')
+        : $booking->trip_status;
+    if (!$this->manifestEditable($booking->status, $tripStatus)) {
+        return response()->json(['error' => 'This manifest can no longer be edited — the booking is closed or the trip has already started.'], 422);
+    }
+
+    $list = DB::table('passengers')->where('booking_id', $booking->id)->get();
+    [$data, $error] = $this->validatedPassenger($request, $passenger->id, $list);
+    if ($error) {
+        return response()->json(['error' => $error], 422);
+    }
+
+    DB::table('passengers')->where('id', $passenger->id)->update([
+        'first_name'  => trim($data['first_name']),
+        'middle_name' => trim((string) ($data['middle_name'] ?? '')) ?: null,
+        'last_name'   => trim($data['last_name']),
+        'suffix'      => $data['suffix'] ?? null,
+        'birthday'    => $data['birthday'],
+        'gender'      => $data['gender'],
+        'updated_at'  => now(),
+    ]);
+
+    $oldName = trim(implode(' ', array_filter([$passenger->first_name, $passenger->middle_name, $passenger->last_name, $passenger->suffix])));
+    $newName = trim(implode(' ', array_filter([$data['first_name'], $data['middle_name'] ?? null, $data['last_name'], $data['suffix'] ?? null])));
+
+    $user = User::find($booking->user_id);
+    if ($user) {
+        $user->notify(new \App\Notifications\ManifestUpdated(
+            $booking->id,
+            $booking->package_name ?? $booking->destination ?? 'your trip',
+            $oldName !== $newName ? "{$oldName} was replaced by " . rtrim($newName, '.') . '.' : "{$newName}'s details were updated."
+        ));
+    }
+
+    return response()->json(['success' => true, 'passenger' => DB::table('passengers')
+        ->select('id', 'booking_id', 'first_name', 'middle_name', 'last_name', 'suffix', 'birthday', 'gender')
+        ->where('id', $passenger->id)->first()]);
+}
+
+// ✅ EDIT ONE PASSENGER ON A JOINER BOOKING (substitution — seats stay the same)
+public function updateJoinerPassenger(Request $request, $id)
+{
+    $passenger = DB::table('joiner_passengers')->where('id', $id)->first();
+    $booking   = $passenger ? DB::table('joiner_bookings')->where('id', $passenger->joiner_booking_id)->first() : null;
+    $trip      = $booking ? DB::table('joiner_trips')->where('id', $booking->joiner_trip_id)->first() : null;
+    if (!$passenger || !$booking || !$trip) {
+        return response()->json(['error' => 'Passenger not found.'], 404);
+    }
+
+    // A rejected/cancelled trip closes every booking on it
+    $status = in_array(strtolower((string) $trip->status), ['rejected', 'cancelled'], true) ? $trip->status : $booking->status;
+    if (!$this->manifestEditable($status, $trip->trip_status)) {
+        return response()->json(['error' => 'This manifest can no longer be edited — the booking is closed or the trip has already started.'], 422);
+    }
+
+    $list = DB::table('joiner_passengers')->where('joiner_booking_id', $booking->id)->get();
+    [$data, $error] = $this->validatedPassenger($request, $passenger->id, $list, true);
+    if ($error) {
+        return response()->json(['error' => $error], 422);
+    }
+
+    $first  = trim($data['first_name']);
+    $middle = trim((string) ($data['middle_name'] ?? '')) ?: null;
+    $last   = trim($data['last_name']);
+    $suffix = $data['suffix'] ?? null;
+    $newName = preg_replace('/\s+/', ' ', trim("{$first} {$middle} {$last} {$suffix}"));
+
+    DB::table('joiner_passengers')->where('id', $passenger->id)->update([
+        'name'        => $newName,
+        'first_name'  => $first,
+        'middle_name' => $middle,
+        'last_name'   => $last,
+        'suffix'      => $suffix,
+        'contact'     => $data['contact'],
+        'birthday'    => $data['birthday'],
+        'gender'      => $data['gender'],
+        'updated_at'  => now(),
+    ]);
+
+    $oldName = $passenger->name ?: trim(implode(' ', array_filter([$passenger->first_name, $passenger->middle_name, $passenger->last_name, $passenger->suffix])));
+    $user = User::find($booking->user_id);
+    if ($user) {
+        $user->notify(new \App\Notifications\ManifestUpdated(
+            $booking->id,
+            $trip->destination ?? 'your trip',
+            $oldName !== $newName ? "{$oldName} was replaced by " . rtrim($newName, '.') . '.' : "{$newName}'s details were updated."
+        ));
+    }
+
+    return response()->json(['success' => true]);
+}
+
+/**
+ * Validate an edited passenger with the same rules as booking, then check the whole
+ * list with this passenger swapped in (e.g. a minor can't be left without an adult).
+ * Returns [data, null] or [null, error message].
+ */
+private function validatedPassenger(Request $request, $passengerId, $currentList, bool $withContact = false): array
+{
+    $nameRule = ['string', 'max:30', 'regex:/^(?!\s)[A-Za-zÀ-ÿ \'\-]+$/u'];
+    $rules = [
+        'first_name'  => array_merge(['required'], $nameRule, [new \App\Rules\PersonName]),
+        'middle_name' => array_merge(['nullable'], $nameRule),
+        'last_name'   => array_merge(['required'], $nameRule, [new \App\Rules\PersonName]),
+        'suffix'      => 'nullable|in:Jr.,Sr.,II,III,IV,V',
+        'birthday'    => 'required|date|before_or_equal:' . now()->subMonth()->toDateString(),
+        'gender'      => 'required|in:Male,Female',
+    ];
+    if ($withContact) {
+        $rules['contact'] = ['required', 'regex:/^09\d{9}$/'];
+    }
+
+    $validator = \Illuminate\Support\Facades\Validator::make($request->all(), $rules, [
+        'birthday.before_or_equal' => 'Each passenger must be at least 1 month old.',
+        'contact.regex'            => 'Contact number must be 11 digits starting with 09.',
+        'regex'                    => 'Names may only contain letters, spaces, apostrophes and hyphens.',
+    ]);
+    if ($validator->fails()) {
+        return [null, $validator->errors()->first()];
+    }
+    $data = $validator->validated();
+
+    $list = collect($currentList)
+        ->map(fn ($p) => (int) $p->id === (int) $passengerId ? $data : (array) $p)
+        ->all();
+    if ($error = $this->validatePassengerAgesAndSuffixes($list)) {
+        return [null, $error];
+    }
+
+    return [$data, null];
 }
 
 public function joinerTrips()
