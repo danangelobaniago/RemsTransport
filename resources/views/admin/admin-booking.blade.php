@@ -340,7 +340,8 @@
                                         @endif
                                     @endif
 
-                                    @if(!in_array($statusClean, ['cancelled', 'rejected', 'completed']))
+                                    {{-- No rescheduling once the trip has started (at pickup / ongoing / done) --}}
+                                    @if(!in_array($statusClean, ['cancelled', 'rejected', 'completed']) && !in_array($tripStatus, ['arrived', 'in_progress', 'completed']))
                                         <button type="button" class="icon-btn icon-btn-reschedule" title="Reschedule"
                                             onclick="openAdminRescheduleModal({{ $booking->id }}, {{ $booking->van_id ?? 'null' }})">
                                             <i class="fas fa-calendar-days"></i>

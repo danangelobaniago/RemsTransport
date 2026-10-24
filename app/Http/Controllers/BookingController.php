@@ -754,6 +754,15 @@ public function rescheduleBooking(Request $request, $id)
         return back()->with('error', 'This booking can no longer be rescheduled.');
     }
 
+    // Once the trip has started (driver at pickup, on the road, or done), the
+    // date can't be moved — not even by an admin. Tours track this on the package.
+    $tripStatus = $booking->tour_id
+        ? DB::table('tour_packages')->where('id', $booking->tour_id)->value('trip_status')
+        : $booking->trip_status;
+    if (in_array($tripStatus, ['arrived', 'in_progress', 'completed'], true)) {
+        return back()->with('error', "Booking #{$id} can't be rescheduled — the trip has already started.");
+    }
+
     // Customers may only reschedule if there's more than 3 full days left before
     // the current trip date (e.g. on Sep 2, a Sep 3-5 trip is too close — Sep 6
     // onward is the earliest that still qualifies). Admins can reschedule anytime.
