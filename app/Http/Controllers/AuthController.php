@@ -178,8 +178,9 @@ public function verifyLoginOtp(Request $request)
             'otp_expires_at' => null
         ]);
 
-        // 4. Official Login
+        // 4. Official Login (logs out any other browser using this account)
         Auth::login($user);
+        \App\Support\SingleSession::start($user);
 
         // 5. Clear temp session
         session()->forget('login_2fa_user_id');
@@ -503,6 +504,7 @@ public function verifyRegisterOtp(Request $request)
     session()->forget(['reg_pending_data', 'reg_otp', 'reg_otp_expires_at']);
 
     Auth::login($user);
+    \App\Support\SingleSession::start($user);
     return redirect('/')->with('success', 'Account created successfully! Welcome, ' . $user->first_name . '!');
 }
 
