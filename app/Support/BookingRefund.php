@@ -86,4 +86,21 @@ class BookingRefund
     {
         return DB::table('booking_refunds')->where('booking_id', $bookingId)->where('source', $source)->first();
     }
+
+    /** Rejected / cancelled bookings still owed money, as [booking id => amount owed]. */
+    public static function owed(): array
+    {
+        return DB::table('bookings')
+            ->leftJoin('booking_refunds', function ($join) {
+                $join->on('booking_refunds.booking_id', '=', 'bookings.id')->where('booking_refunds.source', 'bookings');
+            })
+            ->whereIn('bookings.status', ['rejected', 'cancelled'])
+            ->whereNull('booking_refunds.id')
+            ->get(['bookings.id', 'bookings.status', 'bookings.payment_status', 'bookings.amount_paid',
+                   'bookings.created_at', 'bookings.cancelled_at', 'bookings.start_date'])
+            ->mapWithKeys(fn ($b) => [$b->id => self::eligibleAmount($b->status, $b->payment_status, $b->amount_paid,
+                $b->created_at, $b->cancelled_at ?? null, $b->start_date)])
+            ->filter(fn ($amount) => $amount > 0)
+            ->all();
+    }
 }

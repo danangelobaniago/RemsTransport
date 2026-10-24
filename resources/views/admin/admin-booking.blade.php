@@ -128,6 +128,7 @@
                     'ongoing'   => ['label' => 'Ongoing',          'color' => '#2563eb', 'count' => $counts->ongoing_count ?? 0],
                     'completed' => ['label' => 'Completed',        'color' => '#059669', 'count' => $counts->completed_count ?? 0],
                     'rejected'  => ['label' => 'Rejected',         'color' => '#dc2626', 'count' => $counts->rejected_count ?? 0],
+                    'refund'    => ['label' => 'To Refund',        'color' => '#ea580c', 'count' => $counts->refund_count ?? 0],
                 ];
             @endphp
             @foreach($filters as $key => $f)
@@ -454,8 +455,8 @@
             <div style="padding:20px 24px; display:grid; gap:12px;">
                 <div>
                     <label style="display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:6px;">Refund Amount (₱)</label>
-                    <input type="number" name="amount" id="refundAmount" step="0.01" min="1" required
-                        style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:8px; font-size:14px; box-sizing:border-box;">
+                    <div id="refundAmount"
+                        style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:16px; font-weight:700; color:#15803d; background:#f3f4f6; box-sizing:border-box;"></div>
                     <small id="refundAmountHint" style="color:#6b7280; font-size:12px;"></small>
                 </div>
                 <div>
@@ -567,12 +568,10 @@ function openRefundModal(bookingId, refundable, paid, customer) {
     document.getElementById('refundForm').action = '/admin/bookings/' + bookingId + '/refund';
     document.getElementById('refundForm').reset();
     document.getElementById('refundModalInfo').textContent = 'Booking #' + bookingId + (customer ? ' — ' + customer : '');
-    const amount = document.getElementById('refundAmount');
-    amount.value = refundable.toFixed(2);
-    amount.max = paid;
-    document.getElementById('refundAmountHint').textContent = refundable < paid
-        ? 'Customer paid ' + peso(paid) + '. Suggested refund is 80% (20% cancellation fee).'
-        : 'Full amount the customer paid: ' + peso(paid) + '.';
+    document.getElementById('refundAmount').textContent = peso(refundable);
+    document.getElementById('refundAmountHint').textContent = (refundable < paid
+        ? 'Customer paid ' + peso(paid) + ', minus the 20% cancellation fee.'
+        : 'Full amount the customer paid.') + ' Send exactly this amount.';
     document.getElementById('refundProofPreview').style.display = 'none';
     document.getElementById('refundModal').style.display = 'flex';
 }

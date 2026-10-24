@@ -208,17 +208,7 @@ class AdminController extends Controller
 private function dashboardTodo($upcoming): array
 {
     // Rejected / cancelled bookings that are owed money and haven't been refunded yet
-    $refunds = DB::table('bookings')
-        ->leftJoin('booking_refunds', function ($join) {
-            $join->on('booking_refunds.booking_id', '=', 'bookings.id')->where('booking_refunds.source', 'bookings');
-        })
-        ->whereIn('bookings.status', ['rejected', 'cancelled'])
-        ->whereNull('booking_refunds.id')
-        ->get(['bookings.status', 'bookings.payment_status', 'bookings.amount_paid', 'bookings.created_at',
-               'bookings.cancelled_at', 'bookings.start_date'])
-        ->map(fn ($b) => \App\Support\BookingRefund::eligibleAmount($b->status, $b->payment_status, $b->amount_paid,
-            $b->created_at, $b->cancelled_at ?? null, $b->start_date))
-        ->filter(fn ($amount) => $amount > 0);
+    $refunds = collect(\App\Support\BookingRefund::owed());
 
     // Balances still open on trips in the next 7 days
     $weekEnd = \Illuminate\Support\Carbon::parse(\App\Support\LocalDate::today())->addDays(7)->toDateString();
@@ -350,6 +340,7 @@ private function upcomingTrips(int $days = 14)
 {
     $search = $request->input('search');
     $filter = $request->input('filter', 'all');
+    $owedRefunds = \App\Support\BookingRefund::owed();
 
     $cleanSearch = $search;
     if ($search) {
@@ -389,6 +380,7 @@ private function upcomingTrips(int $days = 14)
         ->when($filter === 'ongoing', fn($q) => $q->where('bookings.status', 'approved'))
         ->when($filter === 'completed', fn($q) => $q->where('bookings.status', 'completed'))
         ->when($filter === 'rejected', fn($q) => $q->where('bookings.status', 'rejected'))
+        ->when($filter === 'refund', fn($q) => $q->whereIn('bookings.id', array_keys($owedRefunds)))
         ->orderBy('bookings.id', 'desc')
         ->paginate(15)
         ->withQueryString(); // keep ?search= and ?filter= on the page links
@@ -447,6 +439,7 @@ private function upcomingTrips(int $days = 14)
             DB::raw("SUM(status = 'completed') as completed_count"),
             DB::raw("SUM(status = 'rejected') as rejected_count")
         )->first();
+    $counts->refund_count = count($owedRefunds);
 
     return view('admin.admin-booking', compact('bookings', 'filter', 'counts'));
 }
@@ -741,15 +734,12 @@ private function upcomingTrips(int $days = 14)
             return back()->with('error', "Booking #{$id} has already been refunded.");
         }
 
-        $paid = round((float) $booking->amount_paid, 2);
         // Report as a page-level error; the bookings table has no per-field error slots.
         $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
-            'amount' => "required|numeric|min:1|max:{$paid}",
             'proof'  => 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
             'notes'  => 'required|string|max:500', // message shown to the customer
         ], [
             'notes.required' => 'Please write a message to the customer.',
-            'amount.max'     => 'The refund can\'t be more than the ₱' . number_format($paid, 2) . ' the customer paid.',
             'proof.required' => 'Please attach a photo of the refund receipt.',
             'proof.image'    => 'The refund receipt must be a photo (JPG, PNG or WEBP).',
             'proof.max'      => 'The refund receipt photo must be 5 MB or smaller.',
@@ -758,6 +748,8 @@ private function upcomingTrips(int $days = 14)
             return back()->with('error', "Booking #{$id}: " . $validator->errors()->first());
         }
         $data = $validator->validated();
+        // The amount is never typed by the admin: it is always exactly what the customer is owed.
+        $data['amount'] = round($eligible, 2);
 
         // Random file name, so the photo's link can't be guessed from the booking id
         $proofPath = $request->file('proof')->store('refunds', 'public');

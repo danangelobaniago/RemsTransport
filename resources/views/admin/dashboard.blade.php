@@ -114,7 +114,7 @@
 
     <!-- TO DO -->
     <div class="dash-grid todo">
-        <a href="/admin/bookings" class="dash-card {{ $todo['refund_count'] > 0 ? 'is-danger' : '' }}">
+        <a href="/admin/bookings?filter=refund" class="dash-card {{ $todo['refund_count'] > 0 ? 'is-danger' : '' }}">
             <h4><i class="fas fa-money-bill-transfer"></i> Refunds to Send</h4>
             <div class="num">{{ $todo['refund_count'] }}</div>
             <div class="sub">{{ $todo['refund_count'] > 0 ? $peso($todo['refund_amount']) . ' owed to customers' : 'Nothing to refund' }}</div>
