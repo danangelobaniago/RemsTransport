@@ -93,7 +93,7 @@
 
         {{-- QUICK-CREATE NEW CUSTOMER --}}
         <div class="card" style="margin-bottom:24px;">
-            <h3 style="margin-bottom:16px;font-size:16px;">New Customer (not yet in the system)</h3>
+            <h3 style="margin-bottom:16px;font-size:16px;">New Customer</h3>
             <form method="POST" action="{{ route('admin.book_for_customer.create') }}">
                 @csrf
                 <div class="form-grid">
