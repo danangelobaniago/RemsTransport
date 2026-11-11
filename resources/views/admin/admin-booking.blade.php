@@ -55,6 +55,7 @@
         .icon-btn-info         { background: #f3f4f6; color: #4b5563; }
         .icon-btn-info:hover         { background: #e5e7eb; }
         .icon-btn-refund       { background: #f59e0b; color: white; }
+        .refunded-tag { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 99px; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 700; white-space: nowrap; cursor: default; }
         .icon-btn-refund:hover       { background: #d97706; }
         .icon-btn-remit        { background: #059669; color: white; }
         .icon-btn-remit:hover        { background: #047857; }
@@ -328,11 +329,11 @@
                                     {{-- Refund: send back what's owed on a rejected / cancelled booking --}}
                                     @if(in_array($statusClean, ['rejected', 'cancelled']))
                                         @if($booking->refund_amount !== null)
-                                            <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($booking->refund_proof_path) }}" target="_blank" rel="noopener"
-                                               class="status-icon" style="background:#dcfce7;color:#15803d;"
-                                               title="Refunded ₱{{ number_format($booking->refund_amount, 2) }} on {{ \Carbon\Carbon::parse($booking->refunded_at, 'UTC')->setTimezone(\App\Support\LocalDate::TIMEZONE)->format('M d, Y g:i A') }} — view receipt">
-                                                <i class="fas fa-rotate-left"></i>
-                                            </a>
+                                            {{-- A label, not a button: the receipt link is in the Payment column --}}
+                                            <span class="refunded-tag"
+                                               title="Refunded ₱{{ number_format($booking->refund_amount, 2) }} on {{ \Carbon\Carbon::parse($booking->refunded_at, 'UTC')->setTimezone(\App\Support\LocalDate::TIMEZONE)->format('M d, Y g:i A') }}">
+                                                <i class="fas fa-circle-check"></i> Refunded
+                                            </span>
                                         @elseif($booking->refundable_amount > 0)
                                             <button type="button" class="icon-btn icon-btn-refund" title="Refund Customer"
                                                 onclick="openRefundModal({{ $booking->id }}, {{ $booking->refundable_amount }}, {{ (float) $booking->amount_paid }}, @js(trim(($booking->first_name ?? '') . ' ' . ($booking->last_name ?? ''))))">
