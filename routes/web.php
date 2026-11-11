@@ -157,6 +157,7 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'role:admin'])->group(function () {
 
     Route::get('/admin/dashboard', [AdminController::class, 'dashboard']);
+    Route::get('/admin/calendar', [AdminController::class, 'calendarTrips'])->name('admin.calendar');
     Route::get('/admin/bookings', [AdminController::class, 'bookings'])->name('admin.bookings');
     Route::post('/admin/update-status', [AdminController::class, 'updateStatus'])->name('admin.updateStatus');
     Route::post('/admin/bookings/{id}/refund', [AdminController::class, 'refundBooking'])->whereNumber('id')->name('admin.bookings.refund');

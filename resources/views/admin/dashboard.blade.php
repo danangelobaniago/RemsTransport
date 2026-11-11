@@ -162,6 +162,82 @@
         </div>
     </div>
 
+    <!-- BOOKING CALENDAR -->
+    <style>
+        .cal-card { margin-bottom: 24px; }
+        .cal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+        .cal-head h2 { margin: 0; }
+        .cal-nav { display: flex; align-items: center; gap: 8px; }
+        .cal-nav button { border: 1px solid #e2e8f0; background: #f8fafc; color: #1e293b; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .cal-nav button:hover { background: #eef2f7; }
+        .cal-title { min-width: 150px; text-align: center; font-weight: 800; color: #0f172a; font-size: 16px; }
+        .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #64748b; margin-bottom: 12px; }
+        .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
+        .cal-legend i.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+        .cal-body { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
+        .cal-dow { background: #f8fafc; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; text-align: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
+        .cal-day { min-height: 96px; padding: 6px; border: 0; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; border-radius: 0; margin: 0; cursor: pointer; background: #fff; text-align: left; font: inherit; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+        .cal-day:nth-child(7n) { border-right: none; }
+        .cal-day:hover { background: #f8fafc; }
+        .cal-day.blank { background: #fafbfc; cursor: default; }
+        .cal-day.selected { box-shadow: inset 0 0 0 2px #2563eb; }
+        .cal-num { font-size: 12px; font-weight: 700; color: #475569; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; }
+        .cal-day.today .cal-num { background: #2563eb; color: #fff; }
+        .cal-day.past .cal-num { color: #94a3b8; }
+        .cal-chip { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .cal-chip.van { background: #dcfce7; color: #166534; }
+        .cal-chip.tour { background: #ede9fe; color: #6d28d9; }
+        .cal-chip.joiner { background: #e0f2fe; color: #0369a1; }
+        .cal-chip.completed { opacity: .5; }
+        .cal-chip.approval { box-shadow: inset 3px 0 0 #f59e0b; }
+        .cal-more { font-size: 11px; color: #64748b; font-weight: 600; padding-left: 4px; }
+        .cal-panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; }
+        .cal-panel h3 { margin: 0 0 2px; font-size: 15px; color: #0f172a; }
+        .cal-panel .cal-count { font-size: 12px; color: #64748b; margin-bottom: 10px; }
+        .cal-trip { display: block; padding: 10px 0; border-top: 1px solid #f1f5f9; text-decoration: none; color: inherit; }
+        .cal-trip:hover .cal-trip-title { color: #2563eb; }
+        .cal-trip-title { font-weight: 700; font-size: 13px; color: #0f172a; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+        .cal-trip-route { font-size: 12px; color: #475569; margin-top: 2px; }
+        .cal-trip-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .cal-state { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
+        .cal-state.approval { background: #fef3c7; color: #b45309; }
+        .cal-state.confirmed { background: #dbeafe; color: #1d4ed8; }
+        .cal-state.ongoing { background: #ffedd5; color: #c2410c; }
+        .cal-state.completed { background: #f1f5f9; color: #64748b; }
+        .cal-empty { color: #94a3b8; font-size: 13px; padding: 12px 0; border-top: 1px solid #f1f5f9; }
+        @media (max-width: 1100px) { .cal-body { grid-template-columns: 1fr; } }
+        @media (max-width: 700px) {
+            .cal-day { min-height: 54px; padding: 4px; align-items: center; }
+            .cal-chip { font-size: 0; padding: 0; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+            .cal-chip.van { background: #16a34a; } .cal-chip.tour { background: #7c3aed; } .cal-chip.joiner { background: #0284c7; }
+            .cal-chips { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+            .cal-more { font-size: 10px; padding: 0; }
+        }
+    </style>
+    <div class="card cal-card">
+        <div class="cal-head">
+            <h2><i class="fas fa-calendar-days" style="color:#2563eb;"></i> Booking Calendar</h2>
+            <div class="cal-nav">
+                <button type="button" onclick="calMove(-1)" aria-label="Previous month"><i class="fas fa-chevron-left"></i></button>
+                <div class="cal-title" id="calTitle">&nbsp;</div>
+                <button type="button" onclick="calMove(1)" aria-label="Next month"><i class="fas fa-chevron-right"></i></button>
+                <button type="button" onclick="calToday()">Today</button>
+            </div>
+        </div>
+        <div class="cal-legend">
+            <span><i class="sw" style="background:#16a34a;"></i> Van Rental</span>
+            <span><i class="sw" style="background:#7c3aed;"></i> Tour Package</span>
+            <span><i class="sw" style="background:#0284c7;"></i> Joiner Trip</span>
+            <span><i class="sw" style="background:#f59e0b;"></i> Needs approval</span>
+            <span><i class="sw" style="background:#cbd5e1;"></i> Completed (faded)</span>
+        </div>
+        <div class="cal-body">
+            <div class="cal-grid" id="calGrid" aria-live="polite"></div>
+            <div class="cal-panel" id="calPanel"></div>
+        </div>
+    </div>
+
     <!-- UPCOMING TRIPS -->
     <style>
         .upcoming-card { margin-bottom: 24px; }
@@ -329,6 +405,98 @@
 </div>
 
 <script>
+// ---- BOOKING CALENDAR ----
+const CAL_TODAY = @json(\App\Support\LocalDate::today()); // Philippine date, YYYY-MM-DD
+const CAL_KIND = { 'Van Rental': 'van', 'Tour Package': 'tour', 'Joiner Trip': 'joiner' };
+const CAL_STATE = { approval: 'Needs approval', confirmed: 'Confirmed', ongoing: 'Ongoing', completed: 'Completed' };
+let calMonth = CAL_TODAY.slice(0, 7);
+let calSelected = CAL_TODAY;
+let calTrips = [];
+
+const calEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const calPad = n => String(n).padStart(2, '0');
+const calOn = (t, day) => t.date <= day && (t.end_date || t.date) >= day;
+
+function calShift(month, by) {
+    let [y, m] = month.split('-').map(Number);
+    m += by;
+    if (m < 1) { m = 12; y--; }
+    if (m > 12) { m = 1; y++; }
+    return y + '-' + calPad(m);
+}
+
+async function calLoad() {
+    const month = calMonth;
+    const [y, m] = month.split('-').map(Number);
+    document.getElementById('calTitle').textContent = new Date(y, m - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+    try {
+        const res = await fetch('{{ route('admin.calendar') }}?month=' + month, { headers: { 'Accept': 'application/json' } });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        if (month !== calMonth) return; // a newer month was requested meanwhile
+        calTrips = data.trips;
+    } catch (e) {
+        calTrips = [];
+    }
+    calRender();
+}
+
+function calRender() {
+    const [y, m] = calMonth.split('-').map(Number);
+    const first = new Date(y, m - 1, 1).getDay();      // 0 = Sunday
+    const days = new Date(y, m, 0).getDate();
+    let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
+
+    for (let i = 0; i < first; i++) html += '<div class="cal-day blank"></div>';
+    for (let d = 1; d <= days; d++) {
+        const day = calMonth + '-' + calPad(d);
+        const trips = calTrips.filter(t => calOn(t, day));
+        const cls = ['cal-day', day === CAL_TODAY ? 'today' : '', day < CAL_TODAY ? 'past' : '', day === calSelected ? 'selected' : ''].join(' ');
+        // Joiner trips have no single customer, so show where they're going
+        const chipName = t => t.kind === 'Joiner Trip' ? (t.route || '').split('→').pop().trim() : t.who;
+        const chips = trips.slice(0, 3).map(t =>
+            `<div class="cal-chip ${CAL_KIND[t.kind]} ${t.state}" title="${calEsc(t.ref + ' · ' + chipName(t))}">${calEsc(t.ref)} ${calEsc(chipName(t))}</div>`).join('');
+        const more = trips.length > 3 ? `<div class="cal-more">+${trips.length - 3} more</div>` : '';
+        const label = d + (trips.length ? `, ${trips.length} trip${trips.length > 1 ? 's' : ''}` : '');
+        html += `<button type="button" class="${cls}" onclick="calPick('${day}')" aria-label="${label}"><span class="cal-num">${d}</span><div class="cal-chips">${chips}</div>${more}</button>`;
+    }
+    const cells = first + days;
+    for (let i = cells; i < Math.ceil(cells / 7) * 7; i++) html += '<div class="cal-day blank"></div>';
+
+    document.getElementById('calGrid').innerHTML = html;
+    calPanel();
+}
+
+function calPanel() {
+    const panel = document.getElementById('calPanel');
+    if (!calSelected.startsWith(calMonth)) {
+        const n = calTrips.length;
+        panel.innerHTML = `<h3>${document.getElementById('calTitle').textContent}</h3><div class="cal-count">${n} trip${n === 1 ? '' : 's'} this month</div><div class="cal-empty">Pick a day to see its trips.</div>`;
+        return;
+    }
+    const [y, m, d] = calSelected.split('-').map(Number);
+    const trips = calTrips.filter(t => calOn(t, calSelected));
+    const title = new Date(y, m - 1, d).toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric' });
+    const list = trips.length ? trips.map(t => {
+        const until = t.end_date && t.end_date > t.date
+            ? ` · ${new Date(t.date + 'T00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}–${new Date(t.end_date + 'T00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}` : '';
+        const balance = t.balance > 0 ? ` · <span style="color:#b91c1c;font-weight:700;">Balance ₱${Number(t.balance).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>` : '';
+        return `<a class="cal-trip" href="${calEsc(t.link)}">
+            <div class="cal-trip-title">${calEsc(t.ref)} · ${calEsc(t.who)}
+                <span class="up-kind ${CAL_KIND[t.kind]}">${calEsc(t.kind)}</span>
+                <span class="cal-state ${t.state}">${CAL_STATE[t.state]}</span></div>
+            <div class="cal-trip-route">${calEsc(t.route || '—')}</div>
+            <div class="cal-trip-meta"><i class="fas fa-van-shuttle"></i> ${calEsc(t.van || 'No van yet')} · <i class="fas fa-user"></i> ${calEsc(t.driver || 'No driver yet')}${until}${balance}</div>
+        </a>`;
+    }).join('') : '<div class="cal-empty">No trips on this day.</div>';
+    panel.innerHTML = `<h3>${title}</h3><div class="cal-count">${trips.length} trip${trips.length === 1 ? '' : 's'}</div>${list}`;
+}
+
+function calPick(day) { calSelected = day; calRender(); }
+function calMove(by) { calMonth = calShift(calMonth, by); calLoad(); }
+function calToday() { calMonth = CAL_TODAY.slice(0, 7); calSelected = CAL_TODAY; calLoad(); }
+calLoad();
+
 function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('open');

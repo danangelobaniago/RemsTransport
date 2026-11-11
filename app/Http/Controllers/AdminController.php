@@ -269,13 +269,42 @@ private function upcomingTrips(int $days = 14)
     $today = \App\Support\LocalDate::today();
     $until = \Illuminate\Support\Carbon::parse($today)->addDays($days)->toDateString();
 
+    return $this->scheduledTrips($today, $until)
+        ->filter(fn ($t) => $t->date >= $today && $t->state !== 'completed')
+        ->values();
+}
+
+/** Month of trips for the dashboard calendar (?month=YYYY-MM, Philippine time). */
+public function calendarTrips(Request $request)
+{
+    $month = preg_match('/^\d{4}-\d{2}$/', (string) $request->query('month'))
+        ? \Illuminate\Support\Carbon::createFromFormat('Y-m-d', $request->query('month') . '-01')
+        : \Illuminate\Support\Carbon::parse(\App\Support\LocalDate::today())->startOfMonth();
+
+    $trips = $this->scheduledTrips($month->toDateString(), $month->copy()->endOfMonth()->toDateString())
+        ->map(fn ($t) => [
+            'date' => $t->date, 'end_date' => $t->end_date, 'kind' => $t->kind, 'ref' => $t->ref,
+            'link' => $t->link, 'who' => $t->who, 'route' => $t->route, 'van' => $t->van,
+            'driver' => $t->driver, 'state' => $t->state, 'balance' => $t->balance,
+        ]);
+
+    return response()->json(['month' => $month->format('Y-m'), 'trips' => $trips]);
+}
+
+/**
+ * Trips (van rentals, tours, joiner trips) on any day from $from to $until,
+ * excluding cancelled / rejected. state: approval, confirmed, ongoing or completed.
+ */
+private function scheduledTrips(string $from, string $until)
+{
     $bookings = DB::table('bookings')
         ->leftJoin('users', 'bookings.user_id', '=', 'users.id')
         ->leftJoin('tour_packages', 'bookings.tour_id', '=', 'tour_packages.id')
         ->leftJoin('vans', 'bookings.van_id', '=', 'vans.id')
         ->leftJoin('drivers', 'bookings.driver', '=', 'drivers.id')
-        ->whereBetween('bookings.start_date', [$today, $until])
-        ->whereNotIn('bookings.status', ['cancelled', 'rejected', 'completed'])
+        ->where('bookings.start_date', '<=', $until)
+        ->whereRaw('COALESCE(bookings.end_date, bookings.start_date) >= ?', [$from])
+        ->whereNotIn('bookings.status', ['cancelled', 'rejected'])
         ->select(
             'bookings.id', 'bookings.tour_id', 'bookings.status', 'bookings.start_date', 'bookings.end_date',
             'bookings.pickup', 'bookings.destination', 'bookings.package_name', 'bookings.passengers',
@@ -287,8 +316,9 @@ private function upcomingTrips(int $days = 14)
             DB::raw('CASE WHEN bookings.tour_id IS NOT NULL THEN tour_packages.trip_status ELSE bookings.trip_status END as trip_status')
         )
         ->get()
-        ->reject(fn ($b) => $b->trip_status === 'completed')
         ->map(fn ($b) => (object) [
+            'state'          => $this->tripState($b->status === 'completed' ? 'completed' : $b->trip_status,
+                in_array($b->status, ['pending', 'downpayment_paid', 'fully_paid'], true)),
             'date'           => $b->start_date,
             'end_date'       => $b->end_date,
             'kind'           => $b->tour_id ? 'Tour Package' : 'Van Rental',
@@ -307,16 +337,17 @@ private function upcomingTrips(int $days = 14)
 
     $joiners = DB::table('joiner_trips')
         ->where('status', 'active')
-        ->whereBetween('trip_date', [$today, $until])
+        ->where('trip_date', '<=', $until)
+        ->whereRaw('COALESCE(end_date, trip_date) >= ?', [$from])
         ->get()
-        ->reject(fn ($t) => $t->trip_status === 'completed')
         ->map(function ($t) {
             $seats = DB::table('joiner_bookings')
                 ->where('joiner_trip_id', $t->id)
-                ->whereIn('status', ['paid', 'pending', 'downpayment_paid', 'fully_paid'])
+                ->whereIn('status', ['paid', 'pending', 'downpayment_paid', 'fully_paid', 'completed'])
                 ->sum('seats_booked');
 
             return (object) [
+                'state'          => $this->tripState($t->trip_status, false),
                 'date'           => $t->trip_date,
                 'end_date'       => $t->end_date ?? $t->trip_date,
                 'kind'           => 'Joiner Trip',
@@ -334,6 +365,16 @@ private function upcomingTrips(int $days = 14)
         });
 
     return $bookings->concat($joiners)->sortBy('date')->values();
+}
+
+private function tripState(?string $tripStatus, bool $needsApproval): string
+{
+    return match (true) {
+        $tripStatus === 'completed'                          => 'completed',
+        in_array($tripStatus, ['arrived', 'in_progress'], true) => 'ongoing',
+        $needsApproval                                       => 'approval',
+        default                                              => 'confirmed',
+    };
 }
 
     public function bookings(Request $request)
