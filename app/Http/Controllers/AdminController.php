@@ -286,9 +286,13 @@ public function calendarTrips(Request $request)
             'date' => $t->date, 'end_date' => $t->end_date, 'kind' => $t->kind, 'ref' => $t->ref,
             'link' => $t->link, 'who' => $t->who, 'route' => $t->route, 'van' => $t->van,
             'driver' => $t->driver, 'state' => $t->state, 'balance' => $t->balance,
+            'plate' => $t->plate, 'group' => $t->group,
         ]);
 
-    return response()->json(['month' => $month->format('Y-m'), 'trips' => $trips]);
+    // For the Vans view (one row per van) and the "free vans" list
+    $vans = DB::table('vans')->orderBy('name')->get(['name', 'plate_number as plate', 'status']);
+
+    return response()->json(['month' => $month->format('Y-m'), 'trips' => $trips, 'vans' => $vans]);
 }
 
 /**
@@ -328,6 +332,9 @@ private function scheduledTrips(string $from, string $until)
             'pax'            => (int) $b->passengers . ' pax',
             'route'          => $b->tour_id ? ($b->package_name ?? $b->destination) : trim(($b->pickup ?? '') . ' → ' . ($b->destination ?? ''), ' →'),
             'van'            => trim(($b->van_name ?? '') . ($b->plate ? " ({$b->plate})" : '')),
+            'plate'          => $b->plate,
+            // Bookings of one tour package ride the same van together
+            'group'          => $b->tour_id ? 'tour-' . $b->tour_id : 'PV-' . $b->id,
             'driver'         => $b->driver_name,
             'trip_status'    => $b->trip_status,
             // Paid but not yet approved by the admin
@@ -357,6 +364,8 @@ private function scheduledTrips(string $from, string $until)
                 'pax'            => null,
                 'route'          => trim(($t->meetup_point ?? '') . ' → ' . ($t->destination ?? ''), ' →'),
                 'van'            => trim(($t->van ?? '') . ($t->plate_number ? " ({$t->plate_number})" : '')),
+                'plate'          => $t->plate_number,
+                'group'          => 'trip-' . $t->id,
                 'driver'         => $t->driver_name,
                 'trip_status'    => $t->trip_status,
                 'needs_approval' => false,
