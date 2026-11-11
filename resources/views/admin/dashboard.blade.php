@@ -279,6 +279,11 @@
         .cal-free { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
         .cal-free span { font-size: 12px; font-weight: 600; background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; border-radius: 99px; padding: 4px 10px; }
         .cal-free span small { color: #4d7c0f; font-weight: 500; }
+        .cal-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; border: 1px solid #e9eef5; background: #f8fafc; border-radius: 10px; padding: 9px 12px; font-family: inherit; cursor: pointer; margin-top: 12px; }
+        .cal-toggle:hover { background: #f1f5f9; }
+        .cal-toggle b { color: #15803d; margin-left: 4px; }
+        .cal-toggle i { transition: transform .15s; }
+        .cal-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
         .cal-empty { color: #94a3b8; font-size: 13px; padding: 14px 0 4px; }
 
         /* HOVER PREVIEW */
@@ -510,6 +515,8 @@ const CAL_STATE = { approval: 'Needs approval', confirmed: 'Confirmed', ongoing:
 const CAL_ICON = { approval: 'fa-hourglass-half', ongoing: 'fa-route', completed: 'fa-check' };
 const CAL_LANES = 3; // bars shown per day in Month view before "+N more"
 let calView = 'month';
+let calFreeOpen = false; // "Free vans on this day" list starts collapsed
+try { calFreeOpen = localStorage.getItem('calFreeOpen') === '1'; } catch (e) {}
 try { if (localStorage.getItem('calView') === 'vans') calView = 'vans'; } catch (e) {}
 let calMonth = CAL_TODAY.slice(0, 7);
 let calSelected = CAL_TODAY;
@@ -772,9 +779,11 @@ function calPanel() {
     if (inMonth && day >= CAL_TODAY && calVans.length) {
         const busy = new Set(calTrips.filter(t => calOn(t, day)).map(t => calPlate(t.plate)));
         const open = calVans.filter(v => v.status === 'available' && !busy.has(calPlate(v.plate)));
-        free = `<div class="cal-sub">Free vans on this day (${open.length} of ${calVans.length})</div>` + (open.length
-            ? `<div class="cal-free">${open.map(v => `<span>${calEsc(v.name)} <small>${calEsc(v.plate)}</small></span>`).join('')}</div>`
-            : '<div class="cal-empty">Every van is booked or unavailable.</div>');
+        free = `<button type="button" class="cal-sub cal-toggle" aria-expanded="${calFreeOpen}" onclick="calToggleFree()">
+                <span>Free vans on this day <b>${open.length} of ${calVans.length}</b></span><i class="fas fa-chevron-down"></i></button>`
+            + (!calFreeOpen ? '' : open.length
+                ? `<div class="cal-free">${open.map(v => `<span>${calEsc(v.name)} <small>${calEsc(v.plate)}</small></span>`).join('')}</div>`
+                : '<div class="cal-empty">Every van is booked or unavailable.</div>');
     }
 
     document.getElementById('calPanel').innerHTML = calView === 'vans'
@@ -815,6 +824,7 @@ if (window.matchMedia('(hover: hover)').matches) {
 }
 
 function calPick(day) { calSelected = day; calHidePop(); calDraw(); }
+function calToggleFree() { calFreeOpen = !calFreeOpen; try { localStorage.setItem('calFreeOpen', calFreeOpen ? '1' : '0'); } catch (e) {} calPanel(); }
 function calToggle(kind) { calHidden.has(kind) ? calHidden.delete(kind) : calHidden.add(kind); calRender(); }
 function calSetView(view) { calView = view; try { localStorage.setItem('calView', view); } catch (e) {} calRender(); }
 function calMove(by) { calMonth = calShift(calMonth, by); calLoad(); }
