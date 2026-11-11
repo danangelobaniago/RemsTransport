@@ -168,51 +168,81 @@
         .cal-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
         .cal-head h2 { margin: 0; }
         .cal-nav { display: flex; align-items: center; gap: 8px; }
-        .cal-nav button { border: 1px solid #e2e8f0; background: #f8fafc; color: #1e293b; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
-        .cal-nav button:hover { background: #eef2f7; }
-        .cal-title { min-width: 150px; text-align: center; font-weight: 800; color: #0f172a; font-size: 16px; }
-        .cal-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: #64748b; margin-bottom: 12px; }
-        .cal-legend span { display: inline-flex; align-items: center; gap: 6px; }
-        .cal-legend i.sw { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+        .cal-nav button { border: 1px solid #e2e8f0; background: #fff; color: #1e293b; border-radius: 8px; padding: 7px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .cal-nav button:hover { background: #f1f5f9; }
+        .cal-title { min-width: 160px; text-align: center; font-weight: 800; color: #0f172a; font-size: 17px; }
+        .cal-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+        .cal-filter { display: inline-flex; align-items: center; gap: 7px; border: 1px solid #e2e8f0; background: #fff; border-radius: 99px; padding: 5px 12px; font-size: 12px; font-weight: 600; color: #334155; cursor: pointer; }
+        .cal-filter .dot { width: 9px; height: 9px; border-radius: 50%; }
+        .cal-filter .n { background: #f1f5f9; color: #0f172a; border-radius: 99px; padding: 0 7px; font-weight: 800; }
+        .cal-filter[aria-pressed="false"] { opacity: .45; }
+        .cal-filter[aria-pressed="false"] .label { text-decoration: line-through; }
+        .cal-note { font-size: 12px; font-weight: 700; padding: 5px 11px; border-radius: 99px; background: #fef3c7; color: #b45309; }
+        .cal-total { margin-left: auto; font-size: 12px; color: #64748b; }
         .cal-body { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-        .cal-dow { background: #f8fafc; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; text-align: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; }
-        .cal-day { min-height: 96px; padding: 6px; border: 0; border-right: 1px solid #f1f5f9; border-bottom: 1px solid #f1f5f9; border-radius: 0; margin: 0; cursor: pointer; background: #fff; text-align: left; font: inherit; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-        .cal-day:nth-child(7n) { border-right: none; }
-        .cal-day:hover { background: #f8fafc; }
-        .cal-day.blank { background: #fafbfc; cursor: default; }
+
+        .cal-grid { border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; background: #fff; }
+        .cal-dows, .cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+        .cal-dows { background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        .cal-dow { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: .5px; text-align: center; padding: 9px 0; }
+        .cal-week { grid-template-rows: 32px repeat(3, 25px) minmax(18px, 1fr); min-height: 124px; border-bottom: 1px solid #eef2f7; }
+        .cal-week:last-child { border-bottom: none; }
+        .cal-day { grid-row: 1 / -1; border: 0; border-right: 1px solid #eef2f7; border-radius: 0; margin: 0; padding: 6px 8px; background: #fff; font: inherit; text-align: left; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between; min-width: 0; }
+        .cal-day.last-col { border-right: none; }
+        .cal-day.weekend { background: #fcfcfd; }
+        .cal-day.past { background: #f9fafb; }
+        .cal-day.past .cal-num { color: #b6bfcc; }
+        .cal-day.today { background: #eff6ff; }
+        .cal-day.other { background: #f8fafc; cursor: default; }
+        .cal-day:not(.other):hover { background: #f1f5f9; }
         .cal-day.selected { box-shadow: inset 0 0 0 2px #2563eb; }
-        .cal-num { font-size: 12px; font-weight: 700; color: #475569; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; }
+        .cal-num { font-size: 12px; font-weight: 700; color: #334155; width: 24px; height: 24px; line-height: 24px; text-align: center; border-radius: 50%; }
         .cal-day.today .cal-num { background: #2563eb; color: #fff; }
-        .cal-day.past .cal-num { color: #94a3b8; }
-        .cal-chip { font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .cal-chip.van { background: #dcfce7; color: #166534; }
-        .cal-chip.tour { background: #ede9fe; color: #6d28d9; }
-        .cal-chip.joiner { background: #e0f2fe; color: #0369a1; }
-        .cal-chip.completed { opacity: .5; }
-        .cal-chip.approval { box-shadow: inset 3px 0 0 #f59e0b; }
-        .cal-more { font-size: 11px; color: #64748b; font-weight: 600; padding-left: 4px; }
-        .cal-panel { border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px 16px; }
-        .cal-panel h3 { margin: 0 0 2px; font-size: 15px; color: #0f172a; }
-        .cal-panel .cal-count { font-size: 12px; color: #64748b; margin-bottom: 10px; }
-        .cal-trip { display: block; padding: 10px 0; border-top: 1px solid #f1f5f9; text-decoration: none; color: inherit; }
-        .cal-trip:hover .cal-trip-title { color: #2563eb; }
-        .cal-trip-title { font-weight: 700; font-size: 13px; color: #0f172a; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-        .cal-trip-route { font-size: 12px; color: #475569; margin-top: 2px; }
-        .cal-trip-meta { font-size: 11px; color: #64748b; margin-top: 2px; }
+        .cal-more { font-size: 11px; font-weight: 700; color: #2563eb; padding-left: 2px; }
+
+        .cal-bar { z-index: 1; height: 22px; line-height: 22px; margin: 1px 4px; padding: 0 8px; border: 0; border-left: 3px solid; border-radius: 6px; font: inherit; font-size: 11px; font-weight: 700; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; min-width: 0; }
+        .cal-bar i { font-size: 10px; margin-right: 3px; }
+        .cal-bar.van    { background: #dcfce7; color: #166534; border-left-color: #16a34a; }
+        .cal-bar.tour   { background: #ede9fe; color: #6d28d9; border-left-color: #7c3aed; }
+        .cal-bar.joiner { background: #e0f2fe; color: #0369a1; border-left-color: #0284c7; }
+        .cal-bar:hover { filter: brightness(.96); }
+        .cal-bar.cont-left  { border-left: 0; margin-left: 0; border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .cal-bar.cont-right { margin-right: 0; border-top-right-radius: 0; border-bottom-right-radius: 0; }
+        .cal-bar.completed { opacity: .5; }
+        .cal-bar.approval { box-shadow: inset 0 0 0 1px #f59e0b; }
+
+        .cal-panel { border: 1px solid #e2e8f0; border-radius: 14px; padding: 16px; background: #fff; }
+        .cal-pdate { display: flex; gap: 12px; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+        .cal-pday { width: 50px; height: 54px; border-radius: 12px; background: #eff6ff; color: #1d4ed8; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0; }
+        .cal-pday b { font-size: 21px; line-height: 1; }
+        .cal-pday small { font-size: 10px; font-weight: 700; text-transform: uppercase; }
+        .cal-pdate h3 { margin: 0; padding: 0; border: 0; font-size: 15px; color: #0f172a; }
+        .cal-pdate div.cnt { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .cal-sub { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: .5px; margin: 14px 0 2px; }
+        .cal-trip { display: block; margin-top: 8px; padding: 10px 12px; border: 1px solid #eef2f7; border-left: 4px solid var(--c); border-radius: 10px; text-decoration: none; color: inherit; transition: background .15s; }
+        .cal-trip:hover { background: #f8fafc; }
+        .cal-trip-title { font-weight: 700; font-size: 13px; color: #0f172a; }
+        .cal-trip-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 4px; }
+        .cal-trip-when { font-size: 11px; color: #64748b; font-weight: 600; }
+        .cal-trip-route { font-size: 12px; color: #475569; margin-top: 4px; }
+        .cal-trip-meta { font-size: 11px; color: #64748b; margin-top: 3px; }
         .cal-state { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 99px; }
         .cal-state.approval { background: #fef3c7; color: #b45309; }
         .cal-state.confirmed { background: #dbeafe; color: #1d4ed8; }
         .cal-state.ongoing { background: #ffedd5; color: #c2410c; }
         .cal-state.completed { background: #f1f5f9; color: #64748b; }
-        .cal-empty { color: #94a3b8; font-size: 13px; padding: 12px 0; border-top: 1px solid #f1f5f9; }
+        .cal-empty { color: #94a3b8; font-size: 13px; padding: 14px 0 4px; text-align: center; }
+
         @media (max-width: 1100px) { .cal-body { grid-template-columns: 1fr; } }
         @media (max-width: 700px) {
-            .cal-day { min-height: 54px; padding: 4px; align-items: center; }
-            .cal-chip { font-size: 0; padding: 0; width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-            .cal-chip.van { background: #16a34a; } .cal-chip.tour { background: #7c3aed; } .cal-chip.joiner { background: #0284c7; }
-            .cal-chips { display: flex; gap: 3px; flex-wrap: wrap; justify-content: center; }
+            .cal-week { grid-template-rows: 28px repeat(3, 8px) minmax(14px, 1fr); min-height: 70px; }
+            .cal-day { padding: 4px; align-items: center; }
+            .cal-bar { height: 6px; line-height: 6px; font-size: 0; padding: 0; margin: 1px 2px; border-left: 0; border-radius: 3px; }
+            .cal-bar i { display: none; }
+            .cal-bar.van { background: #16a34a; } .cal-bar.tour { background: #7c3aed; } .cal-bar.joiner { background: #0284c7; }
             .cal-more { font-size: 10px; padding: 0; }
+            .cal-more-word { display: none; }
+            .cal-total { margin-left: 0; width: 100%; }
         }
     </style>
     <div class="card cal-card">
@@ -225,13 +255,7 @@
                 <button type="button" onclick="calToday()">Today</button>
             </div>
         </div>
-        <div class="cal-legend">
-            <span><i class="sw" style="background:#16a34a;"></i> Van Rental</span>
-            <span><i class="sw" style="background:#7c3aed;"></i> Tour Package</span>
-            <span><i class="sw" style="background:#0284c7;"></i> Joiner Trip</span>
-            <span><i class="sw" style="background:#f59e0b;"></i> Needs approval</span>
-            <span><i class="sw" style="background:#cbd5e1;"></i> Completed (faded)</span>
-        </div>
+        <div class="cal-toolbar" id="calToolbar"></div>
         <div class="cal-body">
             <div class="cal-grid" id="calGrid" aria-live="polite"></div>
             <div class="cal-panel" id="calPanel"></div>
@@ -407,15 +431,26 @@
 <script>
 // ---- BOOKING CALENDAR ----
 const CAL_TODAY = @json(\App\Support\LocalDate::today()); // Philippine date, YYYY-MM-DD
-const CAL_KIND = { 'Van Rental': 'van', 'Tour Package': 'tour', 'Joiner Trip': 'joiner' };
+const CAL_KINDS = {
+    'Van Rental':   { cls: 'van',    color: '#16a34a' },
+    'Tour Package': { cls: 'tour',   color: '#7c3aed' },
+    'Joiner Trip':  { cls: 'joiner', color: '#0284c7' },
+};
 const CAL_STATE = { approval: 'Needs approval', confirmed: 'Confirmed', ongoing: 'Ongoing', completed: 'Completed' };
+const CAL_ICON = { approval: 'fa-hourglass-half', ongoing: 'fa-route', completed: 'fa-check' };
+const CAL_LANES = 3; // bars shown per day before "+N more"
 let calMonth = CAL_TODAY.slice(0, 7);
 let calSelected = CAL_TODAY;
 let calTrips = [];
+const calHidden = new Set();
 
 const calEsc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const calPad = n => String(n).padStart(2, '0');
-const calOn = (t, day) => t.date <= day && (t.end_date || t.date) >= day;
+const calEnd = t => t.end_date && t.end_date > t.date ? t.end_date : t.date;
+const calFmt = (day, opts) => { const [y, m, d] = day.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-PH', opts); };
+// Joiner trips have no single customer, so show where they're going
+const calName = t => t.kind === 'Joiner Trip' ? (t.route || '').split('→').pop().trim() : t.who;
+const calVisible = () => calTrips.filter(t => !calHidden.has(t.kind));
 
 function calShift(month, by) {
     let [y, m] = month.split('-').map(Number);
@@ -427,8 +462,7 @@ function calShift(month, by) {
 
 async function calLoad() {
     const month = calMonth;
-    const [y, m] = month.split('-').map(Number);
-    document.getElementById('calTitle').textContent = new Date(y, m - 1, 1).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' });
+    document.getElementById('calTitle').textContent = calFmt(month + '-01', { month: 'long', year: 'numeric' });
     try {
         const res = await fetch('{{ route('admin.calendar') }}?month=' + month, { headers: { 'Accept': 'application/json' } });
         if (!res.ok) throw new Error(res.status);
@@ -442,57 +476,116 @@ async function calLoad() {
 }
 
 function calRender() {
-    const [y, m] = calMonth.split('-').map(Number);
-    const first = new Date(y, m - 1, 1).getDay();      // 0 = Sunday
-    const days = new Date(y, m, 0).getDate();
-    let html = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('');
-
-    for (let i = 0; i < first; i++) html += '<div class="cal-day blank"></div>';
-    for (let d = 1; d <= days; d++) {
-        const day = calMonth + '-' + calPad(d);
-        const trips = calTrips.filter(t => calOn(t, day));
-        const cls = ['cal-day', day === CAL_TODAY ? 'today' : '', day < CAL_TODAY ? 'past' : '', day === calSelected ? 'selected' : ''].join(' ');
-        // Joiner trips have no single customer, so show where they're going
-        const chipName = t => t.kind === 'Joiner Trip' ? (t.route || '').split('→').pop().trim() : t.who;
-        const chips = trips.slice(0, 3).map(t =>
-            `<div class="cal-chip ${CAL_KIND[t.kind]} ${t.state}" title="${calEsc(t.ref + ' · ' + chipName(t))}">${calEsc(t.ref)} ${calEsc(chipName(t))}</div>`).join('');
-        const more = trips.length > 3 ? `<div class="cal-more">+${trips.length - 3} more</div>` : '';
-        const label = d + (trips.length ? `, ${trips.length} trip${trips.length > 1 ? 's' : ''}` : '');
-        html += `<button type="button" class="${cls}" onclick="calPick('${day}')" aria-label="${label}"><span class="cal-num">${d}</span><div class="cal-chips">${chips}</div>${more}</button>`;
-    }
-    const cells = first + days;
-    for (let i = cells; i < Math.ceil(cells / 7) * 7; i++) html += '<div class="cal-day blank"></div>';
-
-    document.getElementById('calGrid').innerHTML = html;
+    calToolbar();
+    calGrid();
     calPanel();
+}
+
+function calToolbar() {
+    const visible = calVisible();
+    const approvals = visible.filter(t => t.state === 'approval').length;
+    let html = Object.entries(CAL_KINDS).map(([kind, k]) =>
+        `<button type="button" class="cal-filter" aria-pressed="${!calHidden.has(kind)}" onclick="calToggle('${kind}')">
+            <span class="dot" style="background:${k.color}"></span><span class="label">${kind}</span>
+            <span class="n">${calTrips.filter(t => t.kind === kind).length}</span></button>`).join('');
+    if (approvals) html += `<span class="cal-note"><i class="fas fa-hourglass-half"></i> ${approvals} need${approvals === 1 ? 's' : ''} approval</span>`;
+    html += `<span class="cal-total">${visible.length} trip${visible.length === 1 ? '' : 's'} this month &bull; faded = completed</span>`;
+    document.getElementById('calToolbar').innerHTML = html;
+}
+
+function calGrid() {
+    const [y, m] = calMonth.split('-').map(Number);
+    const first = new Date(y, m - 1, 1).getDay(); // 0 = Sunday
+    const days = new Date(y, m, 0).getDate();
+    const weeks = Math.ceil((first + days) / 7);
+    const dayOf = d => calMonth + '-' + calPad(d);
+    const trips = calVisible();
+
+    let html = '<div class="cal-dows">' + ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => `<div class="cal-dow">${d}</div>`).join('') + '</div>';
+
+    for (let w = 0; w < weeks; w++) {
+        const firstD = Math.max(1, w * 7 - first + 1);
+        const lastD = Math.min(days, w * 7 - first + 7);
+        const ws = dayOf(firstD), we = dayOf(lastD);
+        const colOf = day => (first + Number(day.slice(8)) - 1) % 7;
+
+        // This week's piece of every trip, longest first so multi-day bars stay on top
+        const segs = trips.filter(t => t.date <= we && calEnd(t) >= ws)
+            .map(t => { const s = t.date > ws ? t.date : ws, e = calEnd(t) < we ? calEnd(t) : we; return { t, s, e, c0: colOf(s), c1: colOf(e) }; })
+            .sort((a, b) => a.s.localeCompare(b.s) || (b.c1 - b.c0) - (a.c1 - a.c0));
+
+        const lanes = [], hidden = Array(7).fill(0);
+        let bars = '';
+        for (const g of segs) {
+            let lane = 0;
+            while (lanes[lane] && lanes[lane].some(c => c >= g.c0 && c <= g.c1)) lane++;
+            if (lane >= CAL_LANES) { for (let c = g.c0; c <= g.c1; c++) hidden[c]++; continue; }
+            (lanes[lane] = lanes[lane] || []).push(...Array.from({ length: g.c1 - g.c0 + 1 }, (_, i) => g.c0 + i));
+            const t = g.t;
+            const cls = ['cal-bar', CAL_KINDS[t.kind].cls, t.state, t.date < g.s ? 'cont-left' : '', calEnd(t) > g.e ? 'cont-right' : ''].join(' ');
+            const icon = CAL_ICON[t.state] ? `<i class="fas ${CAL_ICON[t.state]}"></i>` : '';
+            const tip = `${t.ref} · ${calName(t)} — ${t.kind}, ${CAL_STATE[t.state]}`;
+            bars += `<button type="button" class="${cls}" style="grid-column:${g.c0 + 1} / ${g.c1 + 2}; grid-row:${lane + 2};"
+                onclick="calPick('${g.s}')" title="${calEsc(tip)}">${icon}${calEsc(t.ref)} ${calEsc(calName(t))}</button>`;
+        }
+
+        let cells = '';
+        for (let c = 0; c < 7; c++) {
+            const d = w * 7 + c - first + 1;
+            const edge = c === 6 ? ' last-col' : '';
+            if (d < 1 || d > days) { cells += `<div class="cal-day other${edge}" style="grid-column:${c + 1}"></div>`; continue; }
+            const day = dayOf(d);
+            const cls = ['cal-day', edge, c === 0 || c === 6 ? 'weekend' : '', day < CAL_TODAY ? 'past' : '', day === CAL_TODAY ? 'today' : '', day === calSelected ? 'selected' : ''].join(' ');
+            const n = trips.filter(t => t.date <= day && calEnd(t) >= day).length;
+            const more = hidden[c] ? `<span class="cal-more">+${hidden[c]}<span class="cal-more-word"> more</span></span>` : '';
+            cells += `<button type="button" class="${cls}" style="grid-column:${c + 1}" onclick="calPick('${day}')"
+                aria-label="${calFmt(day, { month: 'long', day: 'numeric' })}${n ? ', ' + n + ' trip' + (n > 1 ? 's' : '') : ''}"><span class="cal-num">${d}</span>${more}</button>`;
+        }
+        html += `<div class="cal-week">${cells}${bars}</div>`;
+    }
+    document.getElementById('calGrid').innerHTML = html;
+}
+
+function calTripCard(t) {
+    const k = CAL_KINDS[t.kind];
+    const when = calEnd(t) > t.date
+        ? calFmt(t.date, { month: 'short', day: 'numeric' }) + ' – ' + calFmt(calEnd(t), { month: 'short', day: 'numeric' })
+        : calFmt(t.date, { weekday: 'short', month: 'short', day: 'numeric' });
+    const balance = t.balance > 0 ? ` &bull; <span style="color:#b91c1c;font-weight:700;">Balance ₱${Number(t.balance).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>` : '';
+    return `<a class="cal-trip" href="${calEsc(t.link)}" style="--c:${k.color}">
+        <div class="cal-trip-title">${calEsc(t.ref)} &middot; ${calEsc(t.who)}</div>
+        <div class="cal-trip-tags"><span class="up-kind ${k.cls}">${calEsc(t.kind)}</span><span class="cal-state ${t.state}">${CAL_STATE[t.state]}</span><span class="cal-trip-when"><i class="far fa-calendar"></i> ${when}</span></div>
+        <div class="cal-trip-route">${calEsc(t.route || '—')}</div>
+        <div class="cal-trip-meta"><i class="fas fa-van-shuttle"></i> ${calEsc(t.van || 'No van yet')} &bull; <i class="fas fa-user"></i> ${calEsc(t.driver || 'No driver yet')}${balance}</div>
+    </a>`;
 }
 
 function calPanel() {
     const panel = document.getElementById('calPanel');
-    if (!calSelected.startsWith(calMonth)) {
-        const n = calTrips.length;
-        panel.innerHTML = `<h3>${document.getElementById('calTitle').textContent}</h3><div class="cal-count">${n} trip${n === 1 ? '' : 's'} this month</div><div class="cal-empty">Pick a day to see its trips.</div>`;
-        return;
+    const visible = calVisible();
+    const inMonth = calSelected.startsWith(calMonth);
+    const day = inMonth ? calSelected : calMonth + '-01';
+    const onDay = inMonth ? visible.filter(t => t.date <= day && calEnd(t) >= day) : [];
+    const next = visible.filter(t => (!inMonth || t.date > day) && !onDay.includes(t)).slice(0, 4);
+
+    let html = '';
+    if (inMonth) {
+        html += `<div class="cal-pdate"><div class="cal-pday"><small>${calFmt(day, { month: 'short' })}</small><b>${Number(day.slice(8))}</b></div>
+            <div><h3>${calFmt(day, { weekday: 'long' })}${day === CAL_TODAY ? ' &bull; Today' : ''}</h3><div class="cnt">${onDay.length ? onDay.length + ' trip' + (onDay.length > 1 ? 's' : '') : 'No trips on this day'}</div></div></div>`;
+        html += onDay.map(calTripCard).join('');
+    } else {
+        html += `<div class="cal-pdate"><div><h3>${document.getElementById('calTitle').textContent}</h3><div class="cnt">Pick a day to see its trips</div></div></div>`;
     }
-    const [y, m, d] = calSelected.split('-').map(Number);
-    const trips = calTrips.filter(t => calOn(t, calSelected));
-    const title = new Date(y, m - 1, d).toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric' });
-    const list = trips.length ? trips.map(t => {
-        const until = t.end_date && t.end_date > t.date
-            ? ` · ${new Date(t.date + 'T00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}–${new Date(t.end_date + 'T00:00').toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}` : '';
-        const balance = t.balance > 0 ? ` · <span style="color:#b91c1c;font-weight:700;">Balance ₱${Number(t.balance).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</span>` : '';
-        return `<a class="cal-trip" href="${calEsc(t.link)}">
-            <div class="cal-trip-title">${calEsc(t.ref)} · ${calEsc(t.who)}
-                <span class="up-kind ${CAL_KIND[t.kind]}">${calEsc(t.kind)}</span>
-                <span class="cal-state ${t.state}">${CAL_STATE[t.state]}</span></div>
-            <div class="cal-trip-route">${calEsc(t.route || '—')}</div>
-            <div class="cal-trip-meta"><i class="fas fa-van-shuttle"></i> ${calEsc(t.van || 'No van yet')} · <i class="fas fa-user"></i> ${calEsc(t.driver || 'No driver yet')}${until}${balance}</div>
-        </a>`;
-    }).join('') : '<div class="cal-empty">No trips on this day.</div>';
-    panel.innerHTML = `<h3>${title}</h3><div class="cal-count">${trips.length} trip${trips.length === 1 ? '' : 's'}</div>${list}`;
+    if (next.length) {
+        html += `<div class="cal-sub">Coming up this month</div>` + next.map(calTripCard).join('');
+    } else if (!onDay.length) {
+        html += `<div class="cal-empty">Nothing else scheduled this month.</div>`;
+    }
+    panel.innerHTML = html;
 }
 
-function calPick(day) { calSelected = day; calRender(); }
+function calPick(day) { calSelected = day; calGrid(); calPanel(); }
+function calToggle(kind) { calHidden.has(kind) ? calHidden.delete(kind) : calHidden.add(kind); calRender(); }
 function calMove(by) { calMonth = calShift(calMonth, by); calLoad(); }
 function calToday() { calMonth = CAL_TODAY.slice(0, 7); calSelected = CAL_TODAY; calLoad(); }
 calLoad();
